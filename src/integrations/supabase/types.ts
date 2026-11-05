@@ -14,7 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      arvores: {
+        Row: {
+          altura: number | null
+          cap: number | null
+          categoria: string | null
+          created_at: string
+          dap: number | null
+          nome_vulgar: string
+          numero: number
+          picada: string | null
+          volume: number | null
+        }
+        Insert: {
+          altura?: number | null
+          cap?: number | null
+          categoria?: string | null
+          created_at?: string
+          dap?: number | null
+          nome_vulgar?: string
+          numero: number
+          picada?: string | null
+          volume?: number | null
+        }
+        Update: {
+          altura?: number | null
+          cap?: number | null
+          categoria?: string | null
+          created_at?: string
+          dap?: number | null
+          nome_vulgar?: string
+          numero?: number
+          picada?: string | null
+          volume?: number | null
+        }
+        Relationships: []
+      }
+      romaneios: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          created_by: string | null
+          data: string
+          id: string
+          julieta: string | null
+          motorista: string | null
+          placa: string | null
+          qtd_toras: number
+          total_volume: number
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          created_by?: string | null
+          data?: string
+          id?: string
+          julieta?: string | null
+          motorista?: string | null
+          placa?: string | null
+          qtd_toras?: number
+          total_volume?: number
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          created_by?: string | null
+          data?: string
+          id?: string
+          julieta?: string | null
+          motorista?: string | null
+          placa?: string | null
+          qtd_toras?: number
+          total_volume?: number
+        }
+        Relationships: []
+      }
+      toras: {
+        Row: {
+          arvore: number
+          carregada: boolean
+          comprimento: number | null
+          created_at: string
+          d_pe1: number | null
+          d_pe2: number | null
+          d_topo1: number | null
+          d_topo2: number | null
+          especie: string | null
+          plaqueta: number
+          romaneio_id: string | null
+          secao: string | null
+          volume: number
+        }
+        Insert: {
+          arvore: number
+          carregada?: boolean
+          comprimento?: number | null
+          created_at?: string
+          d_pe1?: number | null
+          d_pe2?: number | null
+          d_topo1?: number | null
+          d_topo2?: number | null
+          especie?: string | null
+          plaqueta: number
+          romaneio_id?: string | null
+          secao?: string | null
+          volume?: number
+        }
+        Update: {
+          arvore?: number
+          carregada?: boolean
+          comprimento?: number | null
+          created_at?: string
+          d_pe1?: number | null
+          d_pe2?: number | null
+          d_topo1?: number | null
+          d_topo2?: number | null
+          especie?: string | null
+          plaqueta?: number
+          romaneio_id?: string | null
+          secao?: string | null
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toras_romaneio_id_fkey"
+            columns: ["romaneio_id"]
+            isOneToOne: false
+            referencedRelation: "romaneios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
