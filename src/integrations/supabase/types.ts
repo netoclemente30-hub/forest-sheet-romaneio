@@ -21,6 +21,7 @@ export type Database = {
           categoria: string | null
           created_at: string
           dap: number | null
+          nome_cientifico: string | null
           nome_vulgar: string
           numero: number
           picada: string | null
@@ -32,6 +33,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           dap?: number | null
+          nome_cientifico?: string | null
           nome_vulgar?: string
           numero: number
           picada?: string | null
@@ -43,10 +45,29 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           dap?: number | null
+          nome_cientifico?: string | null
           nome_vulgar?: string
           numero?: number
           picada?: string | null
           volume?: number | null
+        }
+        Relationships: []
+      }
+      autex: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          numero: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          numero: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          numero?: string
         }
         Relationships: []
       }
@@ -92,6 +113,7 @@ export type Database = {
       toras: {
         Row: {
           arvore: number
+          autex: string | null
           carregada: boolean
           comprimento: number | null
           created_at: string
@@ -100,6 +122,7 @@ export type Database = {
           d_topo1: number | null
           d_topo2: number | null
           especie: string | null
+          nome_cientifico: string | null
           plaqueta: number
           romaneio_id: string | null
           secao: string | null
@@ -107,6 +130,7 @@ export type Database = {
         }
         Insert: {
           arvore: number
+          autex?: string | null
           carregada?: boolean
           comprimento?: number | null
           created_at?: string
@@ -115,6 +139,7 @@ export type Database = {
           d_topo1?: number | null
           d_topo2?: number | null
           especie?: string | null
+          nome_cientifico?: string | null
           plaqueta: number
           romaneio_id?: string | null
           secao?: string | null
@@ -122,6 +147,7 @@ export type Database = {
         }
         Update: {
           arvore?: number
+          autex?: string | null
           carregada?: boolean
           comprimento?: number | null
           created_at?: string
@@ -130,12 +156,20 @@ export type Database = {
           d_topo1?: number | null
           d_topo2?: number | null
           especie?: string | null
+          nome_cientifico?: string | null
           plaqueta?: number
           romaneio_id?: string | null
           secao?: string | null
           volume?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "toras_autex_fkey"
+            columns: ["autex"]
+            isOneToOne: false
+            referencedRelation: "autex"
+            referencedColumns: ["numero"]
+          },
           {
             foreignKeyName: "toras_romaneio_id_fkey"
             columns: ["romaneio_id"]
