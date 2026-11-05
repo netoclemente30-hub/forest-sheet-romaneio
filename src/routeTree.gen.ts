@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
+import { Route as RomaneioRouteImport } from './routes/romaneio'
 import { Route as TorasRouteImport } from './routes/toras'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const EtiquetasRoute = EtiquetasRouteImport.update({
   path: '/etiquetas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RomaneioRoute = RomaneioRouteImport.update({
+  id: '/romaneio',
+  path: '/romaneio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TorasRoute = TorasRouteImport.update({
   id: '/toras',
   path: '/toras',
@@ -32,30 +38,34 @@ const TorasRoute = TorasRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/romaneio': typeof RomaneioRoute
   '/toras': typeof TorasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/romaneio': typeof RomaneioRoute
   '/toras': typeof TorasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/romaneio': typeof RomaneioRoute
   '/toras': typeof TorasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/etiquetas' | '/toras'
+  fullPaths: '/' | '/etiquetas' | '/romaneio' | '/toras'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/etiquetas' | '/toras'
-  id: '__root__' | '/' | '/etiquetas' | '/toras'
+  to: '/' | '/etiquetas' | '/romaneio' | '/toras'
+  id: '__root__' | '/' | '/etiquetas' | '/romaneio' | '/toras'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EtiquetasRoute: typeof EtiquetasRoute
+  RomaneioRoute: typeof RomaneioRoute
   TorasRoute: typeof TorasRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EtiquetasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/romaneio': {
+      id: '/romaneio'
+      path: '/romaneio'
+      fullPath: '/romaneio'
+      preLoaderRoute: typeof RomaneioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/toras': {
       id: '/toras'
       path: '/toras'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EtiquetasRoute: EtiquetasRoute,
+  RomaneioRoute: RomaneioRoute,
   TorasRoute: TorasRoute,
 }
 export const routeTree = rootRouteImport
