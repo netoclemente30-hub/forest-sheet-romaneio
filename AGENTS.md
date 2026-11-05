@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Data is read client-side with react-query (`src/lib/data.ts`) after sign-in in `AppShell`; all signed-in users share one team dataset (RLS `authenticated` = full access). Why: field team app, SSR has no session.
+- Tora volume uses `volumeTora` in `src/lib/volume.ts` (Smalian, same as the original spreadsheet); never duplicate the formula.
