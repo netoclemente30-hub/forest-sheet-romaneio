@@ -1,5 +1,6 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut, TreePine } from "lucide-react";
+import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse } from "lucide-react";
+import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginScreen } from "./LoginScreen";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +9,7 @@ const nav = [
   { to: "/", label: "Início", icon: Home },
   { to: "/base", label: "Base", icon: TreePine },
   { to: "/toras", label: "Toras", icon: Layers },
+  { to: "/estoque", label: "Estoque", icon: Warehouse },
   { to: "/romaneio", label: "Romaneio", icon: Truck },
   { to: "/historico", label: "Histórico", icon: History },
 ] as const;
@@ -20,15 +22,15 @@ export function AppShell() {
     <div className="min-h-screen pb-20">
       <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex items-center justify-between sticky top-0 z-20">
         <span className="font-display text-xl font-bold uppercase tracking-wide">Manejo Florestal</span>
-        <button aria-label="Sair" onClick={() => supabase.auth.signOut()} className="opacity-80">
+          <Button size="icon" variant="ghost" aria-label="Sair" onClick={() => supabase.auth.signOut()} className="opacity-80">
           <LogOut className="size-5" />
-        </button>
+          </Button>
       </header>
       <main className="mx-auto max-w-3xl p-4">
         <Outlet />
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">
-        <div className="mx-auto max-w-3xl grid grid-cols-5">
+        <div className="mx-auto max-w-3xl grid grid-cols-6">
           {nav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}

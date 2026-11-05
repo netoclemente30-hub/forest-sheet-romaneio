@@ -4,12 +4,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { volumeTora } from "@/lib/volume";
+import { lerBase } from "@/lib/import-base";
+import modelo from "@/assets/modelo-base.xlsx.asset.json";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Download } from "lucide-react";
 
 export const Route = createFileRoute("/importar")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Importar planilha — Manejo Florestal" },
       { name: "description", content: "Importe a BASE e os Cálculos de Inventário do Excel." },
       { property: "og:title", content: "Importar planilha — Manejo Florestal" },
@@ -41,21 +45,13 @@ function Importar() {
       const wb = XLSX.read(await file.arrayBuffer());
       const base = wb.Sheets["BASE"];
       const calc = wb.Sheets["Calculos_Inventario"];
-      if (!base || !calc) throw new Error("A planilha precisa das abas BASE e Calculos_Inventario");
-
-      const arvores = new Map<number, { numero: number; nome_vulgar: string; cap: number | null; dap: number | null; altura: number | null; volume: number | null; categoria: string | null; picada: string | null }>();
-      let picada: string | null = null;
-      for (const r of XLSX.utils.sheet_to_json<Row>(base, { header: 1 })) {
-        const a = r[0];
-        if (typeof a === "string" && a.toLowerCase().startsWith("picada")) picada = a.split(":")[1]?.trim() ?? a;
-        if (typeof a === "number" && r[1]) {
-          arvores.set(a, { numero: a, nome_vulgar: String(r[1]), cap: n(r[2]), dap: n(r[3]), altura: n(r[4]), volume: n(r[5]), categoria: r[6] ? String(r[6]) : null, picada });
-        }
-      }
+      if (!base) throw new Error("A planilha precisa da aba BASE");
+      const arvores = lerBase(XLSX.utils.sheet_to_json<Row>(base, { header: 1 }));
+      if (!arvores.size) throw new Error("Nenhuma árvore válida na BASE. Preencha número e espécie.");
 
       const toras = new Map<number, Record<string, unknown>>();
       let dup = 0;
-      for (const r of XLSX.utils.sheet_to_json<Row>(calc, { header: 1 }).slice(1)) {
+      for (const r of (calc ? XLSX.utils.sheet_to_json<Row>(calc, { header: 1 }).slice(1) : [])) {
         const pl = n(r[0]);
         const arv = n(r[1]);
         if (!pl || arv === null) continue;
@@ -63,7 +59,7 @@ function Importar() {
         const m = { d_topo1: n(r[4]), d_topo2: n(r[5]), d_pe1: n(r[6]), d_pe2: n(r[7]), comprimento: n(r[10]) };
         toras.set(pl, {
           plaqueta: pl, arvore: arv, especie: arvores.get(arv)?.nome_vulgar ?? "Não cadastrada",
-          secao: r[3] ? String(r[3]) : null, ...m, volume: volumeTora(m),
+          secao: r[3] ? String(r[3]) : null, nome_cientifico: arvores.get(arv)?.nome_cientifico ?? null, ...m, volume: volumeTora(m),
           carregada: String(r[12] ?? "").toLowerCase() === "carregada",
         });
       }
@@ -96,9 +92,10 @@ function Importar() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Importar planilha</h1>
       <p className="text-sm text-muted-foreground">
-        Envie o arquivo Excel (.xlsx ou .xlsm) com as abas <b>BASE</b> e <b>Calculos_Inventario</b>. Árvores são atualizadas;
+        Envie o arquivo Excel (.xlsx ou .xlsm) com a aba <b>BASE</b>. A aba <b>Calculos_Inventario</b> é opcional. Árvores são atualizadas;
         toras novas são adicionadas e as que já existem no app não são alteradas.
       </p>
+      <Button asChild variant="outline"><a href={modelo.url} download="modelo-base.xlsx"><Download /> Baixar planilha modelo</a></Button>
       <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary p-8 text-center bg-card ${busy ? "opacity-50" : "cursor-pointer"}`}>
         <FileSpreadsheet className="size-10 text-primary" />
         <span className="font-semibold">Escolher arquivo</span>

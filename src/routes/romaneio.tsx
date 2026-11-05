@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { torasQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
+import { plaquetaDoQr } from "@/lib/tora-qr";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ import { Camera, X, AlertTriangle } from "lucide-react";
 export const Route = createFileRoute("/romaneio")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Novo romaneio — Manejo Florestal" },
       { name: "description", content: "Monte a carga do caminhão pelas plaquetas e some os volumes." },
       { property: "og:title", content: "Novo romaneio — Manejo Florestal" },
@@ -39,8 +42,8 @@ function RomaneioPage() {
 
   const adicionar = useCallback(
     (raw: string) => {
-      const n = Number(String(raw).replace(/\D/g, ""));
-      if (!n) return;
+      const n = plaquetaDoQr(raw);
+      if (!n) { toast.error("QR code inválido ou plaqueta inválida"); return; }
       const t = mapa.get(n);
       if (!t) { toast.error(`Plaqueta ${n} não encontrada no inventário`); return; }
       if (t.carregada) { toast.warning(`Plaqueta ${n} JÁ FOI CARREGADA em outra carga!`, { duration: 6000 }); return; }
@@ -100,7 +103,7 @@ function RomaneioPage() {
 
       <div className="sticky top-14 z-10 bg-background py-2 space-y-2">
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); adicionar(plq); setPlq(""); inputRef.current?.focus(); }}>
-          <Input ref={inputRef} inputMode="numeric" placeholder="Digite a plaqueta" value={plq} onChange={(e) => setPlq(e.target.value)} className="h-12 text-lg" />
+          <Input ref={inputRef} aria-label="Plaqueta ou conteúdo QR" placeholder="Digite a plaqueta ou cole o QR" value={plq} onChange={(e) => setPlq(e.target.value)} className="h-12 text-lg" />
           <Button type="submit" className="h-12">Adicionar</Button>
           <Button type="button" variant="secondary" className="h-12" aria-label="Ler QR code" onClick={() => setScan(!scan)}><Camera /></Button>
         </form>
