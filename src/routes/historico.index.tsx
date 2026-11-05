@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 export const Route = createFileRoute("/historico/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Histórico de cargas — Manejo Florestal" },
       { name: "description", content: "Todos os romaneios de carga salvos." },
       { property: "og:title", content: "Histórico de cargas — Manejo Florestal" },

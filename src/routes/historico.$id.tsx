@@ -11,6 +11,8 @@ import { FileDown, Trash2 } from "lucide-react";
 export const Route = createFileRoute("/historico/$id")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Romaneio — Manejo Florestal" },
       { name: "description", content: "Detalhes e PDF do romaneio de carga." },
       { property: "og:title", content: "Romaneio — Manejo Florestal" },

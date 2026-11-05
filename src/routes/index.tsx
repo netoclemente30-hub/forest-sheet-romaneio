@@ -8,6 +8,8 @@ import { Truck, Plus, Upload } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Painel — Manejo Florestal" },
       { name: "description", content: "Resumo do inventário, toras no pátio e cargas." },
       { property: "og:title", content: "Painel — Manejo Florestal" },

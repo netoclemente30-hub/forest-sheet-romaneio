@@ -17,6 +17,8 @@ export const Route = createFileRoute("/toras")({
   validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Toras — Manejo Florestal" },
       { name: "description", content: "Cálculos de inventário: toras medidas, volumes e QR codes." },
       { property: "og:title", content: "Toras — Manejo Florestal" },

@@ -9,6 +9,8 @@ export const Route = createFileRoute("/etiquetas")({
   validateSearch: (s: Record<string, unknown>) => ({ p: typeof s["p"] === "string" ? s["p"] : String(s["p"] ?? "") }),
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Etiquetas QR — Manejo Florestal" },
       { name: "description", content: "Imprima etiquetas com QR code para colar nas toras." },
       { property: "og:title", content: "Etiquetas QR — Manejo Florestal" },

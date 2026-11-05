@@ -12,6 +12,8 @@ import { FileSpreadsheet, Download } from "lucide-react";
 export const Route = createFileRoute("/importar")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Importar planilha — Manejo Florestal" },
       { name: "description", content: "Importe a BASE e os Cálculos de Inventário do Excel." },
       { property: "og:title", content: "Importar planilha — Manejo Florestal" },

@@ -16,6 +16,8 @@ import { Camera, X, AlertTriangle } from "lucide-react";
 export const Route = createFileRoute("/romaneio")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Novo romaneio — Manejo Florestal" },
       { name: "description", content: "Monte a carga do caminhão pelas plaquetas e some os volumes." },
       { property: "og:title", content: "Novo romaneio — Manejo Florestal" },
