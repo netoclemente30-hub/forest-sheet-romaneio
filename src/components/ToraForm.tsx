@@ -7,6 +7,7 @@ import { volumeTora, fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AutexPicker } from "./AutexPicker";
 
 const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
@@ -15,6 +16,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
   const proxima = useMemo(() => toras.reduce((m, t) => Math.max(m, t.plaqueta), 0) + 1, [toras]);
   const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: "A", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   const [busy, setBusy] = useState(false);
+  const [autex, setAutex] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   const especie = arvores.find((a) => a.numero === Number(f.arvore))?.nome_vulgar;
@@ -27,7 +29,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
     setBusy(true);
     const { error } = await supabase.from("toras").insert({
-      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", secao: f.secao, ...medidas, volume: vol,
+      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arvores.find((a) => a.numero === Number(f.arvore))?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
@@ -46,6 +48,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
 
   return (
     <form onSubmit={salvar} className="space-y-3">
+      <AutexPicker value={autex} onChange={setAutex} />
       <div className="grid grid-cols-3 gap-2">
         {field("plaqueta", "Plaqueta azul")}
         {field("arvore", "Nº árvore")}

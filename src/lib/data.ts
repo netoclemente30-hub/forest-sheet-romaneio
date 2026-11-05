@@ -5,6 +5,15 @@ export type Tora = Database["public"]["Tables"]["toras"]["Row"];
 export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];
 export type Romaneio = Database["public"]["Tables"]["romaneios"]["Row"];
 
+export const autexQuery = {
+  queryKey: ["autex"],
+  queryFn: async () => {
+    const { data, error } = await supabase.from("autex").select("*").order("numero");
+    if (error) throw error;
+    return data;
+  },
+};
+
 async function fetchAll<T>(table: "toras" | "arvores", order: string): Promise<T[]> {
   const out: T[] = [];
   const size = 1000;
