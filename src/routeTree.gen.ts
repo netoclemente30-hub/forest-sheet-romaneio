@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
+import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as RomaneioRouteImport } from './routes/romaneio'
 import { Route as TorasRouteImport } from './routes/toras'
 import { Route as HistoricoIndexRouteImport } from './routes/historico.index'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const EtiquetasRoute = EtiquetasRouteImport.update({
   id: '/etiquetas',
   path: '/etiquetas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportarRoute = ImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RomaneioRoute = RomaneioRouteImport.update({
@@ -50,6 +56,7 @@ const HistoricoIdRoute = HistoricoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/importar': typeof ImportarRoute
   '/romaneio': typeof RomaneioRoute
   '/toras': typeof TorasRoute
   '/historico/$id': typeof HistoricoIdRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/importar': typeof ImportarRoute
   '/romaneio': typeof RomaneioRoute
   '/toras': typeof TorasRoute
   '/historico/$id': typeof HistoricoIdRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/importar': typeof ImportarRoute
   '/romaneio': typeof RomaneioRoute
   '/toras': typeof TorasRoute
   '/historico/$id': typeof HistoricoIdRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/etiquetas'
+    | '/importar'
     | '/romaneio'
     | '/toras'
     | '/historico/$id'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/etiquetas'
+    | '/importar'
     | '/romaneio'
     | '/toras'
     | '/historico/$id'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/etiquetas'
+    | '/importar'
     | '/romaneio'
     | '/toras'
     | '/historico/$id'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EtiquetasRoute: typeof EtiquetasRoute
+  ImportarRoute: typeof ImportarRoute
   RomaneioRoute: typeof RomaneioRoute
   TorasRoute: typeof TorasRoute
   HistoricoIdRoute: typeof HistoricoIdRoute
@@ -122,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/etiquetas'
       fullPath: '/etiquetas'
       preLoaderRoute: typeof EtiquetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/importar': {
+      id: '/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof ImportarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/romaneio': {
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EtiquetasRoute: EtiquetasRoute,
+  ImportarRoute: ImportarRoute,
   RomaneioRoute: RomaneioRoute,
   TorasRoute: TorasRoute,
   HistoricoIdRoute: HistoricoIdRoute,

@@ -42,8 +42,8 @@ function RomaneioPage() {
       const n = Number(String(raw).replace(/\D/g, ""));
       if (!n) return;
       const t = mapa.get(n);
-      if (!t) return toast.error(`Plaqueta ${n} não encontrada no inventário`);
-      if (t.carregada) return toast.warning(`Plaqueta ${n} JÁ FOI CARREGADA em outra carga!`, { duration: 6000 });
+      if (!t) { toast.error(`Plaqueta ${n} não encontrada no inventário`); return; }
+      if (t.carregada) { toast.warning(`Plaqueta ${n} JÁ FOI CARREGADA em outra carga!`, { duration: 6000 }); return; }
       setItens((cur) => {
         if (cur.some((x) => x.plaqueta === n)) {
           toast.warning(`Plaqueta ${n} já está nesta carga`);
@@ -60,21 +60,21 @@ function RomaneioPage() {
   const resumo = resumoPorEspecie(itens);
 
   async function salvar() {
-    if (!itens.length) return toast.error("Adicione plaquetas");
+    if (!itens.length) { toast.error("Adicione plaquetas"); return; }
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from("romaneios")
-      .insert({ ...cab, total_volume: Math.round(total * 10000) / 10000, qtd_toras: itens.length, created_by: u.user?.id })
+      .insert({ ...cab, total_volume: Math.round(total * 10000) / 10000, qtd_toras: itens.length, created_by: u.user?.id ?? null })
       .select()
       .single();
-    if (error || !data) { setBusy(false); return toast.error(error?.message ?? "Erro"); }
+    if (error || !data) { setBusy(false); { toast.error(error?.message ?? "Erro"); return; } }
     const { error: e2 } = await supabase
       .from("toras")
       .update({ carregada: true, romaneio_id: data.id })
       .in("plaqueta", itens.map((t) => t.plaqueta));
     setBusy(false);
-    if (e2) return toast.error(e2.message);
+    if (e2) { toast.error(e2.message); return; }
     await qc.invalidateQueries();
     toast.success("Romaneio salvo");
     nav({ to: "/historico/$id", params: { id: data.id } });

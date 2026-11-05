@@ -24,13 +24,13 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     const plaqueta = Number(f.plaqueta);
-    if (toras.some((t) => t.plaqueta === plaqueta)) return toast.error(`Plaqueta ${plaqueta} já existe`);
+    if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
     setBusy(true);
     const { error } = await supabase.from("toras").insert({
       plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", secao: f.secao, ...medidas, volume: vol,
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Tora ${plaqueta} salva — ${fmtM3(vol)} m³`);
     await qc.invalidateQueries({ queryKey: ["toras"] });
     onSaved(plaqueta);

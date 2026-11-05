@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/etiquetas")({
-  validateSearch: (s: Record<string, unknown>) => ({ p: typeof s.p === "string" ? s.p : String(s.p ?? "") }),
+  validateSearch: (s: Record<string, unknown>) => ({ p: typeof s["p"] === "string" ? s["p"] : String(s["p"] ?? "") }),
   head: () => ({
     meta: [
       { title: "Etiquetas QR — Manejo Florestal" },

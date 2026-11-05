@@ -77,7 +77,7 @@ function Detalhe() {
     if (!confirm("Excluir esta carga? As toras voltam para o pátio.")) return;
     await supabase.from("toras").update({ carregada: false, romaneio_id: null }).eq("romaneio_id", id);
     const { error } = await supabase.from("romaneios").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     await qc.invalidateQueries();
     toast.success("Carga excluída");
     nav({ to: "/historico" });

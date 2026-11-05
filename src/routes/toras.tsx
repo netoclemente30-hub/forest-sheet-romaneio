@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, QrCode, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/toras")({
-  validateSearch: (s: Record<string, unknown>) => ({ nova: s.nova === true || s.nova === "true" ? true : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
   head: () => ({
     meta: [
       { title: "Toras — Manejo Florestal" },
