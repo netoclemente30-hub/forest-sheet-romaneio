@@ -30,7 +30,7 @@ type Filtro = "todas" | "patio" | "carregadas";
 
 function TorasPage() {
   const { nova } = Route.useSearch();
-  return <TorasList nova={nova} />;
+  return <TorasList nova={nova === true} />;
 }
 
 export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?: boolean }) {
