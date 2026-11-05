@@ -1,11 +1,12 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut } from "lucide-react";
+import { Home, Layers, Truck, History, LogOut, TreePine } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginScreen } from "./LoginScreen";
 import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
+  { to: "/base", label: "Base", icon: TreePine },
   { to: "/toras", label: "Toras", icon: Layers },
   { to: "/romaneio", label: "Romaneio", icon: Truck },
   { to: "/historico", label: "Histórico", icon: History },
@@ -27,7 +28,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">
-        <div className="mx-auto max-w-3xl grid grid-cols-4">
+        <div className="mx-auto max-w-3xl grid grid-cols-5">
           {nav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
