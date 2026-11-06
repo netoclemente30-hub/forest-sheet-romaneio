@@ -2,13 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { arvoresQuery, autexQuery, torasQuery } from "@/lib/data";
+import { arvoresQuery, autexQuery, torasQuery, type Arvore } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { chaveArvore } from "@/lib/import-base";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/base")({
   head: () => ({
@@ -37,6 +40,52 @@ function BasePage() {
   const [lim, setLim] = useState(100);
   const [verManejos, setVerManejos] = useState(false);
   const [busyAutex, setBusyAutex] = useState("");
+  const [editando, setEditando] = useState<Arvore | null>(null);
+  const [form, setForm] = useState({ numero: "", nome_vulgar: "", nome_cientifico: "", cap: "", dap: "", altura: "", volume: "", categoria: "", picada: "", autex: "" });
+  const [busyArvore, setBusyArvore] = useState(false);
+
+  function abrirEdicao(a: Arvore) {
+    setForm({
+      numero: String(a.numero), nome_vulgar: a.nome_vulgar, nome_cientifico: a.nome_cientifico ?? "",
+      cap: a.cap != null ? String(a.cap) : "", dap: a.dap != null ? Number(a.dap).toFixed(1) : "",
+      altura: a.altura != null ? String(a.altura) : "", volume: a.volume != null ? Number(a.volume).toFixed(4) : "",
+      categoria: a.categoria ?? "", picada: a.picada ?? "", autex: a.autex,
+    });
+    setEditando(a);
+  }
+
+  const num = (s: string) => { const n = Number(s.replace(",", ".")); return s.trim() && !isNaN(n) ? n : null; };
+
+  async function salvarEdicao() {
+    if (!editando) return;
+    const numero = parseInt(form.numero, 10);
+    if (!numero || !form.nome_vulgar.trim()) { toast.error("Número e espécie são obrigatórios"); return; }
+    setBusyArvore(true);
+    const { error } = await supabase.from("arvores").update({
+      numero, nome_vulgar: form.nome_vulgar.trim(), nome_cientifico: form.nome_cientifico.trim() || null,
+      cap: num(form.cap), dap: num(form.dap), altura: num(form.altura), volume: num(form.volume),
+      categoria: form.categoria.trim() || null, picada: form.picada.trim() || null, autex: form.autex.trim(),
+    }).eq("id", editando.id);
+    setBusyArvore(false);
+    if (error) { toast.error(error.message.includes("duplicate") ? "Já existe uma árvore com esse número nessa AUTEX" : error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["arvores"] });
+    setEditando(null);
+    toast.success("Árvore atualizada");
+  }
+
+  async function excluirArvore(a: Arvore) {
+    if (volExpl.has(chaveArvore(a.numero, a.autex))) {
+      toast.error("Essa árvore já tem toras lançadas e não pode ser excluída. Se o manejo acabou, use Encerrar no manejo.");
+      return;
+    }
+    if (!window.confirm(`Excluir a árvore ${a.numero} (${a.nome_vulgar})? Essa ação não pode ser desfeita.`)) return;
+    setBusyArvore(true);
+    const { error } = await supabase.from("arvores").delete().eq("id", a.id);
+    setBusyArvore(false);
+    if (error) { toast.error(error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["arvores"] });
+    toast.success("Árvore excluída");
+  }
 
   const encerradas = useMemo(() => new Set((autex.data ?? []).filter((a) => a.encerrado).map((a) => a.numero)), [autex.data]);
 
@@ -127,6 +176,12 @@ function BasePage() {
                   <div className="text-sm font-semibold">{fmtM3(Number(a.volume ?? 0))}</div>
                   <div className="text-xs text-muted-foreground">{a.categoria}</div>
                 </div>
+                {isAdmin && (
+                  <div className="flex flex-col gap-1">
+                    <Button size="icon" variant="ghost" aria-label={`Editar árvore ${a.numero}`} onClick={() => abrirEdicao(a)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" aria-label={`Excluir árvore ${a.numero}`} disabled={busyArvore} onClick={() => excluirArvore(a)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
+                )}
               </div>
               {ve !== undefined && (
                 <div className="mt-1 ml-[4.25rem] text-xs text-success font-semibold">
@@ -140,6 +195,24 @@ function BasePage() {
         {!arvores.isLoading && lista.length === 0 && <div className="p-4 text-sm text-muted-foreground">Nenhuma árvore. Importe sua planilha pela tela inicial.</div>}
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 200)}>Mostrar mais</Button>}
+      <Dialog open={!!editando} onOpenChange={(o) => { if (!o) setEditando(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Editar árvore {editando?.numero}</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Número</Label><Input inputMode="numeric" value={form.numero ?? ""} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Espécie</Label><Input value={form.nome_vulgar ?? ""} onChange={(e) => setForm({ ...form, nome_vulgar: e.target.value })} /></div>
+            <div className="col-span-2 space-y-1"><Label>Nome científico</Label><Input value={form.nome_cientifico ?? ""} onChange={(e) => setForm({ ...form, nome_cientifico: e.target.value })} /></div>
+            <div className="space-y-1"><Label>CAP (cm)</Label><Input inputMode="decimal" value={form.cap ?? ""} onChange={(e) => setForm({ ...form, cap: e.target.value })} /></div>
+            <div className="space-y-1"><Label>DAP (cm)</Label><Input inputMode="decimal" value={form.dap ?? ""} onChange={(e) => setForm({ ...form, dap: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Altura (m)</Label><Input inputMode="decimal" value={form.altura ?? ""} onChange={(e) => setForm({ ...form, altura: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Volume (m³)</Label><Input inputMode="decimal" value={form.volume ?? ""} onChange={(e) => setForm({ ...form, volume: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Categoria</Label><Input value={form.categoria ?? ""} onChange={(e) => setForm({ ...form, categoria: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Picada</Label><Input value={form.picada ?? ""} onChange={(e) => setForm({ ...form, picada: e.target.value })} /></div>
+            <div className="col-span-2 space-y-1"><Label>AUTEX</Label><Input value={form.autex ?? ""} onChange={(e) => setForm({ ...form, autex: e.target.value })} /></div>
+          </div>
+          <Button className="w-full" disabled={busyArvore} onClick={salvarEdicao}>Salvar alterações</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
