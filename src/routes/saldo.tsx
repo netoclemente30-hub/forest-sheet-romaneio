@@ -44,6 +44,7 @@ function Saldo() {
   const pendentes = (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null);
   const [inicio, setInicio] = useState("");
   const [busy, setBusy] = useState(false);
+  const [busca, setBusca] = useState("");
 
   async function cadastrar() {
     const ini = Number(inicio);
@@ -116,8 +117,9 @@ function Saldo() {
           </div>
         </div>}
         <Button asChild className="w-full" disabled={!ok.length}><Link to="/etiquetas" search={{ p: ok.map((r) => r.tora!.plaqueta).join(",") }}><Printer /> Imprimir plaquetas ({ok.length})</Link></Button>
+        <Input placeholder="Filtrar por nome, científico, árvore ou AUTEX" aria-label="Filtrar saldo" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-12" />
         <div className="bg-card border rounded-xl divide-y">
-          {res.map((r, i) => (
+          {res.filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); }).map((r, i) => (
             <div key={i} className="flex items-center gap-3 p-3">
               <div className="font-display text-xl font-bold w-14">{r.tora?.plaqueta ?? "—"}</div>
               <div className="flex-1 min-w-0">
