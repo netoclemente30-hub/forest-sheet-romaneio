@@ -32,6 +32,7 @@ function Etiquetas() {
   const selecionadas = lista.flatMap((pl) => { const t = toras.data?.find((x) => x.plaqueta === pl); return t ? [t] : []; });
   const [tam, setTam] = useState<TamanhoEtiqueta>({ largura: 100, altura: 70 });
   const [busy, setBusy] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   useEffect(() => {
     try { const v = JSON.parse(localStorage.getItem("etiqueta-tamanho") ?? "null"); if (v && tamanhoValido(v)) setTam(v); } catch { /* ignora */ }
   }, []);
@@ -41,8 +42,20 @@ function Etiquetas() {
     setBusy(true);
     try {
       const doc = await gerarEtiquetasPdf(selecionadas, tam);
-      doc.save(`etiquetas-${tam.largura}x${tam.altura}mm.pdf`);
-    } catch { toast.error("Não foi possível gerar o arquivo"); }
+      const nome = `etiquetas-${tam.largura}x${tam.altura}mm.pdf`;
+      const blob = doc.output("blob");
+      const file = new File([blob], nome, { type: "application/pdf" });
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: nome }); setBusy(false); return; }
+        catch (e) { if ((e as Error).name === "AbortError") { setBusy(false); return; } }
+      }
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      const a = document.createElement("a");
+      a.href = url; a.download = nome; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+      toast.success("PDF gerado — se não baixar, toque em \"Abrir PDF\"");
+    } catch (e) { console.error(e); toast.error("Não foi possível gerar o arquivo"); }
     setBusy(false);
   }
   return (
@@ -66,6 +79,7 @@ function Etiquetas() {
           <p className="text-xs text-muted-foreground">Gera um PDF com uma etiqueta por página, no tamanho exato. Na impressão, use "Tamanho real / 100%".</p>
         </div>
         <Button disabled={!selecionadas.length || toras.isLoading || busy} className="w-full h-12" onClick={gerar}><Printer /> {busy ? "Gerando…" : `Gerar PDF de ${selecionadas.length} etiqueta(s)`}</Button>
+        {pdfUrl && <a href={pdfUrl} target="_blank" rel="noopener" className="block text-center underline font-semibold py-2">Abrir PDF</a>}
       </div>
       {toras.isLoading && <p>Carregando etiquetas…</p>}
       {toras.isError && <p className="text-destructive">Não foi possível carregar as etiquetas.</p>}
