@@ -10,6 +10,7 @@ import { resumoPorEspecie } from "@/lib/romaneio";
 import { empresaIdGravacao } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
+import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { plaquetaDoQr } from "@/lib/tora-qr";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ function RomaneioPage() {
 
   async function salvar() {
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
+    const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
     if (!estaOnline()) {
       setBusy(true);
       await fila().enfileirar({
@@ -89,6 +91,7 @@ function RomaneioPage() {
         qtd_toras: itens.length,
         plaquetas: itens.map((t) => t.plaqueta),
         empresa_id: empresaIdGravacao().empresa_id ?? null,
+        log,
       });
       setBusy(false);
       setItens([]);
