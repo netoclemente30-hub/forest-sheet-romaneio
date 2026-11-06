@@ -23,17 +23,20 @@ export function useAuth() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [permissoesCarregando, setPermissoesCarregando] = useState(true);
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       if (s?.user) {
-        checarAdmin(s.user.id).then(setIsAdmin);
-        checarSuperAdmin(s.user.id).then(setIsSuperAdmin);
+        Promise.all([checarAdmin(s.user.id), checarSuperAdmin(s.user.id)])
+          .then(([a, sa]) => { setIsAdmin(a); setIsSuperAdmin(sa); })
+          .finally(() => setPermissoesCarregando(false));
         checarEmpresa().then(setEmpresaId);
       } else {
         setIsAdmin(false);
         setIsSuperAdmin(false);
         setEmpresaId(null);
+        setPermissoesCarregando(false);
       }
     });
     supabase.auth.getSession().then(async ({ data }) => {
@@ -44,10 +47,11 @@ export function useAuth() {
       if (data.session?.user) {
         setIsAdmin(await checarAdmin(data.session.user.id));
         setIsSuperAdmin(await checarSuperAdmin(data.session.user.id));
+        setPermissoesCarregando(false);
         setEmpresaId(await checarEmpresa());
-      }
-     }).catch(() => setLoading(false));
+      } else setPermissoesCarregando(false);
+     }).catch(() => { setLoading(false); setPermissoesCarregando(false); });
     return () => data.subscription.unsubscribe();
   }, []);
-  return { session, loading, isAdmin, isSuperAdmin, empresaId };
+  return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId };
 }
