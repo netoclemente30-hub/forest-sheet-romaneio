@@ -35,3 +35,4 @@ use the editor.
 - BASE imports accept the original seven columns plus optional picada, scientific name and AUTEX (col J); trees are unique by (numero, autex) so repeated tree numbers across AUTEX stay separate; the calculations sheet is optional.
 - Sawmill flow: romaneio QR receipt records the destination pátio on the romaneio; logs at a received pátio are sawmill stock until marked serrada.
 - Toras and Estoque share the same log list and selection behavior; saved unladen logs are stock rather than duplicated records.
+- Multi-tenant by company: every data table has empresa_id (DEFAULT minha_empresa(), trigger-filled); RLS scopes all reads/writes to the user's company; user→company link lives in empresa_usuarios; admins create companies and one shared access per company in /usuarios.

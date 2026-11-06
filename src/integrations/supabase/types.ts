@@ -22,6 +22,7 @@ export type Database = {
           categoria: string | null
           created_at: string
           dap: number | null
+          empresa_id: string | null
           id: string
           nome_cientifico: string | null
           nome_vulgar: string
@@ -36,6 +37,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           dap?: number | null
+          empresa_id?: string | null
           id?: string
           nome_cientifico?: string | null
           nome_vulgar?: string
@@ -50,6 +52,7 @@ export type Database = {
           categoria?: string | null
           created_at?: string
           dap?: number | null
+          empresa_id?: string | null
           id?: string
           nome_cientifico?: string | null
           nome_vulgar?: string
@@ -57,23 +60,86 @@ export type Database = {
           picada?: string | null
           volume?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "arvores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       autex: {
         Row: {
           created_at: string
           descricao: string | null
+          empresa_id: string
           numero: string
         }
         Insert: {
           created_at?: string
           descricao?: string | null
+          empresa_id?: string
           numero: string
         }
         Update: {
           created_at?: string
           descricao?: string | null
+          empresa_id?: string
           numero?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autex_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresa_usuarios: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_usuarios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
         }
         Relationships: []
       }
@@ -81,34 +147,56 @@ export type Database = {
         Row: {
           cpf: string | null
           created_at: string
+          empresa_id: string
           nome: string
         }
         Insert: {
           cpf?: string | null
           created_at?: string
+          empresa_id?: string
           nome: string
         }
         Update: {
           cpf?: string | null
           created_at?: string
+          empresa_id?: string
           nome?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "motoristas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       patios: {
         Row: {
           created_at: string
+          empresa_id: string
           nome: string
         }
         Insert: {
           created_at?: string
+          empresa_id?: string
           nome: string
         }
         Update: {
           created_at?: string
+          empresa_id?: string
           nome?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       romaneios: {
         Row: {
@@ -116,6 +204,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data: string
+          empresa_id: string | null
           id: string
           julieta: string | null
           motorista: string | null
@@ -130,6 +219,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: string
+          empresa_id?: string | null
           id?: string
           julieta?: string | null
           motorista?: string | null
@@ -144,6 +234,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: string
+          empresa_id?: string | null
           id?: string
           julieta?: string | null
           motorista?: string | null
@@ -153,7 +244,15 @@ export type Database = {
           recebido_em?: string | null
           total_volume?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "romaneios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       toras: {
         Row: {
@@ -166,6 +265,7 @@ export type Database = {
           d_pe2: number | null
           d_topo1: number | null
           d_topo2: number | null
+          empresa_id: string
           especie: string | null
           nome_cientifico: string | null
           plaqueta: number
@@ -184,6 +284,7 @@ export type Database = {
           d_pe2?: number | null
           d_topo1?: number | null
           d_topo2?: number | null
+          empresa_id?: string
           especie?: string | null
           nome_cientifico?: string | null
           plaqueta: number
@@ -202,6 +303,7 @@ export type Database = {
           d_pe2?: number | null
           d_topo1?: number | null
           d_topo2?: number | null
+          empresa_id?: string
           especie?: string | null
           nome_cientifico?: string | null
           plaqueta?: number
@@ -213,10 +315,17 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "toras_autex_fkey"
-            columns: ["autex"]
+            columns: ["empresa_id", "autex"]
             isOneToOne: false
             referencedRelation: "autex"
-            referencedColumns: ["numero"]
+            referencedColumns: ["empresa_id", "numero"]
+          },
+          {
+            foreignKeyName: "toras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "toras_romaneio_id_fkey"
@@ -248,26 +357,38 @@ export type Database = {
       veiculos: {
         Row: {
           created_at: string
+          empresa_id: string
           placa: string
           tipo: string
         }
         Insert: {
           created_at?: string
+          empresa_id?: string
           placa: string
           tipo: string
         }
         Update: {
           created_at?: string
+          empresa_id?: string
           placa?: string
           tipo?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "veiculos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_minha_empresa: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -275,6 +396,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      minha_empresa: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"

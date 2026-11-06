@@ -36,6 +36,27 @@
       "when": 1793929523576,
       "tag": "0004_usuarios_e_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793930217368,
+      "tag": "0005_empresas_e_isolamento_de_dados",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793930299947,
+      "tag": "0006_chaves_por_empresa",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793930331393,
+      "tag": "0007_empresa_id_default_automatico",
+      "breakpoints": true
     }
   ]
 }

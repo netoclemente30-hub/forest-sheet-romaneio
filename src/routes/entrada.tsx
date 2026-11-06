@@ -60,7 +60,7 @@ function Entrada() {
     const p = patio.trim();
     if (!p) { toast.error("Escolha o pátio de destino"); return; }
     setBusy(true);
-    await supabase.from("patios").upsert({ nome: p }, { ignoreDuplicates: true });
+    await supabase.from("patios").upsert({ nome: p }, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
     const { error } = await supabase.from("romaneios").update({ recebido_em: new Date().toISOString(), patio: p }).eq("id", id);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
