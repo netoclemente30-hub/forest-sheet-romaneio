@@ -1,0 +1,1 @@
+ALTER TABLE public.toras ADD COLUMN etiqueta_impressa_em timestamptz;
