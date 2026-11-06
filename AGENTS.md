@@ -32,5 +32,6 @@ use the editor.
 - Data is read client-side with react-query (`src/lib/data.ts`) after sign-in in `AppShell`; all signed-in users share one team dataset (RLS `authenticated` = full access). Why: field team app, SSR has no session.
 - Tora volume uses `volumeTora` in `src/lib/volume.ts` (Smalian, same as the original spreadsheet); never duplicate the formula.
 - AUTEX uses a team-shared registry referenced by logs; QR payloads are versioned and resolve to current inventory rows before loading, so printed data never overrides stock status.
-- BASE imports accept the original seven columns plus optional picada and scientific name; the calculations sheet is optional so inventory-only templates work.
+- BASE imports accept the original seven columns plus optional picada, scientific name and AUTEX (col J); trees are unique by (numero, autex) so repeated tree numbers across AUTEX stay separate; the calculations sheet is optional.
+- Sawmill flow: romaneio QR receipt records the destination pátio on the romaneio; logs at a received pátio are sawmill stock until marked serrada.
 - Toras and Estoque share the same log list and selection behavior; saved unladen logs are stock rather than duplicated records.

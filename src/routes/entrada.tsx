@@ -32,6 +32,8 @@ function Entrada() {
   const [txt, setTxt] = useState("");
   const [scan, setScan] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [patio, setPatio] = useState("");
+  const patios = useQuery({ queryKey: ["patios"], queryFn: async () => (await supabase.from("patios").select("*").order("nome")).data ?? [] });
 
   const q = useQuery({
     queryKey: ["entrada", id],
@@ -55,12 +57,15 @@ function Entrada() {
 
   async function confirmar() {
     if (!id) return;
+    const p = patio.trim();
+    if (!p) { toast.error("Escolha o pátio de destino"); return; }
     setBusy(true);
-    const { error } = await supabase.from("romaneios").update({ recebido_em: new Date().toISOString() }).eq("id", id);
+    await supabase.from("patios").upsert({ nome: p }, { ignoreDuplicates: true });
+    const { error } = await supabase.from("romaneios").update({ recebido_em: new Date().toISOString(), patio: p }).eq("id", id);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     await qc.invalidateQueries();
-    toast.success(`Entrada de ${q.data?.itens.length ?? 0} toras confirmada`);
+    toast.success(`Entrada de ${q.data?.itens.length ?? 0} toras confirmada no ${p}`);
   }
 
   const r = q.data?.r;
@@ -86,9 +91,16 @@ function Entrada() {
             <div className="mt-2 font-display text-4xl font-bold">{itens.length} toras · {fmtM3(itens.reduce((n, t) => n + Number(t.volume), 0))} m³</div>
           </div>
           {r.recebido_em ? (
-            <div className="flex items-center gap-2 rounded-lg border p-3 text-success font-semibold"><CheckCircle2 /> Carga já recebida em {new Date(r.recebido_em).toLocaleString("pt-BR")}</div>
+            <div className="flex items-center gap-2 rounded-lg border p-3 text-success font-semibold"><CheckCircle2 /> Carga recebida em {new Date(r.recebido_em).toLocaleString("pt-BR")}{r.patio && ` · ${r.patio}`}</div>
           ) : (
+            <>
+            <label className="text-sm font-semibold block space-y-1">Pátio de destino
+              <input list="lista-patios" aria-label="Pátio de destino" placeholder="Ex.: Pátio RJ Madeiras" value={patio} onChange={(e) => setPatio(e.target.value)} className="w-full h-12 rounded-md border bg-background px-3 font-normal" />
+            </label>
+            <datalist id="lista-patios">{(patios.data ?? []).map((x) => <option key={x.nome} value={x.nome} />)}</datalist>
+            {!!patios.data?.length && <div className="flex flex-wrap gap-2">{patios.data.map((x) => <Button key={x.nome} type="button" size="sm" variant={patio === x.nome ? "default" : "outline"} onClick={() => setPatio(x.nome)}>{x.nome}</Button>)}</div>}
             <Button size="lg" className="w-full h-12" disabled={busy} onClick={confirmar}>Confirmar entrada das {itens.length} toras</Button>
+            </>
           )}
           <div className="bg-card border rounded-xl p-3">
             {resumoPorEspecie(itens).map((e) => (

@@ -19,17 +19,25 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
   const [autex, setAutex] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
-  const especie = arvores.find((a) => a.numero === Number(f.arvore))?.nome_vulgar;
+  const candidatas = f.arvore ? arvores.filter((a) => a.numero === Number(f.arvore)) : [];
+  const arv = candidatas.length === 1 ? candidatas[0] : candidatas.find((a) => a.autex === autex);
+  const especie = arv?.nome_vulgar;
+  const escolherArvore = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    set(k)(e);
+    const c = arvores.filter((a) => a.numero === Number(e.target.value));
+    const u = c.length === 1 ? c[0] : undefined; if (u?.autex) setAutex(u.autex);
+  };
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumeTora(medidas);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     const plaqueta = Number(f.plaqueta);
+    if (candidatas.length > 1 && !arv) { toast.error(`Árvore ${f.arvore} existe em mais de uma AUTEX — escolha qual`); return; }
     if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
     setBusy(true);
     const { error } = await supabase.from("toras").insert({
-      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arvores.find((a) => a.numero === Number(f.arvore))?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol,
+      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arv?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
@@ -42,7 +50,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
   const field = (k: keyof typeof f, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (
     <div className="space-y-1">
       <Label htmlFor={k} className="text-xs">{label}</Label>
-      <Input id={k} inputMode={mode} value={f[k]} onChange={set(k)} required={k !== "secao"} className="h-11 text-lg" />
+      <Input id={k} inputMode={mode} value={f[k]} onChange={k === "arvore" ? escolherArvore(k) : set(k)} required={k !== "secao"} className="h-11 text-lg" />
     </div>
   );
 
@@ -54,6 +62,18 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
         {field("arvore", "Nº árvore")}
         {field("secao", "Secção", "text")}
       </div>
+      {candidatas.length > 1 && (
+        <div className="rounded-md border border-primary p-2 space-y-1">
+          <div className="text-sm font-semibold">Árvore {f.arvore} existe em {candidatas.length} AUTEX. De qual é?</div>
+          <div className="flex flex-wrap gap-2">
+            {candidatas.map((a) => (
+              <Button key={a.id} type="button" size="sm" variant={arv?.id === a.id ? "default" : "outline"} onClick={() => setAutex(a.autex)}>
+                {a.autex || "Sem AUTEX"} · {a.nome_vulgar}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className={`text-sm rounded-md px-3 py-2 ${especie ? "bg-secondary" : "bg-muted text-muted-foreground"}`}>
         Espécie: <b>{f.arvore ? especie ?? "Não cadastrada na BASE" : "—"}</b>
       </div>

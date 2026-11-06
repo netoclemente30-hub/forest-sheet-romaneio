@@ -49,6 +49,8 @@ function Importar() {
       const arvores = lerBase(XLSX.utils.sheet_to_json<Row>(base, { header: 1 }));
       if (!arvores.size) throw new Error("Nenhuma árvore válida na BASE. Preencha número e espécie.");
 
+      const porNumero = new Map<number, ReturnType<typeof arvores.get>>();
+      for (const a of arvores.values()) if (!porNumero.has(a.numero)) porNumero.set(a.numero, a);
       const toras = new Map<number, Record<string, unknown>>();
       let dup = 0;
       for (const r of (calc ? XLSX.utils.sheet_to_json<Row>(calc, { header: 1 }).slice(1) : [])) {
@@ -58,16 +60,21 @@ function Importar() {
         if (toras.has(pl)) { dup++; continue; }
         const m = { d_topo1: n(r[4]), d_topo2: n(r[5]), d_pe1: n(r[6]), d_pe2: n(r[7]), comprimento: n(r[10]) };
         toras.set(pl, {
-          plaqueta: pl, arvore: arv, especie: arvores.get(arv)?.nome_vulgar ?? "Não cadastrada",
-          secao: r[3] ? String(r[3]) : null, nome_cientifico: arvores.get(arv)?.nome_cientifico ?? null, ...m, volume: volumeTora(m),
+          plaqueta: pl, arvore: arv, especie: porNumero.get(arv)?.nome_vulgar ?? "Não cadastrada", autex: porNumero.get(arv)?.autex || null,
+          secao: r[3] ? String(r[3]) : null, nome_cientifico: porNumero.get(arv)?.nome_cientifico ?? null, ...m, volume: volumeTora(m),
           carregada: String(r[12] ?? "").toLowerCase() === "carregada",
         });
       }
 
       const av = [...arvores.values()];
+      const autexes = [...new Set(av.map((a) => a.autex).filter(Boolean))];
+      if (autexes.length) {
+        const { error } = await supabase.from("autex").upsert(autexes.map((numero) => ({ numero })), { ignoreDuplicates: true });
+        if (error) throw error;
+      }
       setStatus(`Enviando ${av.length} árvores…`);
       await chunks(av, 500, async (c) => {
-        const { error } = await supabase.from("arvores").upsert(c);
+        const { error } = await supabase.from("arvores").upsert(c, { onConflict: "numero,autex" });
         if (error) throw error;
       }, (d) => setStatus(`Árvores: ${d}/${av.length}`));
 
@@ -92,7 +99,7 @@ function Importar() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Importar planilha</h1>
       <p className="text-sm text-muted-foreground">
-        Envie o arquivo Excel (.xlsx ou .xlsm) com a aba <b>BASE</b>. A aba <b>Calculos_Inventario</b> é opcional. Árvores são atualizadas;
+        Envie o arquivo Excel (.xlsx ou .xlsm) com a aba <b>BASE</b>. A coluna J (depois do nome científico) é a <b>AUTEX</b> — árvores com o mesmo número em AUTEX diferentes ficam separadas. A aba <b>Calculos_Inventario</b> é opcional. Árvores são atualizadas;
         toras novas são adicionadas e as que já existem no app não são alteradas.
       </p>
       <Button asChild variant="outline"><a href={modelo.url} download="modelo-base.xlsx"><Download /> Baixar planilha modelo</a></Button>
