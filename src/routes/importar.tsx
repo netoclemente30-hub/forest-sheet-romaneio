@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { volumeTora } from "@/lib/volume";
 import { lerBase } from "@/lib/import-base";
@@ -35,8 +36,19 @@ async function chunks<T>(arr: T[], size: number, fn: (c: T[]) => Promise<void>, 
 
 function Importar() {
   const qc = useQueryClient();
+  const { isAdmin, loading } = useAuth();
+  const nav = useNavigate();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      toast.error("Só o administrador pode importar planilhas");
+      nav({ to: "/" });
+    }
+  }, [loading, isAdmin, nav]);
+
+  if (loading || !isAdmin) return null;
 
   async function processar(file: File) {
     setBusy(true);

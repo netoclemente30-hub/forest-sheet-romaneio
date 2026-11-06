@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory } from "lucide-react";
+import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginScreen } from "./LoginScreen";
@@ -16,9 +16,10 @@ const nav = [
 ] as const;
 
 export function AppShell() {
-  const { session, loading } = useAuth();
+  const { session, loading, isAdmin } = useAuth();
   if (loading) return <div className="min-h-screen bg-forest" />;
   if (!session) return <LoginScreen />;
+  const items = isAdmin ? [...nav, { to: "/usuarios", label: "Usuários", icon: Users } as const] : nav;
   return (
     <div className="min-h-screen pb-20">
       <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex items-center justify-between sticky top-0 z-20">
@@ -31,8 +32,8 @@ export function AppShell() {
         <Outlet />
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">
-        <div className="mx-auto max-w-3xl grid grid-cols-7">
-          {nav.map(({ to, label, icon: Icon }) => (
+        <div className="mx-auto max-w-3xl grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+          {items.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
