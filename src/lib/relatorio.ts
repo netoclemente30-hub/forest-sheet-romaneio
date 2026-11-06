@@ -1,13 +1,14 @@
 import type { Tora } from "./data";
 import { fmtM3 } from "./volume";
 
-export type Ordem = "plaqueta_desc" | "plaqueta_asc" | "volume_desc" | "especie_asc" | "especie_desc";
+export type Ordem = "autex" | "plaqueta_desc" | "plaqueta_asc" | "volume_desc" | "especie_asc" | "especie_desc";
 export const ORDENS: { v: Ordem; label: string }[] = [
   { v: "plaqueta_desc", label: "Plaqueta (maior → menor)" },
   { v: "plaqueta_asc", label: "Plaqueta (menor → maior)" },
   { v: "volume_desc", label: "Volume (maior → menor)" },
   { v: "especie_asc", label: "Espécie (A → Z)" },
   { v: "especie_desc", label: "Espécie (Z → A)" },
+  { v: "autex", label: "Separar por AUTEX (depois árvore e seção)" },
 ];
 
 export function ordenarToras(toras: Tora[], ordem: Ordem): Tora[] {
@@ -18,6 +19,7 @@ export function ordenarToras(toras: Tora[], ordem: Ordem): Tora[] {
       case "plaqueta_asc": return a.plaqueta - b.plaqueta;
       case "volume_desc": return Number(b.volume) - Number(a.volume);
       case "especie_asc": return esp(a).localeCompare(esp(b), "pt-BR") || a.plaqueta - b.plaqueta;
+      case "autex": return (a.autex ?? "").localeCompare(b.autex ?? "", "pt-BR") || a.arvore - b.arvore || (a.secao ?? "").localeCompare(b.secao ?? "") || a.plaqueta - b.plaqueta;
       case "especie_desc": return esp(b).localeCompare(esp(a), "pt-BR") || a.plaqueta - b.plaqueta;
     }
   });
@@ -34,6 +36,7 @@ export async function exportarExcel(toras: Tora[]) {
   ws["!cols"] = HEAD.map((h) => ({ wch: Math.max(10, h.length + 2) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Toras");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["AUTEX", "Qtd toras", "Volume (m³)"], ...resumoPorAutex(toras).map((r) => [r.autex, r.qtd, Number(r.volume.toFixed(4))])]), "Por AUTEX");
   XLSX.writeFile(wb, `${nome()}.xlsx`);
 }
 
@@ -56,5 +59,13 @@ export async function exportarPdf(toras: Tora[], titulo: string) {
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },
   });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", "Volume m³"]], body: resumoPorAutex(toras).map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
   doc.save(`${nome()}.pdf`);
+}
+
+export function resumoPorAutex(toras: Tora[]) {
+  const m = new Map<string, { autex: string; qtd: number; volume: number }>();
+  for (const t of toras) { const k = t.autex || "Sem AUTEX"; const r = m.get(k) ?? { autex: k, qtd: 0, volume: 0 }; r.qtd++; r.volume += Number(t.volume); m.set(k, r); }
+  return [...m.values()].sort((a, b) => a.autex.localeCompare(b.autex, "pt-BR"));
 }
