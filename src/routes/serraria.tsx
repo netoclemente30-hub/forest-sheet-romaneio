@@ -79,7 +79,10 @@ function Serraria() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-3xl font-bold uppercase">Serraria</h1>
-        <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm"><Link to="/saldo">Conferir saldo</Link></Button>
+          <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Button variant={aba === "patio" ? "default" : "outline"} onClick={() => { setAba("patio"); setSel([]); }}>Pátio de toras</Button>
