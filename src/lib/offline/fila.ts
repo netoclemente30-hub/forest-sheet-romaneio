@@ -1,6 +1,8 @@
 // Fila de operações feitas sem internet. O armazenamento é injetável para
 // permitir testes em memória; no app usa IndexedDB (db.ts).
 
+import { idb } from "./db";
+
 export type Op =
   | { tipo: "tora_insert"; dados: Record<string, unknown> }
   | {
@@ -75,7 +77,6 @@ function avisar() {
 let filaApp: Fila | null = null;
 export function fila(): Fila {
   if (!filaApp) {
-    const { idb } = require("./db") as typeof import("./db");
     const store: FilaStore = {
       all: () => idb.getAll<ItemFila>("fila"),
       put: (item) => idb.put("fila", item),
