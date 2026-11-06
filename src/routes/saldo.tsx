@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { conferirSaldo, lerSaldo, novasTorasDoSaldo, type LinhaSaldo } from "@/lib/saldo";
 import { fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
-import { Printer, Upload, Ruler } from "lucide-react";
+import { Printer, Upload, Ruler, Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -45,6 +45,32 @@ function Saldo() {
   const [inicio, setInicio] = useState("");
   const [busy, setBusy] = useState(false);
   const [busca, setBusca] = useState("");
+  const [status, setStatus] = useState<"todos" | "estoque" | "fora">("todos");
+  const [edit, setEdit] = useState<{ plaqueta: number; arvore: string; secao: string; especie: string; nome_cientifico: string; autex: string; volume: string } | null>(null);
+
+  async function salvarEdicao() {
+    if (!edit) return;
+    const arvore = Number(edit.arvore), volume = Number(edit.volume.replace(",", "."));
+    if (!Number.isFinite(arvore) || !Number.isFinite(volume)) { toast.error("Árvore e volume precisam ser números"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("toras").update({ arvore, volume, secao: edit.secao.trim().toUpperCase() || null, especie: edit.especie.trim() || null, nome_cientifico: edit.nome_cientifico.trim() || null, autex: edit.autex.trim() || null }).eq("plaqueta", edit.plaqueta);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    await gravarRegistro(await capturarLog("Tora editada", `Plaqueta ${edit.plaqueta} · Árv. ${arvore}-${edit.secao}`));
+    toast.success(`Plaqueta ${edit.plaqueta} alterada`);
+    setEdit(null);
+    await qc.invalidateQueries({ queryKey: ["toras"] });
+  }
+
+  async function excluir(plaqueta: number) {
+    if (!confirm(`Excluir a tora da plaqueta ${plaqueta}?`)) return;
+    const { error } = await supabase.from("toras").delete().eq("plaqueta", plaqueta);
+    if (error) { toast.error(error.message); return; }
+    await gravarRegistro(await capturarLog("Tora excluída", `Plaqueta ${plaqueta} (conferência de saldo)`));
+    toast.success(`Plaqueta ${plaqueta} excluída`);
+    setEdit(null);
+    await qc.invalidateQueries({ queryKey: ["toras"] });
+  }
 
   async function cadastrar() {
     const ini = Number(inicio);
@@ -117,9 +143,28 @@ function Saldo() {
           </div>
         </div>}
         <Button asChild className="w-full" disabled={!ok.length}><Link to="/etiquetas" search={{ p: ok.map((r) => r.tora!.plaqueta).join(",") }}><Printer /> Imprimir plaquetas ({ok.length})</Link></Button>
+        <div className="grid grid-cols-3 gap-2">
+          {([["todos", `Todas (${res.length})`], ["estoque", `No estoque (${ok.length})`], ["fora", `Fora (${fora})`]] as const).map(([k, l]) => (
+            <Button key={k} size="sm" variant={status === k ? "default" : "outline"} onClick={() => setStatus(k)}>{l}</Button>
+          ))}
+        </div>
+        <Sheet open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
+          <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
+            <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
+            {edit && <div className="p-4 pt-0 space-y-2">
+              {([["arvore", "Árvore"], ["secao", "Secção"], ["especie", "Espécie"], ["nome_cientifico", "Nome científico"], ["autex", "AUTEX"], ["volume", "Volume (m³)"]] as const).map(([k, l]) => (
+                <label key={k} className="block text-sm font-semibold space-y-1">{l}
+                  <Input value={edit[k]} inputMode={k === "arvore" || k === "volume" ? "decimal" : undefined} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} className="h-11 font-normal" />
+                </label>
+              ))}
+              <Button className="w-full h-12" disabled={busy} onClick={salvarEdicao}>Salvar alterações</Button>
+              <Button variant="destructive" className="w-full" onClick={() => excluir(edit.plaqueta)}><Trash2 /> Excluir tora</Button>
+            </div>}
+          </SheetContent>
+        </Sheet>
         <Input placeholder="Filtrar por nome, científico, árvore ou AUTEX" aria-label="Filtrar saldo" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-12" />
         <div className="bg-card border rounded-xl divide-y">
-          {res.filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); }).map((r, i) => (
+          {res.filter((r) => status === "todos" || (status === "estoque" ? !!r.tora : !r.tora)).filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); }).map((r, i) => (
             <div key={i} className="flex items-center gap-3 p-3">
               <div className="font-display text-xl font-bold w-14">{r.tora?.plaqueta ?? "—"}</div>
               <div className="flex-1 min-w-0">
@@ -127,6 +172,8 @@ function Saldo() {
                 <div className="text-xs text-muted-foreground">Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"} · {fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³</div>
               </div>
               {!r.tora && <span className="text-xs font-bold text-destructive uppercase">Fora de estoque</span>}
+              {r.tora && <Button size="icon" variant="outline" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => { const t = r.tora!; setEdit({ plaqueta: t.plaqueta, arvore: String(t.arvore), secao: t.secao ?? "", especie: t.especie ?? "", nome_cientifico: t.nome_cientifico ?? "", autex: t.autex ?? "", volume: String(t.volume ?? "") }); }}><Pencil /></Button>}
+              {r.tora && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={() => excluir(r.tora!.plaqueta)}><Trash2 /></Button>}
             </div>
           ))}
         </div>
