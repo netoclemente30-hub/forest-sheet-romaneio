@@ -16,3 +16,5 @@
 - [x] Acesso por convite: Neto admin, cadastro público fechado, tela Usuários (criar acesso com senha, trocar senha, tornar admin, remover), WhatsApp na tela de login, importação de planilha só para admin.
 - [x] Dados separados por empresa: tabela empresas, vínculo usuário→empresa, empresa_id em todas as tabelas de dados, RLS por empresa, admin cria empresa + acesso único compartilhado pelos funcionários. Testado: empresa nova não vê dados da RJ.
 - [x] Etiqueta: nº da árvore e secção em destaque (maiores), plaqueta menor.
+- [x] Conferir saldo da serraria (CSV/Excel) e cadastrar fora de estoque com plaquetas em sequência
+- [x] Excluir toras já romaneadas (aba Toras)
