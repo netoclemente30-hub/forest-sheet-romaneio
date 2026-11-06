@@ -85,6 +85,13 @@
       "when": 1793932502441,
       "tag": "0011_registros_de_atividade",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793933287856,
+      "tag": "0012_empresas_leitura_restrita",
+      "breakpoints": true
     }
   ]
 }
