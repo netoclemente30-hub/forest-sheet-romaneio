@@ -9,14 +9,15 @@ export type Romaneio = Database["public"]["Tables"]["romaneios"]["Row"];
 
 export const autexQuery = {
   queryKey: ["autex"],
-  queryFn: async () => {
-    let q = supabase.from("autex").select("*").order("numero");
-    const emp = getEmpresaAtiva();
-    if (emp) q = q.eq("empresa_id", emp);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data;
-  },
+  queryFn: () =>
+    comCache("autex", async () => {
+      let q = supabase.from("autex").select("*").order("numero");
+      const emp = getEmpresaAtiva();
+      if (emp) q = q.eq("empresa_id", emp);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    }),
 };
 
 async function fetchAll<T>(table: "toras" | "arvores", order: string): Promise<T[]> {
@@ -40,23 +41,24 @@ async function fetchAll<T>(table: "toras" | "arvores", order: string): Promise<T
 
 export const torasQuery = {
   queryKey: ["toras"],
-  queryFn: () => fetchAll<Tora>("toras", "plaqueta"),
+  queryFn: () => comCache("toras", () => fetchAll<Tora>("toras", "plaqueta")),
 };
 export const arvoresQuery = {
   queryKey: ["arvores"],
-  queryFn: () => fetchAll<Arvore>("arvores", "numero"),
+  queryFn: () => comCache("arvores", () => fetchAll<Arvore>("arvores", "numero")),
 };
 export const romaneiosQuery = {
   queryKey: ["romaneios"],
-  queryFn: async () => {
-    let q = supabase
-      .from("romaneios")
-      .select("*")
-      .order("created_at", { ascending: false });
-    const emp = getEmpresaAtiva();
-    if (emp) q = q.eq("empresa_id", emp);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data as Romaneio[];
-  },
+  queryFn: () =>
+    comCache("romaneios", async () => {
+      let q = supabase
+        .from("romaneios")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const emp = getEmpresaAtiva();
+      if (emp) q = q.eq("empresa_id", emp);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Romaneio[];
+    }),
 };
