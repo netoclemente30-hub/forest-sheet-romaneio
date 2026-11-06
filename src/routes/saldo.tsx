@@ -32,8 +32,8 @@ function Saldo() {
   async function abrir(f: File) {
     try {
       const XLSX = await import("xlsx");
-      const wb = XLSX.read(await f.arrayBuffer());
-      const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0] ?? ""]!, { header: 1 }));
+      const wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type: "string", FS: ";" }) : XLSX.read(await f.arrayBuffer());
+      const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0] ?? ""]!, { header: 1, raw: false }));
       setLinhas(l);
       toast.success(`${l.length} linhas lidas`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível ler a planilha"); }
@@ -45,7 +45,7 @@ function Saldo() {
       <p className="text-sm text-muted-foreground">Envie o Excel com AUTEX, nome científico, espécie, árvore, secção e volume. Cada linha é procurada nas toras pelo AUTEX + árvore + secção.</p>
       <label className="block">
         <Button asChild variant="outline" className="w-full"><span><Upload /> Escolher planilha de saldo</span></Button>
-        <input type="file" accept=".xlsx,.xlsm,.xls" className="hidden" onChange={(e) => e.target.files?.[0] && abrir(e.target.files[0])} />
+        <input type="file" accept=".xlsx,.xlsm,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && abrir(e.target.files[0])} />
       </label>
       {res.length > 0 && <>
         <div className="grid grid-cols-2 gap-2 text-center">
