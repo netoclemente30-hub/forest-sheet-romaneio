@@ -95,7 +95,7 @@ function RomaneioPage() {
       <h1 className="text-3xl font-bold uppercase">Romaneio de carga</h1>
       <div className="bg-card border rounded-xl p-3 grid grid-cols-2 gap-2">
         {f("placa", "Placa / caminhão")}
-        {f("julieta", "Julieta")}
+        {f("julieta", " Reboque")}
         {f("motorista", "Motorista")}
         {f("cpf", "CPF")}
         <div className="col-span-2">{f("data", "Data", "date")}</div>
