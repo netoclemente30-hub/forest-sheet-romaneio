@@ -176,6 +176,12 @@ function BasePage() {
                   <div className="text-sm font-semibold">{fmtM3(Number(a.volume ?? 0))}</div>
                   <div className="text-xs text-muted-foreground">{a.categoria}</div>
                 </div>
+                {isAdmin && (
+                  <div className="flex flex-col gap-1">
+                    <Button size="icon" variant="ghost" aria-label={`Editar árvore ${a.numero}`} onClick={() => abrirEdicao(a)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" aria-label={`Excluir árvore ${a.numero}`} disabled={busyArvore} onClick={() => excluirArvore(a)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
+                )}
               </div>
               {ve !== undefined && (
                 <div className="mt-1 ml-[4.25rem] text-xs text-success font-semibold">
@@ -189,6 +195,24 @@ function BasePage() {
         {!arvores.isLoading && lista.length === 0 && <div className="p-4 text-sm text-muted-foreground">Nenhuma árvore. Importe sua planilha pela tela inicial.</div>}
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 200)}>Mostrar mais</Button>}
+      <Dialog open={!!editando} onOpenChange={(o) => { if (!o) setEditando(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Editar árvore {editando?.numero}</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1"><Label>Número</Label><Input inputMode="numeric" value={form.numero ?? ""} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Espécie</Label><Input value={form.nome_vulgar ?? ""} onChange={(e) => setForm({ ...form, nome_vulgar: e.target.value })} /></div>
+            <div className="col-span-2 space-y-1"><Label>Nome científico</Label><Input value={form.nome_cientifico ?? ""} onChange={(e) => setForm({ ...form, nome_cientifico: e.target.value })} /></div>
+            <div className="space-y-1"><Label>CAP (cm)</Label><Input inputMode="decimal" value={form.cap ?? ""} onChange={(e) => setForm({ ...form, cap: e.target.value })} /></div>
+            <div className="space-y-1"><Label>DAP (cm)</Label><Input inputMode="decimal" value={form.dap ?? ""} onChange={(e) => setForm({ ...form, dap: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Altura (m)</Label><Input inputMode="decimal" value={form.altura ?? ""} onChange={(e) => setForm({ ...form, altura: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Volume (m³)</Label><Input inputMode="decimal" value={form.volume ?? ""} onChange={(e) => setForm({ ...form, volume: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Categoria</Label><Input value={form.categoria ?? ""} onChange={(e) => setForm({ ...form, categoria: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Picada</Label><Input value={form.picada ?? ""} onChange={(e) => setForm({ ...form, picada: e.target.value })} /></div>
+            <div className="col-span-2 space-y-1"><Label>AUTEX</Label><Input value={form.autex ?? ""} onChange={(e) => setForm({ ...form, autex: e.target.value })} /></div>
+          </div>
+          <Button className="w-full" disabled={busyArvore} onClick={salvarEdicao}>Salvar alterações</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
