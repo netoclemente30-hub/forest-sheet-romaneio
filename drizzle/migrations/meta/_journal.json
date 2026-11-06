@@ -99,6 +99,13 @@
       "when": 1793987300512,
       "tag": "0013_saldo_compartilhado",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793998298179,
+      "tag": "0014_etiqueta_impressa",
+      "breakpoints": true
     }
   ]
 }

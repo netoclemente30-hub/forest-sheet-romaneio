@@ -340,6 +340,7 @@ export type Database = {
           d_topo2: number | null
           empresa_id: string
           especie: string | null
+          etiqueta_impressa_em: string | null
           nome_cientifico: string | null
           plaqueta: number
           romaneio_id: string | null
@@ -359,6 +360,7 @@ export type Database = {
           d_topo2?: number | null
           empresa_id?: string
           especie?: string | null
+          etiqueta_impressa_em?: string | null
           nome_cientifico?: string | null
           plaqueta: number
           romaneio_id?: string | null
@@ -378,6 +380,7 @@ export type Database = {
           d_topo2?: number | null
           empresa_id?: string
           especie?: string | null
+          etiqueta_impressa_em?: string | null
           nome_cientifico?: string | null
           plaqueta?: number
           romaneio_id?: string | null
