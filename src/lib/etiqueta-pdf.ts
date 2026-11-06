@@ -49,35 +49,34 @@ function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado: numbe
 /** Gera um PDF com uma etiqueta por página, cada página no tamanho exato da etiqueta. */
 export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Promise<jsPDF> {
   const { largura: W, altura: H } = t;
-  const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: W >= H ? "landscape" : "portrait" });
+  const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: W >= H ? "landscape" : "portrait", compress: true });
   const m = Math.max(2, Math.min(W, H) * 0.05);
-  const k = Math.min(W / 100, H / 70); // escala relativa ao modelo 100×70 mm
   for (let i = 0; i < toras.length; i++) {
     const tora = toras[i];
     if (!tora) continue;
     if (i > 0) doc.addPage([W, H], W >= H ? "landscape" : "portrait");
-    const qrMm = Math.min(H * 0.5, W * 0.4);
-    desenharQr(doc, qrTora(tora), m, m, qrMm);
+    const qrMm = Math.min(H - 2 * m, W * 0.48);
+    desenharQr(doc, qrTora(tora), m, (H - qrMm) / 2, qrMm);
     const x = m + qrMm + m;
     const wTxt = W - x - m;
-    let y = m;
-    y += texto(doc, `Árvore ${tora.arvore} · Sec. ${tora.secao ?? "—"}`, x, y, wTxt, 11 * k);
-    y += texto(doc, String(tora.plaqueta), x, y, wTxt, 28 * k);
-    texto(doc, `Autorização: ${tora.autex ?? "Não informada"}`, x, y, wTxt, 8 * k);
-    y = m + qrMm + m * 0.6;
-    const wFull = W - 2 * m;
-    y += texto(doc, tora.especie ?? "Não cadastrada", W / 2, y, wFull, 12 * k, true, "center");
-    if (tora.nome_cientifico) y += texto(doc, tora.nome_cientifico, W / 2, y, wFull, 8 * k, false, "center");
-    const col = wFull / 2;
-    const linhas: [string, string][] = [
-      [`${medida(tora.d_topo1)} × ${medida(tora.d_topo2)} cm (DF1×DF2)`, `C.: ${medida(tora.comprimento)} m`],
-      [`${medida(tora.d_pe1)} × ${medida(tora.d_pe2)} cm (DF3×DF4)`, `VOL.: ${Number(tora.volume).toFixed(4)} m³`],
+    const linhas: [string, number, boolean][] = [
+      [`Árvore ${tora.arvore} · Sec. ${tora.secao ?? "—"}`, 1, true],
+      [String(tora.plaqueta), 2.4, true],
+      [tora.especie ?? "Não cadastrada", 1.1, true],
+      ...(tora.nome_cientifico ? [[tora.nome_cientifico, 0.8, false] as [string, number, boolean]] : []),
+      [`DF1×DF2: ${medida(tora.d_topo1)} × ${medida(tora.d_topo2)} cm`, 0.9, true],
+      [`DF3×DF4: ${medida(tora.d_pe1)} × ${medida(tora.d_pe2)} cm`, 0.9, true],
+      [`C.: ${medida(tora.comprimento)} m · VOL.: ${Number(tora.volume).toFixed(4)} m³`, 0.9, true],
+      [`AUTEX: ${tora.autex ?? "Não informada"}`, 0.8, true],
     ];
-    for (const [a, b] of linhas) {
-      if (y > H - m) break;
-      const h1 = texto(doc, a, m, y, col - 1, 9 * k);
-      const h2 = texto(doc, b, m + col, y, col, 9 * k);
-      y += Math.max(h1, h2);
+    const hTot = H - 2 * m;
+    const soma = linhas.reduce((t, l) => t + l[1], 0);
+    let y = m;
+    for (const [s, peso, bold] of linhas) {
+      const slot = (hTot * peso) / soma;
+      const fs = (slot / 1.15) / 0.3528;
+      texto(doc, s, x, y + slot * 0.05, wTxt, fs, bold);
+      y += slot;
     }
   }
   return doc;
