@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { autexQuery } from "@/lib/data";
+import { empresaIdGravacao } from "@/lib/empresa";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -19,7 +20,7 @@ export function AutexPicker({ value, onChange }: { value: string; onChange: (v: 
   async function salvar() {
     if (!numero.trim()) { toast.error("Informe o número da AUTEX"); return; }
     setBusy(true);
-    const { error } = await supabase.from("autex").insert({ numero: numero.trim(), descricao: descricao.trim() || null });
+    const { error } = await supabase.from("autex").insert({ numero: numero.trim(), descricao: descricao.trim() || null, ...empresaIdGravacao() });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     await qc.invalidateQueries({ queryKey: ["autex"] });
