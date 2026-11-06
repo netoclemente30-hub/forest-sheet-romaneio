@@ -25,7 +25,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
   const escolherArvore = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
     set(k)(e);
     const c = arvores.filter((a) => a.numero === Number(e.target.value));
-    if (c.length === 1 && c[0].autex) setAutex(c[0].autex);
+    const u = c.length === 1 ? c[0] : undefined; if (u?.autex) setAutex(u.autex);
   };
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumeTora(medidas);
