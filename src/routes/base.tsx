@@ -47,8 +47,8 @@ function BasePage() {
   function abrirEdicao(a: Arvore) {
     setForm({
       numero: String(a.numero), nome_vulgar: a.nome_vulgar, nome_cientifico: a.nome_cientifico ?? "",
-      cap: a.cap != null ? String(a.cap) : "", dap: a.dap != null ? String(a.dap) : "",
-      altura: a.altura != null ? String(a.altura) : "", volume: a.volume != null ? String(a.volume) : "",
+      cap: a.cap != null ? String(a.cap) : "", dap: a.dap != null ? Number(a.dap).toFixed(1) : "",
+      altura: a.altura != null ? String(a.altura) : "", volume: a.volume != null ? Number(a.volume).toFixed(4) : "",
       categoria: a.categoria ?? "", picada: a.picada ?? "", autex: a.autex,
     });
     setEditando(a);
