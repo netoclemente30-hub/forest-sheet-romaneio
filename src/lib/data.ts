@@ -8,6 +8,7 @@ export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];
 export type Romaneio = Database["public"]["Tables"]["romaneios"]["Row"];
 
 export const autexQuery = {
+  networkMode: "always" as const,
   queryKey: ["autex"],
   queryFn: () =>
     comCache("autex", async () => {
@@ -40,14 +41,17 @@ async function fetchAll<T>(table: "toras" | "arvores", order: string): Promise<T
 }
 
 export const torasQuery = {
+  networkMode: "always" as const,
   queryKey: ["toras"],
   queryFn: () => comCache("toras", () => fetchAll<Tora>("toras", "plaqueta")),
 };
 export const arvoresQuery = {
+  networkMode: "always" as const,
   queryKey: ["arvores"],
   queryFn: () => comCache("arvores", () => fetchAll<Arvore>("arvores", "numero")),
 };
 export const romaneiosQuery = {
+  networkMode: "always" as const,
   queryKey: ["romaneios"],
   queryFn: () =>
     comCache("romaneios", async () => {

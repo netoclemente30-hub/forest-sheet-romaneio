@@ -23,14 +23,20 @@ export default defineConfig({
         filename: "sw.js",
         manifest: false, // manifesto servido de public/manifest.webmanifest
         workbox: {
+          // O build SSR é examinado a partir do diretório pai, mas a hospedagem
+          // serve client/ na raiz. Não precachear URLs /client/assets inexistentes.
+          modifyURLPrefix: { "client/": "" },
+          globPatterns: ["**/*.{js,css,woff2,png,webmanifest}"],
+          globIgnores: ["**/server/**", "**/sw.js", "**/workbox-*.js"],
           // App com SSR: sem index.html estático — navegações usam NetworkFirst abaixo
           navigateFallback: null,
           runtimeCaching: [
             {
               // Navegações/HTML: rede primeiro, nunca cache-first
-              urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+               urlPattern: ({ request, url }: { request: Request; url: URL }) =>
+                 request.mode === "navigate" && !url.pathname.startsWith("/~oauth"),
               handler: "NetworkFirst",
-              options: { cacheName: "paginas" },
+               options: { cacheName: "paginas", networkTimeoutSeconds: 3 },
             },
             {
               // Assets com hash same-origin: cache-first

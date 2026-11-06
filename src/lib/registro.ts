@@ -26,11 +26,14 @@ function posicaoGps(): Promise<{ lat: number; lng: number } | null> {
 
 // Captura quem/quando/onde no momento do lançamento (funciona offline).
 export async function capturarLog(acao: string, detalhe: string): Promise<LogCapturado> {
-  const [{ data: u }, gps] = await Promise.all([supabase.auth.getUser(), posicaoGps()]);
+   const usuario = typeof navigator !== "undefined" && !navigator.onLine
+     ? supabase.auth.getSession().then(({ data }) => data.session?.user ?? null)
+     : supabase.auth.getUser().then(({ data }) => data.user);
+   const [u, gps] = await Promise.all([usuario, posicaoGps()]);
   return {
     acao,
     detalhe,
-    user_email: u.user?.email ?? null,
+     user_email: u?.email ?? null,
     lat: gps?.lat ?? null,
     lng: gps?.lng ?? null,
     criado_em: new Date().toISOString(),

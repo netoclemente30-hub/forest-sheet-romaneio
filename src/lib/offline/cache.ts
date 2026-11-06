@@ -28,6 +28,11 @@ export async function lerCache<T>(nome: string): Promise<T[] | null> {
 
 // Executa a consulta; em sucesso grava no cache, em falha tenta o cache.
 export async function comCache<T>(nome: string, buscar: () => Promise<T[]>): Promise<T[]> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    const cache = await lerCache<T>(nome);
+    if (cache) return cache;
+    throw new Error("Sem internet e sem dados salvos neste aparelho. Abra esta tela conectado primeiro.");
+  }
   try {
     const dados = await buscar();
     await salvarCache(nome, dados);

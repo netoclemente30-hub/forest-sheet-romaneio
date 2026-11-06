@@ -38,13 +38,15 @@ export function useAuth() {
     });
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
+      // A sessão persistida libera as telas de campo sem aguardar consultas
+      // de permissões na rede. Permissões administrativas continuam verificadas.
+      setLoading(false);
       if (data.session?.user) {
         setIsAdmin(await checarAdmin(data.session.user.id));
         setIsSuperAdmin(await checarSuperAdmin(data.session.user.id));
         setEmpresaId(await checarEmpresa());
       }
-      setLoading(false);
-    });
+     }).catch(() => setLoading(false));
     return () => data.subscription.unsubscribe();
   }, []);
   return { session, loading, isAdmin, isSuperAdmin, empresaId };
