@@ -12,10 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutexPicker } from "./AutexPicker";
+import type { LinhaSaldo } from "@/lib/saldo";
 
 const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
-export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: Arvore[]; onSaved: (plaqueta: number) => void }) {
+export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[]; arvores: Arvore[]; onSaved: (plaqueta: number) => void; saldo?: LinhaSaldo[] }) {
   const qc = useQueryClient();
   const proxima = useMemo(() => toras.reduce((m, t) => Math.max(m, t.plaqueta), 0) + 1, [toras]);
   const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: "A", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
@@ -35,6 +36,9 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
   const secAtual = f.secao.trim().toUpperCase();
   const doSaldoTodas = f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [];
   const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
+  // Linha do arquivo de saldo (ainda não cadastrada) com a mesma árvore e secção.
+  const linhasSaldo = !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [];
+  const linhaSaldo = linhasSaldo.length === 1 ? linhasSaldo[0] : linhasSaldo.find((l) => l.autex === autex);
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumeTora(medidas);
 
@@ -42,6 +46,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     e.preventDefault();
     if (doSaldo) { await medirSaldo(doSaldo); return; }
     if (doSaldoTodas.length > 1) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
+    if (linhasSaldo.length > 1 && !linhaSaldo) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
     const plaqueta = Number(f.plaqueta);
     if (candidatas.length > 1 && !arv) { toast.error(`Árvore ${f.arvore} existe em mais de uma AUTEX — escolha qual`); return; }
     if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
@@ -49,7 +54,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     const rep = toras.find((t) => t.arvore === Number(f.arvore) && (t.autex ?? "") === (autex || "") && (t.secao ?? "").trim().toUpperCase() === sec);
     if (sec && rep) { toast.error(`Árvore ${f.arvore} já tem a secção ${sec} (plaqueta ${rep.plaqueta})`); return; }
     const dados = {
-      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arv?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol, ...empresaIdGravacao(),
+      plaqueta, arvore: Number(f.arvore), especie: linhaSaldo?.especie || especie || "Não cadastrada", nome_cientifico: linhaSaldo?.nome_cientifico || arv?.nome_cientifico || null, autex: linhaSaldo?.autex || autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol, ...empresaIdGravacao(),
     };
     setBusy(true);
     const log = await capturarLog("Tora lançada", `Tora ${plaqueta} · ${dados.especie} · árvore ${f.arvore} · secção ${f.secao || "–"}`);
@@ -116,6 +121,22 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
           <div className="flex flex-wrap gap-2">{doSaldoTodas.map((t) => <Button key={t.plaqueta} type="button" size="sm" variant="outline" onClick={() => setAutex(t.autex ?? "")}>{t.autex || "Sem AUTEX"} · {t.especie}</Button>)}</div>
         </div>
       )}
+      {linhasSaldo.length > 1 && !linhaSaldo && (
+        <div className="rounded-md border border-primary p-2 space-y-1">
+          <div className="text-sm font-semibold">Árvore {f.arvore}-{secAtual} está no saldo em {linhasSaldo.length} AUTEX. De qual é?</div>
+          <div className="flex flex-wrap gap-2">{linhasSaldo.map((l, i) => <Button key={i} type="button" size="sm" variant="outline" onClick={() => setAutex(l.autex)}>{l.autex} · {l.especie}</Button>)}</div>
+        </div>
+      )}
+      {linhaSaldo && (
+        <div className="rounded-md border-2 border-primary bg-secondary p-3 text-sm space-y-1">
+          <div className="font-semibold">No saldo · plaqueta nova {f.plaqueta}</div>
+          <div>{linhaSaldo.especie}{linhaSaldo.nome_cientifico && <i> · {linhaSaldo.nome_cientifico}</i>}</div>
+          <div className="text-xs">{linhaSaldo.autex}</div>
+          <div className="flex justify-between pt-1"><span>Saldo: <b>{fmtM3(linhaSaldo.volume ?? 0)} m³</b></span><span>Medido: <b>{fmtM3(vol)} m³</b></span></div>
+          {vol > 0 && <div className={vol - (linhaSaldo.volume ?? 0) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {vol - (linhaSaldo.volume ?? 0) >= 0 ? "+" : ""}{fmtM3(vol - (linhaSaldo.volume ?? 0))} m³</div>}
+        </div>
+      )}
+      {f.arvore && secAtual && saldo.length > 0 && !doSaldoTodas.length && !linhasSaldo.length && <div className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">Árvore {f.arvore}-{secAtual} não está no saldo</div>}
       {doSaldo && (
         <div className="rounded-md border-2 border-primary bg-secondary p-3 text-sm space-y-1">
           <div className="font-semibold">Tora do saldo · plaqueta {doSaldo.plaqueta}</div>
@@ -126,7 +147,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
         </div>
       )}
       <div className={`text-sm rounded-md px-3 py-2 ${especie ? "bg-secondary" : "bg-muted text-muted-foreground"}`}>
-        Espécie: <b>{f.arvore ? doSaldo?.especie ?? especie ?? "Não cadastrada na BASE" : "—"}</b>
+        Espécie: <b>{f.arvore ? doSaldo?.especie ?? linhaSaldo?.especie ?? especie ?? "Não cadastrada na BASE" : "—"}</b>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {field("d_topo1", "D. Topo 1 (cm)")}
