@@ -68,6 +68,9 @@ export async function registrarServiceWorker() {
          // atendida pelo NetworkFirst gerado; não grava HTML à mão em caches.
          return new Promise<void>((resolve) => {
            const frame = document.createElement("iframe");
+           // Não executar o app dentro do aquecimento (inclusive auth/sync
+           // e limpeza de workers de previews em iframe).
+           frame.setAttribute("sandbox", "allow-same-origin");
            frame.hidden = true;
            frame.setAttribute("aria-hidden", "true");
            const concluir = () => { window.clearTimeout(timer); frame.remove(); resolve(); };
