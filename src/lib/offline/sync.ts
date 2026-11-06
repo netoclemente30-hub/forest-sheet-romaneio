@@ -12,6 +12,11 @@ export function estaOnline(): boolean {
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
 export async function executarOp(op: Op): Promise<void> {
+  await executarOpSemLog(op);
+  if (op.log) await gravarRegistro(op.log);
+}
+
+async function executarOpSemLog(op: Op): Promise<void> {
   switch (op.tipo) {
     case "tora_insert": {
       const { error } = await supabase.from("toras").insert(op.dados as never);
