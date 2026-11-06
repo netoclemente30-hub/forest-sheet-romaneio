@@ -2,13 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { arvoresQuery, autexQuery, torasQuery } from "@/lib/data";
+import { arvoresQuery, autexQuery, torasQuery, type Arvore } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { chaveArvore } from "@/lib/import-base";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/base")({
   head: () => ({
@@ -37,6 +40,52 @@ function BasePage() {
   const [lim, setLim] = useState(100);
   const [verManejos, setVerManejos] = useState(false);
   const [busyAutex, setBusyAutex] = useState("");
+  const [editando, setEditando] = useState<Arvore | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [busyArvore, setBusyArvore] = useState(false);
+
+  function abrirEdicao(a: Arvore) {
+    setForm({
+      numero: String(a.numero), nome_vulgar: a.nome_vulgar, nome_cientifico: a.nome_cientifico ?? "",
+      cap: a.cap != null ? String(a.cap) : "", dap: a.dap != null ? String(a.dap) : "",
+      altura: a.altura != null ? String(a.altura) : "", volume: a.volume != null ? String(a.volume) : "",
+      categoria: a.categoria ?? "", picada: a.picada ?? "", autex: a.autex,
+    });
+    setEditando(a);
+  }
+
+  const num = (s: string) => { const n = Number(s.replace(",", ".")); return s.trim() && !isNaN(n) ? n : null; };
+
+  async function salvarEdicao() {
+    if (!editando) return;
+    const numero = parseInt(form.numero, 10);
+    if (!numero || !form.nome_vulgar.trim()) { toast.error("Número e espécie são obrigatórios"); return; }
+    setBusyArvore(true);
+    const { error } = await supabase.from("arvores").update({
+      numero, nome_vulgar: form.nome_vulgar.trim(), nome_cientifico: form.nome_cientifico.trim() || null,
+      cap: num(form.cap), dap: num(form.dap), altura: num(form.altura), volume: num(form.volume),
+      categoria: form.categoria.trim() || null, picada: form.picada.trim() || null, autex: form.autex.trim(),
+    }).eq("id", editando.id);
+    setBusyArvore(false);
+    if (error) { toast.error(error.message.includes("duplicate") ? "Já existe uma árvore com esse número nessa AUTEX" : error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["arvores"] });
+    setEditando(null);
+    toast.success("Árvore atualizada");
+  }
+
+  async function excluirArvore(a: Arvore) {
+    if (volExpl.has(chaveArvore(a.numero, a.autex))) {
+      toast.error("Essa árvore já tem toras lançadas e não pode ser excluída. Se o manejo acabou, use Encerrar no manejo.");
+      return;
+    }
+    if (!window.confirm(`Excluir a árvore ${a.numero} (${a.nome_vulgar})? Essa ação não pode ser desfeita.`)) return;
+    setBusyArvore(true);
+    const { error } = await supabase.from("arvores").delete().eq("id", a.id);
+    setBusyArvore(false);
+    if (error) { toast.error(error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["arvores"] });
+    toast.success("Árvore excluída");
+  }
 
   const encerradas = useMemo(() => new Set((autex.data ?? []).filter((a) => a.encerrado).map((a) => a.numero)), [autex.data]);
 
