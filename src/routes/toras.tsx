@@ -36,7 +36,7 @@ function TorasPage() {
   return <TorasList nova={nova === true} />;
 }
 
-export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?: boolean }) {
+export function TorasList({ nova }: { nova?: boolean }) {
   const toras = useQuery(torasQuery);
   const arvores = useQuery(arvoresQuery);
   const [open, setOpen] = useState(!!nova);
@@ -63,7 +63,7 @@ export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?:
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold uppercase">{estoque ? "Estoque" : "Toras"}</h1>
+        <h1 className="text-3xl font-bold uppercase">Toras</h1>
         <Button onClick={() => setOpen(true)}><Plus /> Lançar</Button>
       </div>
       {novas.length > 0 && (
@@ -92,7 +92,7 @@ export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?:
         <div className="text-xs text-muted-foreground">Relatório: {selecionadas.length ? `${selecionadas.length} toras selecionadas` : `${lista.length} toras do filtro`}</div>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" disabled={!lista.length} onClick={() => exportarExcel(paraRelatorio())}><FileSpreadsheet /> Excel</Button>
-          <Button variant="outline" disabled={!lista.length} onClick={() => exportarPdf(paraRelatorio(), estoque ? "Estoque" : "Toras")}><FileText /> PDF</Button>
+          <Button variant="outline" disabled={!lista.length} onClick={() => exportarPdf(paraRelatorio(), "Toras")}><FileText /> PDF</Button>
           <Button variant="outline" className="col-span-2" disabled={!lista.length} onClick={() => exportarSinaflor(paraRelatorio())}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory, Users, Building2, ClipboardList, Download, Check } from "lucide-react";
+import { Home, Layers, Truck, History, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
@@ -16,7 +16,6 @@ const nav = [
   { to: "/", label: "Início", icon: Home },
   { to: "/base", label: "Base", icon: TreePine },
   { to: "/toras", label: "Toras", icon: Layers },
-  { to: "/estoque", label: "Estoque", icon: Warehouse },
   { to: "/romaneio", label: "Romaneio", icon: Truck },
   { to: "/historico", label: "Histórico", icon: History },
   { to: "/serraria", label: "Serraria", icon: Factory },
