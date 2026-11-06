@@ -6,6 +6,8 @@ import type { Romaneio, Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { Button } from "@/components/ui/button";
+import { QrImage } from "@/components/QrImage";
+import { qrRomaneio } from "@/lib/tora-qr";
 import { FileDown, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/historico/$id")({
@@ -31,10 +33,15 @@ async function gerarPdf(r: Romaneio, itens: Tora[]) {
   doc.setFontSize(16);
   doc.text("ROMANEIO DE CARGA", 14, 16);
   doc.setFontSize(10);
-  doc.text(`Placa/Caminhão: ${r.placa ?? ""}    Julieta: ${r.julieta ?? ""}`, 14, 24);
+  doc.text(`Placa/Caminhão: ${r.placa ?? ""}    Reboque: ${r.julieta ?? ""}`, 14, 24);
   doc.text(`Data: ${dataBR(r.data)}    Motorista: ${r.motorista ?? ""}    CPF: ${r.cpf ?? ""}`, 14, 30);
+  const QRCode = (await import("qrcode")).default;
+  const qr = await QRCode.toDataURL(qrRomaneio(r, itens.map((t) => t.plaqueta)), { margin: 1, width: 400 });
+  doc.addImage(qr, "PNG", 160, 6, 36, 36);
+  doc.setFontSize(7);
+  doc.text("QR da carga: entrada no pátio", 160, 45);
   autoTable(doc, {
-    startY: 36,
+    startY: 48,
     head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "D1 (m)", "D2 (m)", "C (m)", "m³"]],
     body: itens.map((t) => [
       t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
@@ -94,13 +101,21 @@ function Detalhe() {
       <div className="bg-forest text-primary-foreground rounded-xl p-4">
         <div className="text-xs uppercase opacity-80">Romaneio · {dataBR(r.data)}</div>
         <h1 className="text-3xl font-bold uppercase">{r.placa || "Sem placa"}</h1>
-        <div className="text-sm opacity-90">Julieta {r.julieta || "–"} · {r.motorista} {r.cpf && `· CPF ${r.cpf}`}</div>
+        <div className="text-sm opacity-90">Reboque {r.julieta || "–"} · {r.motorista} {r.cpf && `· CPF ${r.cpf}`}</div>
         <div className="mt-2 font-display text-4xl font-bold">{fmtM3(Number(r.total_volume))} m³</div>
         <div className="text-sm opacity-80">{r.qtd_toras} toras</div>
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
         <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>
+      </div>
+      <div className="bg-card border rounded-xl p-3 flex items-center gap-4">
+        <QrImage value={qrRomaneio(r, itens.map((t) => t.plaqueta))} size={140} />
+        <div className="text-sm">
+          <div className="font-bold uppercase">QR da carga</div>
+          <p className="text-muted-foreground">Leia na serraria em “Entrada no pátio” para receber as {itens.length} toras de uma vez.</p>
+          {r.recebido_em && <p className="text-success font-semibold mt-1">Recebido em {new Date(r.recebido_em).toLocaleString("pt-BR")}</p>}
+        </div>
       </div>
       <div className="bg-card border rounded-xl p-3">
         <h2 className="text-lg font-bold uppercase mb-1">Por espécie</h2>
