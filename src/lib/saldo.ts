@@ -8,8 +8,8 @@ const autexBase = (s: unknown) => norm(s).replace(/^autex[\s:-]*/, "");
 
 /** "AUTEX-2011.2.2026.10587-1861-B" → AUTEX, árvore e secção. */
 export function lerCodigoRastreio(c: unknown) {
-  const m = String(c ?? "").trim().match(/^(.*)-(\d+)(?:P\d+)?-([A-Za-z0-9]+)$/i);
-  return m ? { autex: m[1]!.trim(), arvore: Number(m[2]), secao: m[3]!.toUpperCase() } : null;
+  const m = String(c ?? "").trim().match(/^(.*?)-(\d+)(?:P\d+)?(?:-([A-Za-z0-9]+))?$/i);
+  return m ? { autex: m[1]!.trim(), arvore: Number(m[2]), secao: (m[3] ?? "").toUpperCase() } : null;
 }
 
 /** Lê a planilha de saldo procurando as colunas pelo nome do cabeçalho. */
