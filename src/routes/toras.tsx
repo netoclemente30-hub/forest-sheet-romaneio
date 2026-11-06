@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { ORDENS, ordenarToras, exportarExcel, exportarPdf, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { ToraForm } from "@/components/ToraForm";
@@ -47,13 +48,15 @@ export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?:
   const [selecionadas, setSelecionadas] = useState<number[]>([]);
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
+  const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
 
   const lista = useMemo(() => {
     const t = (toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
     const s = q.trim().toLowerCase();
-    if (!s) return t;
-    return t.filter((x) => String(x.plaqueta) === s || String(x.arvore) === s || (x.especie ?? "").toLowerCase().includes(s));
-  }, [toras.data, q, filtro, dia, autex]);
+    const f = !s ? t : t.filter((x) => String(x.plaqueta) === s || String(x.arvore) === s || (x.especie ?? "").toLowerCase().includes(s));
+    return ordenarToras(f, ordem);
+  }, [toras.data, q, filtro, dia, autex, ordem]);
+  const paraRelatorio = () => (selecionadas.length ? lista.filter((t) => selecionadas.includes(t.plaqueta)) : lista);
 
   const tora = toras.data?.find((t) => t.plaqueta === qr);
 
@@ -79,6 +82,18 @@ export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?:
             {k === "patio" ? "No pátio" : k === "carregadas" ? "Carregadas" : "Todas"}
           </Button>
         ))}
+      </div>
+      <div className="bg-card border rounded-xl p-3 space-y-2">
+        <label className="text-xs space-y-1 block">Ordenar por
+          <select aria-label="Ordenar toras" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} className="w-full h-10 rounded-md border bg-background px-2 text-sm">
+            {ORDENS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+          </select>
+        </label>
+        <div className="text-xs text-muted-foreground">Relatório: {selecionadas.length ? `${selecionadas.length} toras selecionadas` : `${lista.length} toras do filtro`}</div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" disabled={!lista.length} onClick={() => exportarExcel(paraRelatorio())}><FileSpreadsheet /> Excel</Button>
+          <Button variant="outline" disabled={!lista.length} onClick={() => exportarPdf(paraRelatorio(), estoque ? "Estoque" : "Toras")}><FileText /> PDF</Button>
+        </div>
       </div>
       <div className="flex justify-between text-sm text-muted-foreground">
         <span>{lista.length} toras</span>
