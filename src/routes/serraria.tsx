@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { romaneiosQuery, torasQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { selecionarToras } from "@/lib/tora-qr";
+import { fila } from "@/lib/offline/fila";
+import { estaOnline } from "@/lib/offline/sync";
+import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -52,10 +55,20 @@ function Serraria() {
   async function serrar(desfazer = false) {
     if (!sel.length) return;
     if (!desfazer && !confirm(`Dar baixa de ${sel.length} toras como serradas?`)) return;
+    const log = await capturarLog(desfazer ? "Toras voltaram ao pátio" : "Toras serradas", `${sel.length} toras · plaquetas ${sel.slice(0, 10).join(", ")}${sel.length > 10 ? "…" : ""}`);
+    if (!estaOnline()) {
+      setBusy(true);
+      await fila().enfileirar({ tipo: "toras_serradas", plaquetas: sel, desfazer, log });
+      setBusy(false);
+      setSel([]);
+      toast.success("Baixa salva offline — será enviada quando conectar");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from("toras").update({ serrada_em: desfazer ? null : new Date().toISOString() }).in("plaqueta", sel);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
+    await gravarRegistro(log);
     toast.success(desfazer ? `${sel.length} toras voltaram ao pátio` : `${sel.length} toras serradas`);
     setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });

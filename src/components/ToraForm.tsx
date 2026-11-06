@@ -5,6 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Arvore, Tora } from "@/lib/data";
 import { volumeTora, fmtM3 } from "@/lib/volume";
 import { empresaIdGravacao } from "@/lib/empresa";
+import { fila } from "@/lib/offline/fila";
+import { estaOnline } from "@/lib/offline/sync";
+import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,14 +42,23 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     const sec = f.secao.trim().toUpperCase();
     const rep = toras.find((t) => t.arvore === Number(f.arvore) && (t.autex ?? "") === (autex || "") && (t.secao ?? "").trim().toUpperCase() === sec);
     if (sec && rep) { toast.error(`Árvore ${f.arvore} já tem a secção ${sec} (plaqueta ${rep.plaqueta})`); return; }
-    setBusy(true);
-    const { error } = await supabase.from("toras").insert({
+    const dados = {
       plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arv?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol, ...empresaIdGravacao(),
-    });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`Tora ${plaqueta} salva — ${fmtM3(vol)} m³`);
-    await qc.invalidateQueries({ queryKey: ["toras"] });
+    };
+    setBusy(true);
+    const log = await capturarLog("Tora lançada", `Tora ${plaqueta} · ${dados.especie} · árvore ${f.arvore} · secção ${f.secao || "–"}`);
+    if (!estaOnline()) {
+      await fila().enfileirar({ tipo: "tora_insert", dados, log });
+      setBusy(false);
+      toast.success(`Tora ${plaqueta} salva offline — será enviada quando conectar`);
+    } else {
+      const { error } = await supabase.from("toras").insert(dados);
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      await gravarRegistro(log);
+      toast.success(`Tora ${plaqueta} salva — ${fmtM3(vol)} m³`);
+      await qc.invalidateQueries({ queryKey: ["toras"] });
+    }
     onSaved(plaqueta);
     setF({ ...f, plaqueta: String(plaqueta + 1), secao: String.fromCharCode(f.secao.charCodeAt(0) + 1), d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   }

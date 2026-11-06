@@ -52,6 +52,10 @@ function Importar() {
   if (loading || !isAdmin) return null;
 
   async function processar(file: File) {
+    if (!navigator.onLine) {
+      toast.error("A importação de planilha precisa de internet");
+      return;
+    }
     setBusy(true);
     try {
       const XLSX = await import("xlsx");

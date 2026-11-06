@@ -1,4 +1,6 @@
 # Tarefas
+- [x] Modo offline + instalável no Android (PWA): manifest/ícones, service worker com guards, fila IndexedDB, sync, indicador. Offline só funciona no app publicado.
+- [x] Log de registros: quem inseriu, horário e coordenadas GPS (link Google Maps) para cada lançamento.
 - [x] Criar planilha modelo para importar BASE sem exigir toras.
 - [x] Cadastrar e selecionar AUTEX ao medir toras.
 - [x] Mostrar toras salvas na aba Estoque.

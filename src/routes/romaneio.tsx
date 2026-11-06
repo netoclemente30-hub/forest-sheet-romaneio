@@ -8,6 +8,9 @@ import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { empresaIdGravacao } from "@/lib/empresa";
+import { fila } from "@/lib/offline/fila";
+import { estaOnline } from "@/lib/offline/sync";
+import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { plaquetaDoQr } from "@/lib/tora-qr";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
@@ -78,6 +81,24 @@ function RomaneioPage() {
 
   async function salvar() {
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
+    const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
+    if (!estaOnline()) {
+      setBusy(true);
+      await fila().enfileirar({
+        tipo: "romaneio_salvar",
+        cab,
+        total_volume: Math.round(total * 10000) / 10000,
+        qtd_toras: itens.length,
+        plaquetas: itens.map((t) => t.plaqueta),
+        empresa_id: empresaIdGravacao().empresa_id ?? null,
+        log,
+      });
+      setBusy(false);
+      setItens([]);
+      toast.success("Romaneio salvo offline — será enviado quando conectar");
+      nav({ to: "/historico" });
+      return;
+    }
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase
@@ -97,6 +118,7 @@ function RomaneioPage() {
       up(cab.placa, "caminhao"), up(cab.julieta, "reboque"),
       cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome" }),
     ]);
+    await gravarRegistro(log);
     await qc.invalidateQueries();
     toast.success("Romaneio salvo");
     nav({ to: "/historico/$id", params: { id: data.id } });
