@@ -134,15 +134,17 @@ function Saldo() {
         <Input placeholder="Filtrar por nome, científico, árvore ou AUTEX" aria-label="Filtrar saldo" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-12" />
         <div className="bg-card border rounded-xl divide-y">
           {res.filter((r) => status === "todos" || (status === "estoque" ? !!r.tora : !r.tora)).filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); }).map((r, i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
-              <div className="font-display text-xl font-bold w-14">{r.tora?.plaqueta ?? "—"}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{r.linha.especie}{r.linha.nome_cientifico && <span className="text-muted-foreground"> · {r.linha.nome_cientifico}</span>}</div>
-                <div className="text-xs text-muted-foreground">Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"} · {fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³</div>
+            <div key={i} className="flex items-center gap-2 p-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold leading-snug">{r.linha.especie || "Sem nome"}</div>
+                {r.linha.nome_cientifico && <div className="text-xs italic text-muted-foreground">{r.linha.nome_cientifico}</div>}
+                <div className="text-xs text-muted-foreground">{r.tora ? `Plaqueta ${r.tora.plaqueta} · ` : ""}Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"}</div>
+                <div className="text-xs text-muted-foreground">{fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³{!r.tora && <span className="font-semibold text-destructive"> · fora de estoque</span>}</div>
               </div>
-              {!r.tora && <span className="text-xs font-bold text-destructive uppercase">Fora de estoque</span>}
-              {r.tora && <Button size="icon" variant="outline" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora!)}><Pencil /></Button>}
-              {r.tora && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={async () => { if (await excluirTora(r.tora!)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 /></Button>}
+              {r.tora && <div className="flex shrink-0 items-center gap-1">
+                <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora!)}><Pencil className="h-4 w-4" /></Button>
+                <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={async () => { if (await excluirTora(r.tora!)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4" /></Button>
+              </div>}
             </div>
           ))}
         </div>
