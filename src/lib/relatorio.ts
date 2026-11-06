@@ -49,8 +49,8 @@ export async function exportarPdf(toras: Tora[], titulo: string) {
   const cols = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12];
   autoTable(doc, {
     startY: 25,
-    head: [cols.map((i) => HEAD[i])],
-    body: toras.map((t) => { const l = linha(t); l[10] = fmtM3(Number(t.volume)); return cols.map((i) => l[i]); }),
+    head: [cols.map((i) => HEAD[i] ?? "")],
+    body: toras.map((t) => { const l = linha(t); l[10] = fmtM3(Number(t.volume)); return cols.map((i) => String(l[i] ?? "")); }),
     foot: [["TOTAL", `${toras.length} toras`, "", "", "", "", "", "", "", fmtM3(total), "", ""]],
     styles: { fontSize: 7.5 },
     headStyles: { fillColor: [46, 84, 56] },
