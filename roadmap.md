@@ -1,4 +1,7 @@
 # Tarefas
+- [ ] Adicionar botão Instalar app no canto superior direito e verificar instalação disponível/orientação alternativa.
+- [x] Ocultar a marca Edit with Lovable na publicação.
+- [ ] Explicar onde consultar dados das empresas e registros dos funcionários.
 - [x] Corrigir abertura offline no Android: caminhos corrigidos, primeira navegação preparada, cache acessível sem rede; testes de abertura com worker corrigido isolado e lançamento offline passaram.
 - [ ] Validar atualização no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
 - [x] Modo offline + instalável no Android (PWA): manifest/ícones, service worker com guards, fila IndexedDB, sync, indicador. Offline só funciona no app publicado.
