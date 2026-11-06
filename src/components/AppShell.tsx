@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory, Users, Building2 } from "lucide-react";
+import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory, Users, Building2, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
@@ -27,7 +27,9 @@ export function AppShell() {
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
   if (loading) return <div className="min-h-screen bg-forest" />;
   if (!session) return <LoginScreen />;
-  const items = isAdmin || isSuperAdmin ? [...nav, { to: "/usuarios", label: "Usuários", icon: Users } as const] : nav;
+  const items = isAdmin || isSuperAdmin
+    ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
+    : nav;
   return (
     <div className="min-h-screen pb-20">
       <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-20">
