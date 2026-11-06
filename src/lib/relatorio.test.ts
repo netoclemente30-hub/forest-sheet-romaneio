@@ -13,3 +13,9 @@ it("separa toras de mesma árvore e seção por AUTEX", () => {
   expect(ordenarToras([a, b], "autex").map((x) => x.autex)).toEqual(["A-1", "B-2"]);
   expect(resumoPorAutex([a, b]).map((r) => [r.autex, r.qtd])).toEqual([["A-1", 1], ["B-2", 1]]);
 });
+
+import { linhaSinaflor as ls } from "./relatorio";
+import { it as it2, expect as ex2 } from "vitest";
+it2("SINAFLOR: médias de topo e pé em metros", () => {
+  ex2(ls({ arvore: 11, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 })).toEqual([11, 0.705, 0.645, 7.6]);
+});

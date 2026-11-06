@@ -119,11 +119,36 @@ function RomaneioPage() {
       <datalist id="lista-motorista">{cad.data?.motoristas.map((m) => <option key={m.nome} value={m.nome}>{m.cpf ?? ""}</option>)}</datalist>
       <div className="bg-card border rounded-xl p-3 grid grid-cols-2 gap-2">
         {f("placa", "Placa / caminhão", "text", "lista-caminhao")}
-        {f("julieta", " Reboque")}
+        {f("julieta", " Reboque", "text", "lista-reboque")}
         {f("motorista", "Motorista", "text", "lista-motorista")}
         {f("cpf", "CPF")}
         <div className="col-span-2">{f("data", "Data", "date")}</div>
       </div>
+      <details className="bg-card border rounded-xl p-3">
+        <summary className="font-semibold cursor-pointer">Cadastros salvos (toque para preencher)</summary>
+        <div className="mt-2 space-y-2 text-sm">
+          {([["Caminhões", "caminhao", "placa"], ["Reboques", "reboque", "julieta"]] as const).map(([titulo, tipo, campo]) => (
+            <div key={tipo}>
+              <div className="text-xs text-muted-foreground">{titulo}</div>
+              <div className="flex flex-wrap gap-1">
+                {cad.data?.veiculos.filter((v) => v.tipo === tipo).map((v) => (
+                  <Button key={v.placa} size="sm" variant="outline" onClick={() => setCab((c) => ({ ...c, [campo]: v.placa }))}>{v.placa}</Button>
+                ))}
+                {!cad.data?.veiculos.some((v) => v.tipo === tipo) && <span className="text-muted-foreground">Nenhum ainda</span>}
+              </div>
+            </div>
+          ))}
+          <div>
+            <div className="text-xs text-muted-foreground">Motoristas</div>
+            <div className="flex flex-wrap gap-1">
+              {cad.data?.motoristas.map((m) => (
+                <Button key={m.nome} size="sm" variant="outline" onClick={() => setCab((c) => ({ ...c, motorista: m.nome, cpf: m.cpf ?? "" }))}>{m.nome}</Button>
+              ))}
+              {!cad.data?.motoristas.length && <span className="text-muted-foreground">Nenhum ainda</span>}
+            </div>
+          </div>
+        </div>
+      </details>
 
       <div className="sticky top-14 z-10 bg-background py-2 space-y-2">
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); adicionar(plq); setPlq(""); inputRef.current?.focus(); }}>
@@ -143,7 +168,7 @@ function RomaneioPage() {
           <h2 className="text-lg font-bold uppercase mb-1">Por espécie</h2>
           {resumo.map((r) => (
             <div key={r.especie} className="flex justify-between text-sm py-0.5">
-              <span>{r.especie} <span className="text-muted-foreground">({r.qtd})</span></span>
+              <span>{r.especie}{r.nome_cientifico && <i className="text-muted-foreground"> · {r.nome_cientifico}</i>} <span className="text-muted-foreground">({r.qtd})</span></span>
               <span className="font-medium">{fmtM3(r.volume)}</span>
             </div>
           ))}

@@ -58,8 +58,8 @@ async function gerarPdf(r: Romaneio, itens: Tora[]) {
   const y = (doc as any).lastAutoTable.finalY + 8;
   autoTable(doc, {
     startY: y,
-    head: [["Espécie", "Qtd toras", "Volume m³"]],
-    body: resumoPorEspecie(itens).map((e) => [e.especie, e.qtd, fmtM3(e.volume)]),
+    head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]],
+    body: resumoPorEspecie(itens).map((e) => [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(e.volume)]),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [46, 84, 56] },
   });
@@ -121,7 +121,7 @@ function Detalhe() {
         <h2 className="text-lg font-bold uppercase mb-1">Por espécie</h2>
         {resumoPorEspecie(itens).map((e) => (
           <div key={e.especie} className="flex justify-between text-sm py-0.5">
-            <span>{e.especie} <span className="text-muted-foreground">({e.qtd})</span></span>
+            <span>{e.especie}{e.nome_cientifico && <i className="text-muted-foreground"> · {e.nome_cientifico}</i>} <span className="text-muted-foreground">({e.qtd})</span></span>
             <span className="font-medium">{fmtM3(e.volume)}</span>
           </div>
         ))}

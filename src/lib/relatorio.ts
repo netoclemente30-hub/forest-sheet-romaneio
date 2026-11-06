@@ -69,3 +69,18 @@ export function resumoPorAutex(toras: Tora[]) {
   for (const t of toras) { const k = t.autex || "Sem AUTEX"; const r = m.get(k) ?? { autex: k, qtd: 0, volume: 0 }; r.qtd++; r.volume += Number(t.volume); m.set(k, r); }
   return [...m.values()].sort((a, b) => a.autex.localeCompare(b.autex, "pt-BR"));
 }
+
+export function linhaSinaflor(t: Pick<Tora, "arvore" | "d_topo1" | "d_topo2" | "d_pe1" | "d_pe2" | "comprimento">) {
+  const media = (a: number | null, b: number | null) => (a == null || b == null ? null : Math.round(((Number(a) + Number(b)) / 2 / 100) * 10000) / 10000);
+  return [t.arvore, media(t.d_topo1, t.d_topo2), media(t.d_pe1, t.d_pe2), t.comprimento == null ? null : Number(t.comprimento)];
+}
+
+export async function exportarSinaflor(toras: Tora[]) {
+  const XLSX = await import("xlsx");
+  const head = ["Nº Árvore", "D. Médio Topo (m)", "D. Médio Pé (m)", "Comprimento (m)"];
+  const ws = XLSX.utils.aoa_to_sheet([head, ...toras.map(linhaSinaflor)]);
+  ws["!cols"] = head.map((h) => ({ wch: h.length + 3 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Repique SINAFLOR");
+  XLSX.writeFile(wb, `sinaflor_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
