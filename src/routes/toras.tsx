@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { useMemo, useState } from "react";
 import { ORDENS, ordenarToras, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery } from "@/lib/data";
@@ -12,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, QrCode, Printer, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/toras")({
   validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
@@ -59,6 +63,20 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const paraRelatorio = () => (selecionadas.length ? lista.filter((t) => selecionadas.includes(t.plaqueta)) : lista);
 
   const tora = toras.data?.find((t) => t.plaqueta === qr);
+  const { isAdmin } = useAuth();
+  const qc = useQueryClient();
+  const romaneadasSel = (toras.data ?? []).filter((t) => t.carregada && selecionadas.includes(t.plaqueta)).map((t) => t.plaqueta);
+
+  async function excluirRomaneadas() {
+    if (!romaneadasSel.length || !confirm(`Excluir ${romaneadasSel.length} toras já romaneadas? Isso não pode ser desfeito.`)) return;
+    if (!navigator.onLine) { toast.error("Precisa de internet para excluir"); return; }
+    const { error } = await supabase.from("toras").delete().in("plaqueta", romaneadasSel).eq("carregada", true);
+    if (error) { toast.error(error.message); return; }
+    await gravarRegistro(await capturarLog("Toras romaneadas excluídas", `${romaneadasSel.length} toras · plaquetas ${romaneadasSel.slice(0, 10).join(", ")}${romaneadasSel.length > 10 ? "…" : ""}`));
+    toast.success(`${romaneadasSel.length} toras excluídas`);
+    setSelecionadas((s) => s.filter((p) => !romaneadasSel.includes(p)));
+    await qc.invalidateQueries({ queryKey: ["toras"] });
+  }
 
   return (
     <div className="space-y-4">
@@ -103,6 +121,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas as toras filtradas" checked={lista.length > 0 && lista.every((t) => selecionadas.includes(t.plaqueta))} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar filtradas</label>
         <Button asChild variant="secondary"><Link to="/etiquetas" search={{ p: selecionadas.join(",") }} aria-disabled={!selecionadas.length} onClick={(e) => { if (!selecionadas.length) e.preventDefault(); }}><Printer /> Etiquetas ({selecionadas.length})</Link></Button>
+        {isAdmin && romaneadasSel.length > 0 && <Button variant="destructive" size="sm" onClick={excluirRomaneadas}><Trash2 /> Excluir romaneadas ({romaneadasSel.length})</Button>}
         {selecionadas.length > 0 && <Button variant="ghost" size="sm" onClick={() => setSelecionadas([])}>Limpar seleção</Button>}
       </div>
       <div className="bg-card border rounded-xl divide-y">

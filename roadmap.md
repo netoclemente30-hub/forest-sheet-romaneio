@@ -17,4 +17,4 @@
 - [x] Dados separados por empresa: tabela empresas, vínculo usuário→empresa, empresa_id em todas as tabelas de dados, RLS por empresa, admin cria empresa + acesso único compartilhado pelos funcionários. Testado: empresa nova não vê dados da RJ.
 - [x] Etiqueta: nº da árvore e secção em destaque (maiores), plaqueta menor.
 - [x] Conferir saldo da serraria (CSV/Excel) e cadastrar fora de estoque com plaquetas em sequência
-- [ ] Excluir toras já romaneadas (aba Toras)
+- [x] Excluir toras já romaneadas (aba Toras)
