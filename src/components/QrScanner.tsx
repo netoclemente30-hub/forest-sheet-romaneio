@@ -3,17 +3,21 @@ import { useEffect, useRef } from "react";
 export function QrScanner({ onScan, onClose }: { onScan: (text: string) => void; onClose: () => void }) {
   const last = useRef<{ t: string; at: number }>({ t: "", at: 0 });
   const cb = useRef(onScan);
+  const fechar = useRef(onClose);
   cb.current = onScan;
+  fechar.current = onClose;
+  // Inicia a câmera uma única vez; callbacks vêm por ref para não reiniciar a cada render.
   useEffect(() => {
-    let scanner: { stop: () => Promise<void>; clear: () => void } | null = null;
     let cancel = false;
-    import("html5-qrcode").then(({ Html5Qrcode }) => {
+    let iniciou: Promise<unknown> | null = null;
+    let scanner: { stop: () => Promise<void>; clear: () => void; isScanning?: boolean } | null = null;
+    import("html5-qrcode").then(({ Html5Qrcode, Html5QrcodeSupportedFormats }) => {
       if (cancel) return;
-      const s = new Html5Qrcode("qr-reader");
+      const s = new Html5Qrcode("qr-reader", { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], verbose: false, useBarCodeDetectorIfSupported: true });
       scanner = s;
-      s.start(
+      iniciou = s.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
+        { fps: 12, qrbox: (w: number, h: number) => { const n = Math.floor(Math.min(w, h) * 0.85); return { width: n, height: n }; } },
         (text) => {
           const now = Date.now();
           if (text === last.current.t && now - last.current.at < 2500) return;
@@ -21,12 +25,12 @@ export function QrScanner({ onScan, onClose }: { onScan: (text: string) => void;
           cb.current(text);
         },
         () => {},
-      ).catch(() => onClose());
+      ).catch(() => { if (!cancel) fechar.current(); });
     });
     return () => {
       cancel = true;
-      scanner?.stop().then(() => scanner?.clear()).catch(() => {});
+      Promise.resolve(iniciou).then(() => scanner?.stop()).then(() => scanner?.clear()).catch(() => {});
     };
-  }, [onClose]);
+  }, []);
   return <div id="qr-reader" className="w-full overflow-hidden rounded-xl bg-foreground" />;
 }
