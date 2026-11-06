@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 function descrever(op: Op): string {
   if (op.log?.detalhe) return `${op.log.acao} · ${op.log.detalhe}`;
   switch (op.tipo) {
-    case "tora_insert": return `Tora lançada · plaqueta ${String(op.dados.plaqueta ?? "?")}`;
+    case "tora_insert": return `Tora lançada · plaqueta ${String(op.dados["plaqueta"] ?? "?")}`;
     case "tora_update": return `Tora editada · plaqueta ${op.plaqueta}`;
     case "tora_delete": return `Tora excluída · plaqueta ${op.plaqueta}`;
     case "romaneio_salvar": return `Romaneio ${op.cab.placa} · ${op.qtd_toras} toras`;
