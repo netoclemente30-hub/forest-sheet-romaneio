@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -7,10 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trees } from "lucide-react";
 
+const WHATS = "https://wa.me/5569999004121?text=Ol%C3%A1%20Neto%2C%20quero%20um%20acesso%20ao%20aplicativo%20Manejo%20Florestal.";
+
 export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [semAcesso, setSemAcesso] = useState(false);
+
+  useEffect(() => {
+    // Conta Google sem acesso liberado volta com erro na URL.
+    const txt = window.location.search + window.location.hash;
+    if (/error/i.test(txt)) {
+      setSemAcesso(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +34,7 @@ export function LoginScreen() {
 
   async function google() {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (r.error) toast.error("Não foi possível entrar com Google");
+    if (r.error) setSemAcesso(true);
   }
 
   return (
@@ -33,6 +45,15 @@ export function LoginScreen() {
         <p className="mt-2 opacity-80">Inventário, toras e romaneios de carga</p>
       </div>
       <div className="bg-card rounded-t-3xl sm:rounded-3xl sm:mx-auto sm:w-full sm:max-w-sm p-6 space-y-4">
+        {semAcesso && (
+          <div role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 space-y-3">
+            <p className="font-semibold">Esta conta ainda não tem acesso.</p>
+            <p className="text-sm text-muted-foreground">O acesso é liberado pelo administrador. Peça o seu pelo WhatsApp.</p>
+            <Button asChild size="lg" className="w-full h-12">
+              <a href={WHATS} target="_blank" rel="noreferrer">Pedir acesso pelo WhatsApp</a>
+            </Button>
+          </div>
+        )}
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
             <Label htmlFor="email">E-mail</Label>
@@ -54,7 +75,7 @@ export function LoginScreen() {
           Não tem acesso?{" "}
           <a
             className="text-primary font-semibold underline"
-            href="https://wa.me/5569999004121?text=Ol%C3%A1%20Neto%2C%20quero%20um%20acesso%20ao%20aplicativo%20Manejo%20Florestal."
+            href={WHATS}
             target="_blank"
             rel="noreferrer"
           >
