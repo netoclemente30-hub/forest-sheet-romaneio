@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil } from "lucide-react";
+import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 
 export const Route = createFileRoute("/toras")({
   validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
@@ -53,6 +54,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
+  const [edit, setEdit] = useState<Tora | null>(null);
 
   const lista = useMemo(() => {
     const t = (toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
@@ -70,8 +72,14 @@ export function TorasList({ nova }: { nova?: boolean }) {
   async function excluirRomaneadas() {
     if (!romaneadasSel.length || !confirm(`Excluir ${romaneadasSel.length} toras já romaneadas? Isso não pode ser desfeito.`)) return;
     if (!navigator.onLine) { toast.error("Precisa de internet para excluir"); return; }
-    const { error } = await supabase.from("toras").delete().in("plaqueta", romaneadasSel).eq("carregada", true);
-    if (error) { toast.error(error.message); return; }
+    // Plaquetas se repetem entre empresas: apagar só as toras da empresa de cada uma.
+    const porEmpresa = new Map<string, number[]>();
+    for (const t of (toras.data ?? []).filter((x) => x.carregada && romaneadasSel.includes(x.plaqueta)))
+      porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
+    for (const [emp, plaquetas] of porEmpresa) {
+      const { error } = await supabase.from("toras").delete().in("plaqueta", plaquetas).eq("carregada", true).eq("empresa_id", emp);
+      if (error) { toast.error(error.message); return; }
+    }
     await gravarRegistro(await capturarLog("Toras romaneadas excluídas", `${romaneadasSel.length} toras · plaquetas ${romaneadasSel.slice(0, 10).join(", ")}${romaneadasSel.length > 10 ? "…" : ""}`));
     toast.success(`${romaneadasSel.length} toras excluídas`);
     setSelecionadas((s) => s.filter((p) => !romaneadasSel.includes(p)));
