@@ -49,7 +49,7 @@ function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado: numbe
 /** Gera um PDF com uma etiqueta por página, cada página no tamanho exato da etiqueta. */
 export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Promise<jsPDF> {
   const { largura: W, altura: H } = t;
-  const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: W >= H ? "landscape" : "portrait" });
+  const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: W >= H ? "landscape" : "portrait", compress: true });
   const m = Math.max(2, Math.min(W, H) * 0.05);
   for (let i = 0; i < toras.length; i++) {
     const tora = toras[i];
