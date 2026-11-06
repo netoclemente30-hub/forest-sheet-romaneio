@@ -42,3 +42,13 @@ export function conferirSaldo<T extends ToraMin>(linhas: LinhaSaldo[], toras: T[
     return { linha: l, tora: t ?? null };
   });
 }
+
+/** Monta as toras fora de estoque com plaquetas em sequência, pulando números já usados. */
+export function novasTorasDoSaldo(fora: LinhaSaldo[], inicio: number, usadas: Set<number>) {
+  let p = inicio;
+  return fora.map((l) => {
+    while (usadas.has(p)) p++;
+    const plaqueta = p++;
+    return { plaqueta, arvore: l.arvore!, secao: l.secao || null, autex: l.autex || null, especie: l.especie || null, nome_cientifico: l.nome_cientifico || null, volume: l.volume ?? 0 };
+  });
+}
