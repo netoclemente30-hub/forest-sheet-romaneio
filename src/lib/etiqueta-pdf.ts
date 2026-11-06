@@ -38,6 +38,7 @@ export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Prom
   const k = Math.min(W / 100, H / 70); // escala relativa ao modelo 100×70 mm
   for (let i = 0; i < toras.length; i++) {
     const tora = toras[i];
+    if (!tora) continue;
     if (i > 0) doc.addPage([W, H], W >= H ? "landscape" : "portrait");
     const qrMm = Math.min(H * 0.5, W * 0.4);
     const qr = await QRCode.toDataURL(qrTora(tora), { margin: 0, width: 600 });
