@@ -8,6 +8,7 @@ import { LoginScreen } from "./LoginScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { listarEmpresas } from "@/lib/usuarios.functions";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
+import { SyncStatus } from "./SyncStatus";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
@@ -55,6 +56,7 @@ export function AppShell() {
           <LogOut className="size-5" />
           </Button>
       </header>
+      <SyncStatus />
       <main className="mx-auto max-w-3xl p-4">
         <Outlet />
       </main>

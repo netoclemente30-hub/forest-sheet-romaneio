@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { getEmpresaAtiva } from "./empresa";
+import { comCache } from "./offline/cache";
 
 export type Tora = Database["public"]["Tables"]["toras"]["Row"];
 export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];
