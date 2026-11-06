@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory, Users, Building2, ClipboardList } from "lucide-react";
+import { Home, Layers, Truck, History, LogOut, TreePine, Warehouse, Factory, Users, Building2, ClipboardList, Download, Check } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { listarEmpresas } from "@/lib/usuarios.functions";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
+import { useInstallApp } from "@/hooks/useInstallApp";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
@@ -21,6 +23,7 @@ const nav = [
 ] as const;
 
 export function AppShell() {
+  const installation = useInstallApp();
   const { session, loading, isAdmin, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const [empresaSel, setEmpresaSel] = useState<string>(() => getEmpresaAtiva() ?? "");
@@ -32,10 +35,19 @@ export function AppShell() {
     : nav;
   return (
     <div className="min-h-screen pb-20">
-      <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex items-center justify-between gap-2 sticky top-0 z-20">
-        <span className="font-display text-xl font-bold uppercase tracking-wide shrink-0">Manejo Florestal</span>
+      <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
+        <span className="font-display text-xl font-bold uppercase min-w-0">Manejo Florestal</span>
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          <Button size="icon" variant="ghost" aria-label="Sair" title="Sair" onClick={() => supabase.auth.signOut()} className="opacity-80">
+            <LogOut className="size-5" />
+          </Button>
+          <Button size="sm" variant="ghost" onClick={installation.install} disabled={installation.installed || installation.busy}>
+            {installation.installed ? <Check /> : <Download />}
+            {installation.installed ? "App instalado" : installation.busy ? "Instalando…" : "Instalar app"}
+          </Button>
+        </div>
         {isSuperAdmin && (
-          <div className="flex items-center gap-1 min-w-0">
+          <div className="flex items-center gap-1 min-w-0 basis-full">
             <Building2 className="size-4 shrink-0 opacity-80" />
             <select
               aria-label="Empresa que você está visualizando"
@@ -54,10 +66,22 @@ export function AppShell() {
             </select>
           </div>
         )}
-          <Button size="icon" variant="ghost" aria-label="Sair" onClick={() => supabase.auth.signOut()} className="opacity-80 shrink-0">
-          <LogOut className="size-5" />
-          </Button>
       </header>
+      <Dialog open={installation.helpOpen} onOpenChange={installation.setHelpOpen}>
+        <DialogContent className="max-w-sm w-[calc(100%-2rem)] rounded-lg">
+          <DialogHeader>
+            <DialogTitle>Instalar Manejo Florestal</DialogTitle>
+            <DialogDescription>
+              {installation.preview
+                ? "Abra o aplicativo publicado no navegador do celular para instalar."
+                : installation.ios
+                  ? "No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início."
+                  : "No menu do Chrome ou Edge, escolha Instalar aplicativo ou Adicionar à tela inicial. Se a opção não aparecer, abra o aplicativo conectado à internet e tente novamente."}
+            </DialogDescription>
+          </DialogHeader>
+          {installation.preview && <Button asChild><a href="https://forest-sheet-romaneio.lovable.app" target="_blank" rel="noopener noreferrer">Abrir aplicativo</a></Button>}
+        </DialogContent>
+      </Dialog>
       <SyncStatus />
       <main className="mx-auto max-w-3xl p-4">
         <Outlet />
