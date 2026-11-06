@@ -75,18 +75,21 @@ export type Database = {
           created_at: string
           descricao: string | null
           empresa_id: string
+          encerrado: boolean
           numero: string
         }
         Insert: {
           created_at?: string
           descricao?: string | null
           empresa_id?: string
+          encerrado?: boolean
           numero: string
         }
         Update: {
           created_at?: string
           descricao?: string | null
           empresa_id?: string
+          encerrado?: boolean
           numero?: string
         }
         Relationships: [
