@@ -118,6 +118,7 @@ function RomaneioPage() {
       up(cab.placa, "caminhao"), up(cab.julieta, "reboque"),
       cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome" }),
     ]);
+    await gravarRegistro(log);
     await qc.invalidateQueries();
     toast.success("Romaneio salvo");
     nav({ to: "/historico/$id", params: { id: data.id } });
