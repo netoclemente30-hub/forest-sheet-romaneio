@@ -8,7 +8,7 @@ const num = (v: unknown) => { const x = Number(String(v ?? "").replace(",", ".")
 export function lerSaldo(rows: unknown[][]): LinhaSaldo[] {
   const hi = rows.findIndex((r) => r.some((c) => norm(c).includes("arv")));
   if (hi < 0) throw new Error("Não achei a coluna da árvore no cabeçalho");
-  const h = rows[hi].map(norm);
+  const h = (rows[hi] ?? []).map(norm);
   const col = (...k: string[]) => h.findIndex((c) => k.some((x) => c.includes(x)));
   const ci = { autex: col("autex", "autoriz"), arvore: col("arv"), secao: col("sec"), cient: col("cientif"), volume: col("vol"), especie: h.findIndex((c, i) => (c.includes("especie") || c.includes("vulgar") || c === "nome") && i !== col("cientif")) };
   return rows.slice(hi + 1).filter((r) => r.some((c) => String(c ?? "").trim())).map((r) => ({

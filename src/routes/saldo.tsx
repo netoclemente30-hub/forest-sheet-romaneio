@@ -33,7 +33,7 @@ function Saldo() {
     try {
       const XLSX = await import("xlsx");
       const wb = XLSX.read(await f.arrayBuffer());
-      const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], { header: 1 }));
+      const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0] ?? ""]!, { header: 1 }));
       setLinhas(l);
       toast.success(`${l.length} linhas lidas`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível ler a planilha"); }
