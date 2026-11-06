@@ -63,9 +63,11 @@ export function medidasDaEdicao(e: EdicaoTora) {
   };
 }
 
-// Volume de Smalian a partir do que está digitado (0 enquanto faltar medida).
+// Volume de Smalian das medidas digitadas — 0 enquanto faltar qualquer uma,
+// senão uma ponta faltante sairia pela metade do volume.
 export function volumeMedido(e: EdicaoTora): number {
-  return volumeTora(medidasDaEdicao(e));
+  const m = medidasDaEdicao(e);
+  return MEDIDAS.every((k) => m[k] != null && m[k]! > 0) ? volumeTora(m) : 0;
 }
 
 export function validarEdicao(e: EdicaoTora, toras: Tora[]): string | null {

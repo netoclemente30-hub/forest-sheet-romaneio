@@ -74,7 +74,7 @@ describe("dadosDaEdicao", () => {
   });
 
   it("calcula o volume de Smalian das medidas digitadas", () => {
-    expect(volumeMedido(ed({ d_topo1: "73", d_topo2: "68", d_pe1: "67", d_pe2: "62", comprimento: "7,6" }))).toBeCloseTo(0.5457, 3);
+    expect(volumeMedido(ed({ d_topo1: "73", d_topo2: "68", d_pe1: "67", d_pe2: "62", comprimento: "7,6" }))).toBeCloseTo(2.725, 3);
   });
 
   it("não calcula volume enquanto faltar medida", () => {
