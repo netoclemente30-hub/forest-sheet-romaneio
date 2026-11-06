@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Arvore, Tora } from "@/lib/data";
 import { volumeTora, fmtM3 } from "@/lib/volume";
+import { empresaIdGravacao } from "@/lib/empresa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +41,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     if (sec && rep) { toast.error(`Árvore ${f.arvore} já tem a secção ${sec} (plaqueta ${rep.plaqueta})`); return; }
     setBusy(true);
     const { error } = await supabase.from("toras").insert({
-      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arv?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol,
+      plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arv?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol, ...empresaIdGravacao(),
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }

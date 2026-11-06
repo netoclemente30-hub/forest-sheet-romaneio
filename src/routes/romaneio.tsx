@@ -7,6 +7,7 @@ import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
+import { empresaIdGravacao } from "@/lib/empresa";
 import { plaquetaDoQr } from "@/lib/tora-qr";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ function RomaneioPage() {
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase
       .from("romaneios")
-      .insert({ ...cab, total_volume: Math.round(total * 10000) / 10000, qtd_toras: itens.length, created_by: u.user?.id ?? null })
+      .insert({ ...cab, total_volume: Math.round(total * 10000) / 10000, qtd_toras: itens.length, created_by: u.user?.id ?? null, ...empresaIdGravacao() })
       .select()
       .single();
     if (error || !data) { setBusy(false); { toast.error(error?.message ?? "Erro"); return; } }
@@ -91,10 +92,10 @@ function RomaneioPage() {
       .in("plaqueta", itens.map((t) => t.plaqueta));
     setBusy(false);
     if (e2) { toast.error(e2.message); return; }
-    const up = (p: string, tipo: string) => p.trim() && supabase.from("veiculos").upsert({ placa: p.trim().toUpperCase(), tipo }, { onConflict: "empresa_id,placa,tipo", ignoreDuplicates: true });
+    const up = (p: string, tipo: string) => p.trim() && supabase.from("veiculos").upsert({ placa: p.trim().toUpperCase(), tipo, ...empresaIdGravacao() }, { onConflict: "empresa_id,placa,tipo", ignoreDuplicates: true });
     await Promise.all([
       up(cab.placa, "caminhao"), up(cab.julieta, "reboque"),
-      cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null }, { onConflict: "empresa_id,nome" }),
+      cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome" }),
     ]);
     await qc.invalidateQueries();
     toast.success("Romaneio salvo");
