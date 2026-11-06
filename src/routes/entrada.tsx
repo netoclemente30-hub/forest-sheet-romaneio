@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Romaneio, Tora } from "@/lib/data";
 import { lerQrRomaneio } from "@/lib/tora-qr";
+import { empresaIdGravacao } from "@/lib/empresa";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { QrScanner } from "@/components/QrScanner";
@@ -60,7 +61,7 @@ function Entrada() {
     const p = patio.trim();
     if (!p) { toast.error("Escolha o pátio de destino"); return; }
     setBusy(true);
-    await supabase.from("patios").upsert({ nome: p }, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
+    await supabase.from("patios").upsert({ nome: p, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
     const { error } = await supabase.from("romaneios").update({ recebido_em: new Date().toISOString(), patio: p }).eq("id", id);
     setBusy(false);
     if (error) { toast.error(error.message); return; }

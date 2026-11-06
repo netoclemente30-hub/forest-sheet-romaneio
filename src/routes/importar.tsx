@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { volumeTora } from "@/lib/volume";
+import { empresaIdGravacao } from "@/lib/empresa";
 import { lerBase } from "@/lib/import-base";
 import modelo from "@/assets/modelo-base.xlsx.asset.json";
 import { Button } from "@/components/ui/button";
@@ -81,19 +82,20 @@ function Importar() {
       const av = [...arvores.values()];
       const autexes = [...new Set(av.map((a) => a.autex).filter(Boolean))];
       if (autexes.length) {
-        const { error } = await supabase.from("autex").upsert(autexes.map((numero) => ({ numero })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
+        const { error } = await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...empresaIdGravacao() })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
         if (error) throw error;
       }
       setStatus(`Enviando ${av.length} árvores…`);
+      const emp = empresaIdGravacao();
       await chunks(av, 500, async (c) => {
-        const { error } = await supabase.from("arvores").upsert(c, { onConflict: "empresa_id,numero,autex" });
+        const { error } = await supabase.from("arvores").upsert(c.map((a) => ({ ...a, ...emp })), { onConflict: "empresa_id,numero,autex" });
         if (error) throw error;
       }, (d) => setStatus(`Árvores: ${d}/${av.length}`));
 
       const tv = [...toras.values()];
       await chunks(tv, 500, async (c) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await supabase.from("toras").upsert(c as any, { onConflict: "empresa_id,plaqueta", ignoreDuplicates: true });
+        const { error } = await supabase.from("toras").upsert(c.map((t) => ({ ...t, ...emp })) as any, { onConflict: "empresa_id,plaqueta", ignoreDuplicates: true });
         if (error) throw error;
       }, (d) => setStatus(`Toras: ${d}/${tv.length}`));
 
