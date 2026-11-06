@@ -2,9 +2,10 @@
 // permitir testes em memória; no app usa IndexedDB (db.ts).
 
 import { idb } from "./db";
+import type { LogCapturado } from "@/lib/registro";
 
 export type Op =
-  | { tipo: "tora_insert"; dados: Record<string, unknown> }
+  | { tipo: "tora_insert"; dados: Record<string, unknown>; log?: LogCapturado }
   | {
       tipo: "romaneio_salvar";
       cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string };
@@ -12,9 +13,10 @@ export type Op =
       qtd_toras: number;
       plaquetas: number[];
       empresa_id?: string | null;
+      log?: LogCapturado;
     }
-  | { tipo: "romaneio_recebido"; id: string; patio: string; empresa_id?: string | null }
-  | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean };
+  | { tipo: "romaneio_recebido"; id: string; patio: string; empresa_id?: string | null; log?: LogCapturado }
+  | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; log?: LogCapturado };
 
 export interface ItemFila {
   id: string;

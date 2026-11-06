@@ -3,6 +3,7 @@
 // descartados) para o usuário resolver.
 
 import { supabase } from "@/integrations/supabase/client";
+import { gravarRegistro } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
 
 export function estaOnline(): boolean {
