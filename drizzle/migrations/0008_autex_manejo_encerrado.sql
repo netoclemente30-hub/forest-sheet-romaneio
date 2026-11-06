@@ -1,0 +1,2 @@
+ALTER TABLE public.autex ADD COLUMN encerrado boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.autex.encerrado IS 'Manejo arquivado: árvores dessa AUTEX ficam ocultas da Base e a AUTEX some do seletor de medição de toras.';

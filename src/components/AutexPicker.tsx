@@ -31,7 +31,7 @@ export function AutexPicker({ value, onChange }: { value: string; onChange: (v: 
     <div className="flex gap-2">
       <Select value={value || "sem"} onValueChange={(v) => { if (v) onChange(v === "sem" ? "" : v); }}>
         <SelectTrigger className="flex-1 min-w-0"><SelectValue placeholder="Selecionar AUTEX" /></SelectTrigger>
-        <SelectContent><SelectItem value="sem">Sem AUTEX</SelectItem>{(q.data ?? []).map((a) => <SelectItem key={a.numero} value={a.numero}>{a.numero}{a.descricao ? ` · ${a.descricao}` : ""}</SelectItem>)}</SelectContent>
+        <SelectContent><SelectItem value="sem">Sem AUTEX</SelectItem>{(q.data ?? []).filter((a) => !a.encerrado || a.numero === value).map((a) => <SelectItem key={a.numero} value={a.numero}>{a.numero}{a.descricao ? ` · ${a.descricao}` : ""}{a.encerrado ? " (encerrado)" : ""}</SelectItem>)}</SelectContent>
       </Select>
       <Button type="button" variant="outline" onClick={() => setNovo(!novo)} aria-label={novo ? "Cancelar cadastro AUTEX" : "Adicionar AUTEX"}>{novo ? <X /> : <Plus />}</Button>
     </div>

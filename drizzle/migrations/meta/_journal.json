@@ -57,6 +57,13 @@
       "when": 1793930331393,
       "tag": "0007_empresa_id_default_automatico",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793931383454,
+      "tag": "0008_autex_manejo_encerrado",
+      "breakpoints": true
     }
   ]
 }

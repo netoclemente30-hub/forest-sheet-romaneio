@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { arvoresQuery, torasQuery } from "@/lib/data";
+import { toast } from "sonner";
+import { arvoresQuery, autexQuery, torasQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { chaveArvore } from "@/lib/import-base";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -21,14 +24,30 @@ export const Route = createFileRoute("/base")({
   component: BasePage,
 });
 
-type Filtro = "todas" | "exploradas" | "nao";
+type Filtro = "todas" | "exploradas" | "nao" | "encerradas";
 
 function BasePage() {
   const arvores = useQuery(arvoresQuery);
   const toras = useQuery(torasQuery);
+  const autex = useQuery(autexQuery);
+  const { isAdmin } = useAuth();
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [lim, setLim] = useState(100);
+  const [verManejos, setVerManejos] = useState(false);
+  const [busyAutex, setBusyAutex] = useState("");
+
+  const encerradas = useMemo(() => new Set((autex.data ?? []).filter((a) => a.encerrado).map((a) => a.numero)), [autex.data]);
+
+  async function alternarEncerrado(numero: string, encerrado: boolean) {
+    setBusyAutex(numero);
+    const { error } = await supabase.from("autex").update({ encerrado: !encerrado }).eq("numero", numero);
+    setBusyAutex("");
+    if (error) { toast.error(error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["autex"] });
+    toast.success(encerrado ? "Manejo reaberto" : "Manejo encerrado e arquivado");
+  }
 
   // Mesma lógica das colunas EXPL. e VOL.EXPL da planilha
   const volExpl = useMemo(() => {
@@ -40,13 +59,15 @@ function BasePage() {
   const lista = useMemo(() => {
     const s = q.trim().toLowerCase();
     return (arvores.data ?? []).filter((a) => {
+      const enc = encerradas.has(a.autex);
+      if (filtro === "encerradas" ? !enc : enc) return false;
       const expl = volExpl.has(chaveArvore(a.numero, a.autex));
       if (filtro === "exploradas" && !expl) return false;
       if (filtro === "nao" && expl) return false;
       if (!s) return true;
       return String(a.numero) === s || a.nome_vulgar.toLowerCase().includes(s) || a.picada === s || a.autex.toLowerCase() === s;
     });
-  }, [arvores.data, volExpl, q, filtro]);
+  }, [arvores.data, volExpl, encerradas, q, filtro]);
 
   const volInv = lista.reduce((n, a) => n + Number(a.volume ?? 0), 0);
   const volEx = lista.reduce((n, a) => n + (volExpl.get(chaveArvore(a.numero, a.autex)) ?? 0), 0);
@@ -55,13 +76,35 @@ function BasePage() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Base · Ficha de campo</h1>
       <Input placeholder="Buscar nº, espécie, picada ou AUTEX" value={q} onChange={(e) => setQ(e.target.value)} className="h-11" />
-      <div className="flex gap-2">
-        {(["todas", "exploradas", "nao"] as Filtro[]).map((k) => (
+      <div className="flex flex-wrap gap-2">
+        {(["todas", "exploradas", "nao", "encerradas"] as Filtro[]).map((k) => (
           <Button key={k} size="sm" variant={filtro === k ? "default" : "outline"} onClick={() => setFiltro(k)}>
-            {k === "todas" ? "Todas" : k === "exploradas" ? "Exploradas" : "Não exploradas"}
+            {k === "todas" ? "Todas" : k === "exploradas" ? "Exploradas" : k === "nao" ? "Não exploradas" : "Encerradas"}
           </Button>
         ))}
+        {isAdmin && (
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setVerManejos(!verManejos)}>
+            {verManejos ? "Fechar manejos" : "Gerenciar manejos"}
+          </Button>
+        )}
       </div>
+      {isAdmin && verManejos && (
+        <div className="bg-card border rounded-xl divide-y">
+          <div className="p-3 text-sm font-semibold">Manejos (AUTEX) — encerrar arquiva a base sem apagar nada</div>
+          {(autex.data ?? []).map((a) => (
+            <div key={a.numero} className="p-3 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{a.numero}{a.descricao && <span className="text-muted-foreground font-normal"> · {a.descricao}</span>}</div>
+                {a.encerrado && <div className="text-xs text-muted-foreground">Manejo encerrado · arquivado</div>}
+              </div>
+              <Button size="sm" variant={a.encerrado ? "outline" : "secondary"} disabled={busyAutex === a.numero} onClick={() => alternarEncerrado(a.numero, a.encerrado)}>
+                {a.encerrado ? "Reabrir" : "Encerrar"}
+              </Button>
+            </div>
+          ))}
+          {autex.data?.length === 0 && <div className="p-3 text-sm text-muted-foreground">Nenhuma AUTEX cadastrada ainda.</div>}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="bg-card border rounded-lg p-2"><div className="text-xs text-muted-foreground">Árvores</div><div className="font-display text-xl font-bold">{lista.length}</div></div>
         <div className="bg-card border rounded-lg p-2"><div className="text-xs text-muted-foreground">Vol. inventário</div><div className="font-display text-xl font-bold">{fmtM3(volInv)}</div></div>
