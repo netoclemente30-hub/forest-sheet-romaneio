@@ -71,6 +71,24 @@ export type Database = {
         }
         Relationships: []
       }
+      motoristas: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          nome: string
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          nome: string
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       romaneios: {
         Row: {
           cpf: string | null
@@ -82,6 +100,7 @@ export type Database = {
           motorista: string | null
           placa: string | null
           qtd_toras: number
+          recebido_em: string | null
           total_volume: number
         }
         Insert: {
@@ -94,6 +113,7 @@ export type Database = {
           motorista?: string | null
           placa?: string | null
           qtd_toras?: number
+          recebido_em?: string | null
           total_volume?: number
         }
         Update: {
@@ -106,6 +126,7 @@ export type Database = {
           motorista?: string | null
           placa?: string | null
           qtd_toras?: number
+          recebido_em?: string | null
           total_volume?: number
         }
         Relationships: []
@@ -178,6 +199,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      veiculos: {
+        Row: {
+          created_at: string
+          placa: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          placa: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          placa?: string
+          tipo?: string
+        }
+        Relationships: []
       }
     }
     Views: {
