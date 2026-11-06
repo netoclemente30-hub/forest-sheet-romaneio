@@ -60,6 +60,15 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
       await store.del(id);
       onMudou();
     },
+    async limparErro(id: string) {
+      const itens = await store.all();
+      const item = itens.find((i) => i.id === id);
+      if (item) {
+        const { erro: _e, ...resto } = item;
+        await store.put(resto);
+        onMudou();
+      }
+    },
     async marcarErro(id: string, erro: string) {
       const itens = await store.all();
       const item = itens.find((i) => i.id === id);
