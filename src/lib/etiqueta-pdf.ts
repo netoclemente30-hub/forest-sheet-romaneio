@@ -60,8 +60,9 @@ export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Prom
     const x = m + qrMm + m;
     const wTxt = W - x - m;
     const linhas: [string, number, boolean][] = [
-      [`Árvore ${tora.arvore} · Sec. ${tora.secao ?? "—"}`, 1, true],
-      [String(tora.plaqueta), 2.4, true],
+      [`Árvore ${tora.arvore}`, 1.8, true],
+      [`Secção ${tora.secao ?? "—"}`, 1.8, true],
+      [`Plaqueta ${tora.plaqueta}`, 0.9, true],
       [tora.especie ?? "Não cadastrada", 1.1, true],
       ...(tora.nome_cientifico ? [[tora.nome_cientifico, 0.8, false] as [string, number, boolean]] : []),
       [`DF1×DF2: ${medida(tora.d_topo1)} × ${medida(tora.d_topo2)} cm`, 0.9, true],
