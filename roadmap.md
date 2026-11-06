@@ -15,3 +15,4 @@
 - [x] AUTEX na base (coluna J), escolha de AUTEX quando o nº da árvore repete, relatórios separados por AUTEX.
 - [x] Acesso por convite: Neto admin, cadastro público fechado, tela Usuários (criar acesso com senha, trocar senha, tornar admin, remover), WhatsApp na tela de login, importação de planilha só para admin.
 - [x] Dados separados por empresa: tabela empresas, vínculo usuário→empresa, empresa_id em todas as tabelas de dados, RLS por empresa, admin cria empresa + acesso único compartilhado pelos funcionários. Testado: empresa nova não vê dados da RJ.
+- [x] Etiqueta: nº da árvore e secção em destaque (maiores), plaqueta menor.
