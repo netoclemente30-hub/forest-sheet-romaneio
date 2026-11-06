@@ -24,7 +24,7 @@ export const Route = createFileRoute("/usuarios")({
 });
 
 function UsuariosPage() {
-  const { session, isAdmin, loading } = useAuth();
+  const { session, isAdmin, isSuperAdmin, empresaId: minhaEmpresaId, loading } = useAuth();
   const nav = useNavigate();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
@@ -37,22 +37,22 @@ function UsuariosPage() {
   const usuarios = useQuery({
     queryKey: ["usuarios"],
     queryFn: () => listarUsuarios(),
-    enabled: isAdmin,
+    enabled: isAdmin || isSuperAdmin,
   });
   const empresas = useQuery({
     queryKey: ["empresas"],
     queryFn: () => listarEmpresas(),
-    enabled: isAdmin,
+    enabled: isAdmin || isSuperAdmin,
   });
 
   if (loading) return null;
-  if (!isAdmin) {
+  if (!isAdmin && !isSuperAdmin) {
     nav({ to: "/" });
     return null;
   }
 
-  const listaEmpresas = empresas.data ?? [];
-  const souSuperAdmin = isAdmin;
+  const souSuperAdmin = isSuperAdmin;
+  const listaEmpresas = souSuperAdmin ? (empresas.data ?? []) : (empresas.data ?? []).filter((e) => e.id === minhaEmpresaId);
 
   async function criar(e: React.FormEvent) {
     e.preventDefault();
@@ -193,9 +193,14 @@ function UsuariosPage() {
                       <Building2 className="size-3" /> {u.empresa}
                     </span>
                   )}
-                  {u.admin && (
+                  {u.super && (
                     <span className="inline-flex items-center gap-1 text-primary font-semibold">
-                      <ShieldCheck className="size-3" /> Administrador
+                      <ShieldCheck className="size-3" /> Administrador geral
+                    </span>
+                  )}
+                  {u.admin && !u.super && (
+                    <span className="inline-flex items-center gap-1 text-primary font-semibold">
+                      <ShieldCheck className="size-3" /> Admin da empresa
                     </span>
                   )}
                 </div>
