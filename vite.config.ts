@@ -23,8 +23,8 @@ export default defineConfig({
         filename: "sw.js",
         manifest: false, // manifesto servido de public/manifest.webmanifest
         workbox: {
-          navigateFallback: "/index.html",
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+          // App com SSR: sem index.html estático — navegações usam NetworkFirst abaixo
+          navigateFallback: null,
           runtimeCaching: [
             {
               // Navegações/HTML: rede primeiro, nunca cache-first
