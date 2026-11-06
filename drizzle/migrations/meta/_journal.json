@@ -22,6 +22,13 @@
       "when": 1793924967824,
       "tag": "0002_cadastros_romaneio_e_entrada",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793925581338,
+      "tag": "0003_autex_na_base_e_patios",
+      "breakpoints": true
     }
   ]
 }

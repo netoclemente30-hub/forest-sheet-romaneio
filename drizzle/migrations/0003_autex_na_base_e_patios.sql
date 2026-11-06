@@ -1,0 +1,12 @@
+ALTER TABLE public.arvores ADD COLUMN id uuid NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE public.arvores ADD COLUMN autex text NOT NULL DEFAULT '';
+ALTER TABLE public.arvores DROP CONSTRAINT arvores_pkey;
+ALTER TABLE public.arvores ADD PRIMARY KEY (id);
+ALTER TABLE public.arvores ADD CONSTRAINT arvores_numero_autex_key UNIQUE (numero, autex);
+CREATE TABLE public.patios (nome text PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.patios TO authenticated;
+GRANT ALL ON public.patios TO service_role;
+ALTER TABLE public.patios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY equipe ON public.patios FOR ALL TO authenticated USING (true) WITH CHECK (true);
+ALTER TABLE public.romaneios ADD COLUMN patio text;
+ALTER TABLE public.toras ADD COLUMN serrada_em timestamptz;

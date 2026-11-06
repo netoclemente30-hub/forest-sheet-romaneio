@@ -17,10 +17,12 @@ export type Database = {
       arvores: {
         Row: {
           altura: number | null
+          autex: string
           cap: number | null
           categoria: string | null
           created_at: string
           dap: number | null
+          id: string
           nome_cientifico: string | null
           nome_vulgar: string
           numero: number
@@ -29,10 +31,12 @@ export type Database = {
         }
         Insert: {
           altura?: number | null
+          autex?: string
           cap?: number | null
           categoria?: string | null
           created_at?: string
           dap?: number | null
+          id?: string
           nome_cientifico?: string | null
           nome_vulgar?: string
           numero: number
@@ -41,10 +45,12 @@ export type Database = {
         }
         Update: {
           altura?: number | null
+          autex?: string
           cap?: number | null
           categoria?: string | null
           created_at?: string
           dap?: number | null
+          id?: string
           nome_cientifico?: string | null
           nome_vulgar?: string
           numero?: number
@@ -89,6 +95,21 @@ export type Database = {
         }
         Relationships: []
       }
+      patios: {
+        Row: {
+          created_at: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       romaneios: {
         Row: {
           cpf: string | null
@@ -98,6 +119,7 @@ export type Database = {
           id: string
           julieta: string | null
           motorista: string | null
+          patio: string | null
           placa: string | null
           qtd_toras: number
           recebido_em: string | null
@@ -111,6 +133,7 @@ export type Database = {
           id?: string
           julieta?: string | null
           motorista?: string | null
+          patio?: string | null
           placa?: string | null
           qtd_toras?: number
           recebido_em?: string | null
@@ -124,6 +147,7 @@ export type Database = {
           id?: string
           julieta?: string | null
           motorista?: string | null
+          patio?: string | null
           placa?: string | null
           qtd_toras?: number
           recebido_em?: string | null
@@ -147,6 +171,7 @@ export type Database = {
           plaqueta: number
           romaneio_id: string | null
           secao: string | null
+          serrada_em: string | null
           volume: number
         }
         Insert: {
@@ -164,6 +189,7 @@ export type Database = {
           plaqueta: number
           romaneio_id?: string | null
           secao?: string | null
+          serrada_em?: string | null
           volume?: number
         }
         Update: {
@@ -181,6 +207,7 @@ export type Database = {
           plaqueta?: number
           romaneio_id?: string | null
           secao?: string | null
+          serrada_em?: string | null
           volume?: number
         }
         Relationships: [
