@@ -201,6 +201,50 @@ export type Database = {
           },
         ]
       }
+      registros: {
+        Row: {
+          acao: string
+          criado_em: string
+          detalhe: string | null
+          empresa_id: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          acao: string
+          criado_em?: string
+          detalhe?: string | null
+          empresa_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          acao?: string
+          criado_em?: string
+          detalhe?: string | null
+          empresa_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       romaneios: {
         Row: {
           cpf: string | null

@@ -78,6 +78,13 @@
       "when": 1793931849835,
       "tag": "0010_superadmin_politicas_acesso",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793932502441,
+      "tag": "0011_registros_de_atividade",
+      "breakpoints": true
     }
   ]
 }
