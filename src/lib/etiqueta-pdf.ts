@@ -30,6 +30,22 @@ function texto(doc: jsPDF, s: string, x: number, y: number, maxW: number, tamanh
   return (fs * 0.3528) * 1.15; // altura da linha em mm
 }
 
+/** Desenha o QR como vetor (quadrados pretos): nítido em qualquer impressora e arquivo bem leve. */
+function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado: number) {
+  const qr = QRCode.create(valor, { errorCorrectionLevel: "M" });
+  const n = qr.modules.size;
+  const c = lado / n;
+  doc.setFillColor(0, 0, 0);
+  for (let r = 0; r < n; r++) {
+    let ini = -1;
+    for (let col = 0; col <= n; col++) {
+      const on = col < n && qr.modules.get(r, col);
+      if (on && ini < 0) ini = col;
+      if (!on && ini >= 0) { doc.rect(x + ini * c, y + r * c, (col - ini) * c, c, "F"); ini = -1; }
+    }
+  }
+}
+
 /** Gera um PDF com uma etiqueta por página, cada página no tamanho exato da etiqueta. */
 export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Promise<jsPDF> {
   const { largura: W, altura: H } = t;
@@ -41,8 +57,7 @@ export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Prom
     if (!tora) continue;
     if (i > 0) doc.addPage([W, H], W >= H ? "landscape" : "portrait");
     const qrMm = Math.min(H * 0.5, W * 0.4);
-    const qr = await QRCode.toDataURL(qrTora(tora), { margin: 0, width: 600 });
-    doc.addImage(qr, "PNG", m, m, qrMm, qrMm);
+    desenharQr(doc, qrTora(tora), m, m, qrMm);
     const x = m + qrMm + m;
     const wTxt = W - x - m;
     let y = m;
