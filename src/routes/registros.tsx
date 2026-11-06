@@ -23,7 +23,8 @@ export const Route = createFileRoute("/registros")({
 });
 
 function Registros() {
-  const { isAdmin, isSuperAdmin, loading } = useAuth();
+  const { isAdmin, isSuperAdmin, loading: loadingSessao, permissoesCarregando } = useAuth();
+  const loading = loadingSessao || permissoesCarregando;
   const nav = useNavigate();
   const [q, setQ] = useState("");
 

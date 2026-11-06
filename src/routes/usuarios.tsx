@@ -24,7 +24,8 @@ export const Route = createFileRoute("/usuarios")({
 });
 
 function UsuariosPage() {
-  const { session, isAdmin, isSuperAdmin, empresaId: minhaEmpresaId, loading } = useAuth();
+  const { session, isAdmin, isSuperAdmin, empresaId: minhaEmpresaId, loading: loadingSessao, permissoesCarregando } = useAuth();
+  const loading = loadingSessao || permissoesCarregando;
   const nav = useNavigate();
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
