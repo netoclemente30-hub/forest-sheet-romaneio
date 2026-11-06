@@ -8,7 +8,18 @@ import { resumoPorEspecie } from "@/lib/romaneio";
 import { Button } from "@/components/ui/button";
 import { QrImage } from "@/components/QrImage";
 import { qrRomaneio } from "@/lib/tora-qr";
-import { FileDown, Trash2 } from "lucide-react";
+import { FileDown, Trash2, Share2 } from "lucide-react";
+
+// Ordem alfabética por espécie, depois árvore e secção (A antes de B).
+export function ordenarRomaneio(itens: Tora[]): Tora[] {
+  return [...itens].sort(
+    (a, b) =>
+      (a.especie ?? "").localeCompare(b.especie ?? "", "pt-BR") ||
+      a.arvore - b.arvore ||
+      (a.secao ?? "").localeCompare(b.secao ?? "", "pt-BR") ||
+      a.plaqueta - b.plaqueta,
+  );
+}
 
 export const Route = createFileRoute("/historico/$id")({
   head: () => ({
@@ -26,7 +37,7 @@ export const Route = createFileRoute("/historico/$id")({
 
 const dataBR = (d: string) => new Date(d + "T12:00").toLocaleDateString("pt-BR");
 
-async function gerarPdf(r: Romaneio, itens: Tora[]) {
+async function montarPdf(r: Romaneio, itens: Tora[]) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF();
@@ -63,7 +74,34 @@ async function gerarPdf(r: Romaneio, itens: Tora[]) {
     styles: { fontSize: 9 },
     headStyles: { fillColor: [46, 84, 56] },
   });
-  doc.save(`romaneio_${r.placa || "carga"}_${r.data}.pdf`);
+  return doc;
+}
+
+const nomePdf = (r: Romaneio) => `romaneio_${r.placa || "carga"}_${r.data}.pdf`;
+
+async function gerarPdf(r: Romaneio, itens: Tora[]) {
+  const doc = await montarPdf(r, itens);
+  doc.save(nomePdf(r));
+}
+
+// Compartilha o PDF (no celular abre a lista de apps, incluindo WhatsApp).
+// Se o navegador não souber compartilhar arquivos, abre o WhatsApp com o resumo em texto.
+async function compartilharPdf(r: Romaneio, itens: Tora[]) {
+  const doc = await montarPdf(r, itens);
+  const arquivo = new File([doc.output("blob")], nomePdf(r), { type: "application/pdf" });
+  if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [arquivo] })) {
+    try {
+      await navigator.share({ files: [arquivo], title: `Romaneio ${r.placa ?? ""}` });
+      return;
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return; // usuário cancelou
+    }
+  }
+  const resumo = resumoPorEspecie(itens)
+    .map((e) => `• ${e.especie}: ${e.qtd} toras · ${fmtM3(e.volume)} m³`)
+    .join("\n");
+  const texto = `ROMANEIO DE CARGA\nPlaca: ${r.placa ?? "–"} · Reboque: ${r.julieta ?? "–"}\nData: ${dataBR(r.data)} · Motorista: ${r.motorista ?? "–"}\n${itens.length} toras · ${fmtM3(Number(r.total_volume))} m³\n\n${resumo}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 }
 
 function Detalhe() {
