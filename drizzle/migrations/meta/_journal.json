@@ -64,6 +64,13 @@
       "when": 1793931383454,
       "tag": "0008_autex_manejo_encerrado",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793931835059,
+      "tag": "0009_app_role_superadmin",
+      "breakpoints": true
     }
   ]
 }
