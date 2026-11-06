@@ -66,6 +66,7 @@ function Saldo() {
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<"todos" | "estoque" | "fora">("todos");
   const [edit, setEdit] = useState<Tora | null>(null);
+  const [sel, setSel] = useState<number[]>([]);
 
   async function cadastrar() {
     const ini = Number(inicio);
@@ -137,7 +138,10 @@ function Saldo() {
             <Button disabled={busy || !inicio} onClick={cadastrar}>{busy ? "Cadastrando…" : "Cadastrar no estoque"}</Button>
           </div>
         </div>}
-        <Button asChild className="w-full" disabled={!ok.length}><Link to="/etiquetas" search={{ p: ok.map((r) => r.tora!.plaqueta).join(",") }}><Printer /> Imprimir plaquetas ({ok.length})</Link></Button>
+        {sel.length > 0
+          ? <div className="flex gap-2"><Button asChild className="flex-1"><Link to="/etiquetas" search={{ p: sel.join(",") }}><Printer /> Imprimir selecionadas ({sel.length})</Link></Button><Button variant="outline" onClick={() => setSel([])}>Limpar</Button></div>
+          : <Button asChild className="w-full" disabled={!ok.length}><Link to="/etiquetas" search={{ p: ok.map((r) => r.tora!.plaqueta).join(",") }}><Printer /> Imprimir todas ({ok.length})</Link></Button>}
+        <div className="text-xs text-muted-foreground">Marque as toras na lista para imprimir só as escolhidas.</div>
         <div className="grid grid-cols-3 gap-2">
           {([["todos", `Todas (${res.length})`], ["estoque", `No estoque (${ok.length})`], ["fora", `Fora (${fora})`]] as const).map(([k, l]) => (
             <Button key={k} size="sm" variant={status === k ? "default" : "outline"} onClick={() => setStatus(k)}>{l}</Button>
@@ -153,6 +157,7 @@ function Saldo() {
         <div className="bg-card border rounded-xl divide-y">
           {res.filter((r) => status === "todos" || (status === "estoque" ? !!r.tora : !r.tora)).filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); }).map((r, i) => (
             <div key={i} className="flex items-center gap-2 p-3">
+              {r.tora ? <input type="checkbox" className="h-5 w-5 shrink-0 accent-primary" aria-label={`Selecionar plaqueta ${r.tora.plaqueta}`} checked={sel.includes(r.tora.plaqueta)} onChange={() => { const p = r.tora!.plaqueta; setSel((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]); }} /> : <span className="w-5 shrink-0" />}
               <div className="min-w-0 flex-1">
                 <div className="font-semibold leading-snug">{r.linha.especie || "Sem nome"}</div>
                 {r.linha.nome_cientifico && <div className="text-xs italic text-muted-foreground">{r.linha.nome_cientifico}</div>}
