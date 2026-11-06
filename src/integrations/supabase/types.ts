@@ -74,19 +74,19 @@ export type Database = {
         Row: {
           created_at: string
           descricao: string | null
-          empresa_id: string | null
+          empresa_id: string
           numero: string
         }
         Insert: {
           created_at?: string
           descricao?: string | null
-          empresa_id?: string | null
+          empresa_id: string
           numero: string
         }
         Update: {
           created_at?: string
           descricao?: string | null
-          empresa_id?: string | null
+          empresa_id?: string
           numero?: string
         }
         Relationships: [
@@ -147,19 +147,19 @@ export type Database = {
         Row: {
           cpf: string | null
           created_at: string
-          empresa_id: string | null
+          empresa_id: string
           nome: string
         }
         Insert: {
           cpf?: string | null
           created_at?: string
-          empresa_id?: string | null
+          empresa_id: string
           nome: string
         }
         Update: {
           cpf?: string | null
           created_at?: string
-          empresa_id?: string | null
+          empresa_id?: string
           nome?: string
         }
         Relationships: [
@@ -175,17 +175,17 @@ export type Database = {
       patios: {
         Row: {
           created_at: string
-          empresa_id: string | null
+          empresa_id: string
           nome: string
         }
         Insert: {
           created_at?: string
-          empresa_id?: string | null
+          empresa_id: string
           nome: string
         }
         Update: {
           created_at?: string
-          empresa_id?: string | null
+          empresa_id?: string
           nome?: string
         }
         Relationships: [
@@ -265,7 +265,7 @@ export type Database = {
           d_pe2: number | null
           d_topo1: number | null
           d_topo2: number | null
-          empresa_id: string | null
+          empresa_id: string
           especie: string | null
           nome_cientifico: string | null
           plaqueta: number
@@ -284,7 +284,7 @@ export type Database = {
           d_pe2?: number | null
           d_topo1?: number | null
           d_topo2?: number | null
-          empresa_id?: string | null
+          empresa_id: string
           especie?: string | null
           nome_cientifico?: string | null
           plaqueta: number
@@ -303,7 +303,7 @@ export type Database = {
           d_pe2?: number | null
           d_topo1?: number | null
           d_topo2?: number | null
-          empresa_id?: string | null
+          empresa_id?: string
           especie?: string | null
           nome_cientifico?: string | null
           plaqueta?: number
@@ -315,10 +315,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "toras_autex_fkey"
-            columns: ["autex"]
+            columns: ["empresa_id", "autex"]
             isOneToOne: false
             referencedRelation: "autex"
-            referencedColumns: ["numero"]
+            referencedColumns: ["empresa_id", "numero"]
           },
           {
             foreignKeyName: "toras_empresa_id_fkey"
@@ -357,19 +357,19 @@ export type Database = {
       veiculos: {
         Row: {
           created_at: string
-          empresa_id: string | null
+          empresa_id: string
           placa: string
           tipo: string
         }
         Insert: {
           created_at?: string
-          empresa_id?: string | null
+          empresa_id: string
           placa: string
           tipo: string
         }
         Update: {
           created_at?: string
-          empresa_id?: string | null
+          empresa_id?: string
           placa?: string
           tipo?: string
         }
