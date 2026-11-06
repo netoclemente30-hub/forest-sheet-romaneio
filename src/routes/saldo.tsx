@@ -6,11 +6,13 @@ import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { torasQuery } from "@/lib/data";
+import { torasQuery, arvoresQuery } from "@/lib/data";
+import { ToraForm } from "@/components/ToraForm";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { conferirSaldo, lerSaldo, novasTorasDoSaldo, type LinhaSaldo } from "@/lib/saldo";
 import { fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
-import { Printer, Upload } from "lucide-react";
+import { Printer, Upload, Ruler } from "lucide-react";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -33,6 +35,11 @@ function Saldo() {
   const ok = res.filter((r) => r.tora);
   const fora = res.length - ok.length;
   const qc = useQueryClient();
+  const arvores = useQuery(arvoresQuery);
+  const [medir, setMedir] = useState(false);
+  const [medidas, setMedidas] = useState<number[]>([]);
+  // Toras do saldo = cadastradas só com volume; quando medidas ganham diâmetros.
+  const pendentes = (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null);
   const [inicio, setInicio] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -71,6 +78,21 @@ function Saldo() {
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Conferir saldo</h1>
+      <div className="bg-card border rounded-xl p-3 space-y-2">
+        <div className="flex justify-between text-sm"><span>Toras do saldo a medir</span><b>{pendentes.length}</b></div>
+        {medidas.length > 0 && <div className="text-xs text-muted-foreground">{medidas.length} medidas agora</div>}
+        <Button className="w-full h-12" disabled={!pendentes.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>
+        {medidas.length > 0 && <Button asChild variant="secondary" className="w-full"><Link to="/etiquetas" search={{ p: medidas.join(",") }}><Printer /> Imprimir as {medidas.length} medidas agora</Link></Button>}
+      </div>
+      <Sheet open={medir} onOpenChange={setMedir}>
+        <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Medir tora do saldo</SheetTitle></SheetHeader>
+          <div className="p-4 pt-0 space-y-2">
+            <p className="text-xs text-muted-foreground">Digite o nº da árvore e a secção: AUTEX, espécie e nome científico vêm do saldo.</p>
+            <ToraForm toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => setMedidas((m) => m.includes(p) ? m : [...m, p])} />
+          </div>
+        </SheetContent>
+      </Sheet>
       <p className="text-sm text-muted-foreground">Envie o Excel com AUTEX, nome científico, espécie, árvore, secção e volume. Cada linha é procurada nas toras pelo AUTEX + árvore + secção.</p>
       <label className="block">
         <Button asChild variant="outline" className="w-full"><span><Upload /> Escolher planilha de saldo</span></Button>
