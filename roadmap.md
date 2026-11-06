@@ -8,7 +8,7 @@
 - [x] Log de registros: quem inseriu, horário e coordenadas GPS (link Google Maps) para cada lançamento.
 - [x] Criar planilha modelo para importar BASE sem exigir toras.
 - [x] Cadastrar e selecionar AUTEX ao medir toras.
-- [x] Mostrar toras salvas na aba Estoque.
+- [x] Mostrar toras salvas (aba Estoque excluída depois: duplicava a aba Toras).
 - [x] Selecionar toras e imprimir etiquetas conforme PDF enviado.
 - [x] Incluir dados da tora no QR e ler QR para montar romaneio.
 - [x] Validar importação, medição, estoque, etiquetas e romaneio com dados temporários; câmera e impressão física dependem do dispositivo.- [x] Escolher pátio na entrada e aba Serraria (pátio de toras / serrar).

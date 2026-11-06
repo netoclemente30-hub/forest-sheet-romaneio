@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BaseRouteImport } from './routes/base'
 import { Route as EntradaRouteImport } from './routes/entrada'
-import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
 import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as RegistrosRouteImport } from './routes/registros'
@@ -36,11 +35,6 @@ const BaseRoute = BaseRouteImport.update({
 const EntradaRoute = EntradaRouteImport.update({
   id: '/entrada',
   path: '/entrada',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EstoqueRoute = EstoqueRouteImport.update({
-  id: '/estoque',
-  path: '/estoque',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EtiquetasRoute = EtiquetasRouteImport.update({
@@ -93,7 +87,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/base': typeof BaseRoute
   '/entrada': typeof EntradaRoute
-  '/estoque': typeof EstoqueRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
@@ -108,7 +101,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/base': typeof BaseRoute
   '/entrada': typeof EntradaRoute
-  '/estoque': typeof EstoqueRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
@@ -124,7 +116,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/base': typeof BaseRoute
   '/entrada': typeof EntradaRoute
-  '/estoque': typeof EstoqueRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
@@ -141,7 +132,6 @@ export interface FileRouteTypes {
     | '/'
     | '/base'
     | '/entrada'
-    | '/estoque'
     | '/etiquetas'
     | '/importar'
     | '/registros'
@@ -156,7 +146,6 @@ export interface FileRouteTypes {
     | '/'
     | '/base'
     | '/entrada'
-    | '/estoque'
     | '/etiquetas'
     | '/importar'
     | '/registros'
@@ -171,7 +160,6 @@ export interface FileRouteTypes {
     | '/'
     | '/base'
     | '/entrada'
-    | '/estoque'
     | '/etiquetas'
     | '/importar'
     | '/registros'
@@ -187,7 +175,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BaseRoute: typeof BaseRoute
   EntradaRoute: typeof EntradaRoute
-  EstoqueRoute: typeof EstoqueRoute
   EtiquetasRoute: typeof EtiquetasRoute
   ImportarRoute: typeof ImportarRoute
   RegistrosRoute: typeof RegistrosRoute
@@ -220,13 +207,6 @@ declare module '@tanstack/react-router' {
       path: '/entrada'
       fullPath: '/entrada'
       preLoaderRoute: typeof EntradaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/estoque': {
-      id: '/estoque'
-      path: '/estoque'
-      fullPath: '/estoque'
-      preLoaderRoute: typeof EstoqueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/etiquetas': {
@@ -299,7 +279,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BaseRoute: BaseRoute,
   EntradaRoute: EntradaRoute,
-  EstoqueRoute: EstoqueRoute,
   EtiquetasRoute: EtiquetasRoute,
   ImportarRoute: ImportarRoute,
   RegistrosRoute: RegistrosRoute,
