@@ -301,6 +301,32 @@ export type Database = {
           },
         ]
       }
+      saldos: {
+        Row: {
+          atualizado_em: string
+          empresa_id: string
+          linhas: Json
+        }
+        Insert: {
+          atualizado_em?: string
+          empresa_id?: string
+          linhas?: Json
+        }
+        Update: {
+          atualizado_em?: string
+          empresa_id?: string
+          linhas?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saldos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       toras: {
         Row: {
           arvore: number
