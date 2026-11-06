@@ -92,6 +92,13 @@
       "when": 1793933287856,
       "tag": "0012_empresas_leitura_restrita",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793987300512,
+      "tag": "0013_saldo_compartilhado",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { empresaIdGravacao } from "@/lib/empresa";
+import { empresaIdGravacao, getEmpresaAtiva } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
@@ -32,8 +32,26 @@ export const Route = createFileRoute("/saldo")({
 function Saldo() {
   const toras = useQuery(torasQuery);
   const [linhas, setLinhasState] = useState<LinhaSaldo[]>([]);
-  useEffect(() => { try { setLinhasState(JSON.parse(localStorage.getItem("saldo-linhas") ?? "[]")); } catch { /* sem saldo salvo */ } }, []);
-  const setLinhas = (l: LinhaSaldo[]) => { setLinhasState(l); try { localStorage.setItem("saldo-linhas", JSON.stringify(l)); } catch { /* cheio */ } };
+  // Saldo compartilhado por empresa na nuvem; cópia local para uso offline.
+  useEffect(() => {
+    try { setLinhasState(JSON.parse(localStorage.getItem("saldo-linhas") ?? "[]")); } catch { /* sem saldo salvo */ }
+    if (!navigator.onLine) return;
+    (async () => {
+      const emp = getEmpresaAtiva() ?? ((await supabase.rpc("minha_empresa")).data as string | null);
+      if (!emp) return;
+      const { data } = await supabase.from("saldos").select("linhas").eq("empresa_id", emp).maybeSingle();
+      if (data?.linhas) { const l = data.linhas as unknown as LinhaSaldo[]; setLinhasState(l); try { localStorage.setItem("saldo-linhas", JSON.stringify(l)); } catch { /* cheio */ } }
+    })();
+  }, []);
+  const setLinhas = async (l: LinhaSaldo[]) => {
+    setLinhasState(l);
+    try { localStorage.setItem("saldo-linhas", JSON.stringify(l)); } catch { /* cheio */ }
+    if (!navigator.onLine) return;
+    const emp = getEmpresaAtiva() ?? ((await supabase.rpc("minha_empresa")).data as string | null);
+    if (!emp) return;
+    const { error } = await supabase.from("saldos").upsert({ empresa_id: emp, linhas: l as unknown as never, atualizado_em: new Date().toISOString() });
+    if (error) toast.error("Saldo não foi compartilhado: " + error.message);
+  };
   const res = useMemo(() => conferirSaldo(linhas, toras.data ?? []), [linhas, toras.data]);
   const ok = res.filter((r) => r.tora);
   const fora = res.length - ok.length;
@@ -76,7 +94,7 @@ function Saldo() {
       const XLSX = await import("xlsx");
       const wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type: "string", FS: ";" }) : XLSX.read(await f.arrayBuffer());
       const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0] ?? ""]!, { header: 1, raw: false }));
-      setLinhas(l);
+      await setLinhas(l);
       const autexes = [...new Set(l.map((x) => x.autex).filter(Boolean))];
       if (autexes.length && navigator.onLine) await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...empresaIdGravacao() })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
       toast.success(`${l.length} linhas lidas`);
