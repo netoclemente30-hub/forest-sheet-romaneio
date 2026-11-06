@@ -6,8 +6,9 @@ import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { torasQuery, arvoresQuery } from "@/lib/data";
+import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { ToraForm } from "@/components/ToraForm";
+import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { conferirSaldo, lerSaldo, novasTorasDoSaldo, type LinhaSaldo } from "@/lib/saldo";
 import { fmtM3 } from "@/lib/volume";
@@ -46,31 +47,7 @@ function Saldo() {
   const [busy, setBusy] = useState(false);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<"todos" | "estoque" | "fora">("todos");
-  const [edit, setEdit] = useState<{ plaqueta: number; arvore: string; secao: string; especie: string; nome_cientifico: string; autex: string; volume: string } | null>(null);
-
-  async function salvarEdicao() {
-    if (!edit) return;
-    const arvore = Number(edit.arvore), volume = Number(edit.volume.replace(",", "."));
-    if (!Number.isFinite(arvore) || !Number.isFinite(volume)) { toast.error("Árvore e volume precisam ser números"); return; }
-    setBusy(true);
-    const { error } = await supabase.from("toras").update({ arvore, volume, secao: edit.secao.trim().toUpperCase() || null, especie: edit.especie.trim() || null, nome_cientifico: edit.nome_cientifico.trim() || null, autex: edit.autex.trim() || null }).eq("plaqueta", edit.plaqueta);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    await gravarRegistro(await capturarLog("Tora editada", `Plaqueta ${edit.plaqueta} · Árv. ${arvore}-${edit.secao}`));
-    toast.success(`Plaqueta ${edit.plaqueta} alterada`);
-    setEdit(null);
-    await qc.invalidateQueries({ queryKey: ["toras"] });
-  }
-
-  async function excluir(plaqueta: number) {
-    if (!confirm(`Excluir a tora da plaqueta ${plaqueta}?`)) return;
-    const { error } = await supabase.from("toras").delete().eq("plaqueta", plaqueta);
-    if (error) { toast.error(error.message); return; }
-    await gravarRegistro(await capturarLog("Tora excluída", `Plaqueta ${plaqueta} (conferência de saldo)`));
-    toast.success(`Plaqueta ${plaqueta} excluída`);
-    setEdit(null);
-    await qc.invalidateQueries({ queryKey: ["toras"] });
-  }
+  const [edit, setEdit] = useState<Tora | null>(null);
 
   async function cadastrar() {
     const ini = Number(inicio);
@@ -151,15 +128,7 @@ function Saldo() {
         <Sheet open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
           <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
             <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
-            {edit && <div className="p-4 pt-0 space-y-2">
-              {([["arvore", "Árvore"], ["secao", "Secção"], ["especie", "Espécie"], ["nome_cientifico", "Nome científico"], ["autex", "AUTEX"], ["volume", "Volume (m³)"]] as const).map(([k, l]) => (
-                <label key={k} className="block text-sm font-semibold space-y-1">{l}
-                  <Input value={edit[k]} inputMode={k === "arvore" || k === "volume" ? "decimal" : undefined} onChange={(e) => setEdit({ ...edit, [k]: e.target.value })} className="h-11 font-normal" />
-                </label>
-              ))}
-              <Button className="w-full h-12" disabled={busy} onClick={salvarEdicao}>Salvar alterações</Button>
-              <Button variant="destructive" className="w-full" onClick={() => excluir(edit.plaqueta)}><Trash2 /> Excluir tora</Button>
-            </div>}
+            {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
           </SheetContent>
         </Sheet>
         <Input placeholder="Filtrar por nome, científico, árvore ou AUTEX" aria-label="Filtrar saldo" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-12" />
@@ -172,8 +141,8 @@ function Saldo() {
                 <div className="text-xs text-muted-foreground">Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"} · {fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³</div>
               </div>
               {!r.tora && <span className="text-xs font-bold text-destructive uppercase">Fora de estoque</span>}
-              {r.tora && <Button size="icon" variant="outline" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => { const t = r.tora!; setEdit({ plaqueta: t.plaqueta, arvore: String(t.arvore), secao: t.secao ?? "", especie: t.especie ?? "", nome_cientifico: t.nome_cientifico ?? "", autex: t.autex ?? "", volume: String(t.volume ?? "") }); }}><Pencil /></Button>}
-              {r.tora && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={() => excluir(r.tora!.plaqueta)}><Trash2 /></Button>}
+              {r.tora && <Button size="icon" variant="outline" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora!)}><Pencil /></Button>}
+              {r.tora && <Button size="icon" variant="outline" className="text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={async () => { if (await excluirTora(r.tora!)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 /></Button>}
             </div>
           ))}
         </div>

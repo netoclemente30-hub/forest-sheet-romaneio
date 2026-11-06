@@ -23,6 +23,34 @@ async function executarOpSemLog(op: Op): Promise<void> {
       if (error) throw new Error(error.message);
       return;
     }
+    case "tora_update": {
+      // A AUTEX digitada precisa existir no cadastro da empresa antes de gravar na tora.
+      if (op.autex) {
+        const { error: ea } = await supabase
+          .from("autex")
+          .upsert({ numero: op.autex, empresa_id: op.empresa_id } as never, {
+            onConflict: "empresa_id,numero",
+            ignoreDuplicates: true,
+          });
+        if (ea) throw new Error(ea.message);
+      }
+      const { error } = await supabase
+        .from("toras")
+        .update(op.dados as never)
+        .eq("plaqueta", op.plaqueta)
+        .eq("empresa_id", op.empresa_id);
+      if (error) throw new Error(error.message);
+      return;
+    }
+    case "tora_delete": {
+      const { error } = await supabase
+        .from("toras")
+        .delete()
+        .eq("plaqueta", op.plaqueta)
+        .eq("empresa_id", op.empresa_id);
+      if (error) throw new Error(error.message);
+      return;
+    }
     case "romaneio_salvar": {
       const { data: u } = await supabase.auth.getUser();
       const { data, error } = await supabase

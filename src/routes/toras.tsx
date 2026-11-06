@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { useMemo, useState } from "react";
 import { ORDENS, ordenarToras, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
-import { torasQuery, arvoresQuery } from "@/lib/data";
+import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { ToraForm } from "@/components/ToraForm";
 import { QrImage } from "@/components/QrImage";
@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText } from "lucide-react";
+import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil } from "lucide-react";
+import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 
 export const Route = createFileRoute("/toras")({
   validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
@@ -53,6 +54,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
+  const [edit, setEdit] = useState<Tora | null>(null);
 
   const lista = useMemo(() => {
     const t = (toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
@@ -70,8 +72,14 @@ export function TorasList({ nova }: { nova?: boolean }) {
   async function excluirRomaneadas() {
     if (!romaneadasSel.length || !confirm(`Excluir ${romaneadasSel.length} toras já romaneadas? Isso não pode ser desfeito.`)) return;
     if (!navigator.onLine) { toast.error("Precisa de internet para excluir"); return; }
-    const { error } = await supabase.from("toras").delete().in("plaqueta", romaneadasSel).eq("carregada", true);
-    if (error) { toast.error(error.message); return; }
+    // Plaquetas se repetem entre empresas: apagar só as toras da empresa de cada uma.
+    const porEmpresa = new Map<string, number[]>();
+    for (const t of (toras.data ?? []).filter((x) => x.carregada && romaneadasSel.includes(x.plaqueta)))
+      porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
+    for (const [emp, plaquetas] of porEmpresa) {
+      const { error } = await supabase.from("toras").delete().in("plaqueta", plaquetas).eq("carregada", true).eq("empresa_id", emp);
+      if (error) { toast.error(error.message); return; }
+    }
     await gravarRegistro(await capturarLog("Toras romaneadas excluídas", `${romaneadasSel.length} toras · plaquetas ${romaneadasSel.slice(0, 10).join(", ")}${romaneadasSel.length > 10 ? "…" : ""}`));
     toast.success(`${romaneadasSel.length} toras excluídas`);
     setSelecionadas((s) => s.filter((p) => !romaneadasSel.includes(p)));
@@ -135,6 +143,8 @@ export function TorasList({ nova }: { nova?: boolean }) {
             </div>
             <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
             <Button size="icon" variant="ghost" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode /></Button>
+            {isAdmin && <Button size="icon" variant="ghost" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
+            {isAdmin && <Button size="icon" variant="ghost" aria-label={`Excluir tora ${t.plaqueta}`} onClick={async () => { if (await excluirTora(t)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
           </div>
         ))}
         {toras.isLoading && <div className="p-4 text-sm text-muted-foreground">Carregando…</div>}
@@ -149,6 +159,13 @@ export function TorasList({ nova }: { nova?: boolean }) {
           <div className="p-4 pt-0">
             <ToraForm toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => { setNovas((n) => [...n, p]); }} />
           </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={edit !== null} onOpenChange={(o) => !o && setEdit(null)}>
+        <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
+          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
 
