@@ -31,11 +31,17 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     const c = arvores.filter((a) => a.numero === Number(e.target.value));
     const u = c.length === 1 ? c[0] : undefined; if (u?.autex) setAutex(u.autex);
   };
+  // Tora vinda do saldo (só volume, sem medidas) com a mesma árvore e secção: medir completa ela.
+  const secAtual = f.secao.trim().toUpperCase();
+  const doSaldoTodas = f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [];
+  const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumeTora(medidas);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (doSaldo) { await medirSaldo(doSaldo); return; }
+    if (doSaldoTodas.length > 1) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
     const plaqueta = Number(f.plaqueta);
     if (candidatas.length > 1 && !arv) { toast.error(`Árvore ${f.arvore} existe em mais de uma AUTEX — escolha qual`); return; }
     if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
@@ -61,6 +67,20 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     }
     onSaved(plaqueta);
     setF({ ...f, plaqueta: String(plaqueta + 1), secao: String.fromCharCode(f.secao.charCodeAt(0) + 1), d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+  }
+
+  async function medirSaldo(t: Tora) {
+    if (!estaOnline()) { toast.error("Precisa de internet para medir tora do saldo"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("toras").update({ ...medidas, volume: vol }).eq("plaqueta", t.plaqueta).eq("empresa_id", t.empresa_id);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    const dif = vol - Number(t.volume);
+    await gravarRegistro(await capturarLog("Tora do saldo medida", `Tora ${t.plaqueta} · ${t.especie} · árvore ${t.arvore}-${t.secao} · saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³ (${dif >= 0 ? "+" : ""}${fmtM3(dif)})`));
+    toast.success(`Tora ${t.plaqueta} medida — saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³`);
+    await qc.invalidateQueries({ queryKey: ["toras"] });
+    onSaved(t.plaqueta);
+    setF({ ...f, arvore: "", secao: "A", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   }
 
   const field = (k: keyof typeof f, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (
@@ -90,8 +110,23 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
           </div>
         </div>
       )}
+      {doSaldoTodas.length > 1 && !doSaldo && (
+        <div className="rounded-md border border-primary p-2 space-y-1">
+          <div className="text-sm font-semibold">Árvore {f.arvore}-{secAtual} está no saldo em {doSaldoTodas.length} AUTEX. De qual é?</div>
+          <div className="flex flex-wrap gap-2">{doSaldoTodas.map((t) => <Button key={t.plaqueta} type="button" size="sm" variant="outline" onClick={() => setAutex(t.autex ?? "")}>{t.autex || "Sem AUTEX"} · {t.especie}</Button>)}</div>
+        </div>
+      )}
+      {doSaldo && (
+        <div className="rounded-md border-2 border-primary bg-secondary p-3 text-sm space-y-1">
+          <div className="font-semibold">Tora do saldo · plaqueta {doSaldo.plaqueta}</div>
+          <div>{doSaldo.especie}{doSaldo.nome_cientifico && <i> · {doSaldo.nome_cientifico}</i>}</div>
+          <div className="text-xs">AUTEX {doSaldo.autex ?? "—"}</div>
+          <div className="flex justify-between pt-1"><span>Saldo: <b>{fmtM3(Number(doSaldo.volume))} m³</b></span><span>Medido: <b>{fmtM3(vol)} m³</b></span></div>
+          {vol > 0 && <div className={vol - Number(doSaldo.volume) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {vol - Number(doSaldo.volume) >= 0 ? "+" : ""}{fmtM3(vol - Number(doSaldo.volume))} m³</div>}
+        </div>
+      )}
       <div className={`text-sm rounded-md px-3 py-2 ${especie ? "bg-secondary" : "bg-muted text-muted-foreground"}`}>
-        Espécie: <b>{f.arvore ? especie ?? "Não cadastrada na BASE" : "—"}</b>
+        Espécie: <b>{f.arvore ? doSaldo?.especie ?? especie ?? "Não cadastrada na BASE" : "—"}</b>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {field("d_topo1", "D. Topo 1 (cm)")}
@@ -104,7 +139,7 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
         <span className="text-sm opacity-80">Volume</span>
         <span className="font-display text-2xl font-bold">{fmtM3(vol)} m³</span>
       </div>
-      <Button type="submit" size="lg" className="w-full h-12" disabled={busy}>Salvar tora</Button>
+      <Button type="submit" size="lg" className="w-full h-12" disabled={busy}>{doSaldo ? `Salvar medidas da tora ${doSaldo.plaqueta}` : "Salvar tora"}</Button>
     </form>
   );
 }
