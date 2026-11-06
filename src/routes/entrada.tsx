@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Romaneio, Tora } from "@/lib/data";
 import { lerQrRomaneio } from "@/lib/tora-qr";
 import { empresaIdGravacao } from "@/lib/empresa";
+import { fila } from "@/lib/offline/fila";
+import { estaOnline } from "@/lib/offline/sync";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { QrScanner } from "@/components/QrScanner";
@@ -60,6 +62,13 @@ function Entrada() {
     if (!id) return;
     const p = patio.trim();
     if (!p) { toast.error("Escolha o pátio de destino"); return; }
+    if (!estaOnline()) {
+      setBusy(true);
+      await fila().enfileirar({ tipo: "romaneio_recebido", id, patio: p, empresa_id: empresaIdGravacao().empresa_id ?? null });
+      setBusy(false);
+      toast.success("Entrada salva offline — será enviada quando conectar");
+      return;
+    }
     setBusy(true);
     await supabase.from("patios").upsert({ nome: p, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
     const { error } = await supabase.from("romaneios").update({ recebido_em: new Date().toISOString(), patio: p }).eq("id", id);

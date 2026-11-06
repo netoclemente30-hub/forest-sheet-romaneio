@@ -8,6 +8,8 @@ import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { empresaIdGravacao } from "@/lib/empresa";
+import { fila } from "@/lib/offline/fila";
+import { estaOnline } from "@/lib/offline/sync";
 import { plaquetaDoQr } from "@/lib/tora-qr";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
@@ -78,6 +80,22 @@ function RomaneioPage() {
 
   async function salvar() {
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
+    if (!estaOnline()) {
+      setBusy(true);
+      await fila().enfileirar({
+        tipo: "romaneio_salvar",
+        cab,
+        total_volume: Math.round(total * 10000) / 10000,
+        qtd_toras: itens.length,
+        plaquetas: itens.map((t) => t.plaqueta),
+        empresa_id: empresaIdGravacao().empresa_id ?? null,
+      });
+      setBusy(false);
+      setItens([]);
+      toast.success("Romaneio salvo offline — será enviado quando conectar");
+      nav({ to: "/historico" });
+      return;
+    }
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data, error } = await supabase
