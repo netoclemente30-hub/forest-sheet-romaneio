@@ -71,6 +71,13 @@
       "when": 1793931835059,
       "tag": "0009_app_role_superadmin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793931849835,
+      "tag": "0010_superadmin_politicas_acesso",
+      "breakpoints": true
     }
   ]
 }
