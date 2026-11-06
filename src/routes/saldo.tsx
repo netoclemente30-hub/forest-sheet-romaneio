@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Input } from "@/components/ui/input";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { torasQuery, arvoresQuery } from "@/lib/data";
 import { ToraForm } from "@/components/ToraForm";
@@ -30,7 +30,9 @@ export const Route = createFileRoute("/saldo")({
 
 function Saldo() {
   const toras = useQuery(torasQuery);
-  const [linhas, setLinhas] = useState<LinhaSaldo[]>([]);
+  const [linhas, setLinhasState] = useState<LinhaSaldo[]>([]);
+  useEffect(() => { try { setLinhasState(JSON.parse(localStorage.getItem("saldo-linhas") ?? "[]")); } catch { /* sem saldo salvo */ } }, []);
+  const setLinhas = (l: LinhaSaldo[]) => { setLinhasState(l); try { localStorage.setItem("saldo-linhas", JSON.stringify(l)); } catch { /* cheio */ } };
   const res = useMemo(() => conferirSaldo(linhas, toras.data ?? []), [linhas, toras.data]);
   const ok = res.filter((r) => r.tora);
   const fora = res.length - ok.length;
@@ -71,6 +73,8 @@ function Saldo() {
       const wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type: "string", FS: ";" }) : XLSX.read(await f.arrayBuffer());
       const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0] ?? ""]!, { header: 1, raw: false }));
       setLinhas(l);
+      const autexes = [...new Set(l.map((x) => x.autex).filter(Boolean))];
+      if (autexes.length && navigator.onLine) await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...empresaIdGravacao() })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
       toast.success(`${l.length} linhas lidas`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível ler a planilha"); }
   }
@@ -79,9 +83,10 @@ function Saldo() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Conferir saldo</h1>
       <div className="bg-card border rounded-xl p-3 space-y-2">
-        <div className="flex justify-between text-sm"><span>Toras do saldo a medir</span><b>{pendentes.length}</b></div>
+        <div className="flex justify-between text-sm"><span>Toras do saldo a medir</span><b>{pendentes.length + fora}</b></div>
+        {!linhas.length && !pendentes.length && <div className="text-xs text-muted-foreground">Escolha primeiro a planilha de saldo abaixo.</div>}
         {medidas.length > 0 && <div className="text-xs text-muted-foreground">{medidas.length} medidas agora</div>}
-        <Button className="w-full h-12" disabled={!pendentes.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>
+        <Button className="w-full h-12" disabled={!pendentes.length && !linhas.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>
         {medidas.length > 0 && <Button asChild variant="secondary" className="w-full"><Link to="/etiquetas" search={{ p: medidas.join(",") }}><Printer /> Imprimir as {medidas.length} medidas agora</Link></Button>}
       </div>
       <Sheet open={medir} onOpenChange={setMedir}>
@@ -89,7 +94,7 @@ function Saldo() {
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Medir tora do saldo</SheetTitle></SheetHeader>
           <div className="p-4 pt-0 space-y-2">
             <p className="text-xs text-muted-foreground">Digite o nº da árvore e a secção: AUTEX, espécie e nome científico vêm do saldo.</p>
-            <ToraForm toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => setMedidas((m) => m.includes(p) ? m : [...m, p])} />
+            <ToraForm toras={toras.data ?? []} arvores={arvores.data ?? []} saldo={linhas} onSaved={(p) => setMedidas((m) => m.includes(p) ? m : [...m, p])} />
           </div>
         </SheetContent>
       </Sheet>
