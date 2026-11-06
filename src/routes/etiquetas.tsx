@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { torasQuery } from "@/lib/data";
 import { ToraLabel } from "@/components/ToraLabel";
 import { Button } from "@/components/ui/button";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ function Etiquetas() {
     try { const v = JSON.parse(localStorage.getItem("etiqueta-tamanho") ?? "null"); if (v && tamanhoValido(v)) setTam(v); } catch { /* ignora */ }
   }, []);
   function escolher(t: TamanhoEtiqueta) { setTam(t); if (tamanhoValido(t)) localStorage.setItem("etiqueta-tamanho", JSON.stringify(t)); }
-  async function gerar() {
+  async function gerar(salvar = false) {
     if (!tamanhoValido(tam)) { toast.error("Informe largura e altura entre 25 e 300 mm"); return; }
     setBusy(true);
     try {
@@ -54,7 +54,7 @@ function Etiquetas() {
       }
       const blob = doc.output("blob");
       const file = new File([blob], nome, { type: "application/pdf" });
-      if (navigator.canShare?.({ files: [file] })) {
+      if (!salvar && navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file], title: nome }); setBusy(false); return; }
         catch (e) { if ((e as Error).name === "AbortError") { setBusy(false); return; } }
       }
@@ -87,7 +87,8 @@ function Etiquetas() {
           </div>
           <p className="text-xs text-muted-foreground">Gera um PDF com uma etiqueta por página, no tamanho exato. Na impressão, use "Tamanho real / 100%".</p>
         </div>
-        <Button disabled={!selecionadas.length || toras.isLoading || busy} className="w-full h-12" onClick={gerar}><Printer /> {busy ? "Gerando…" : `Gerar PDF de ${selecionadas.length} etiqueta(s)`}</Button>
+        <Button disabled={!selecionadas.length || toras.isLoading || busy} className="w-full h-12" onClick={() => gerar()}><Printer /> {busy ? "Gerando…" : `Gerar PDF de ${selecionadas.length} etiqueta(s)`}</Button>
+        <Button variant="outline" disabled={!selecionadas.length || toras.isLoading || busy} className="w-full h-12" onClick={() => gerar(true)}><Download /> Salvar PDF no aparelho</Button>
         {pdfUrl && <a href={pdfUrl} target="_blank" rel="noopener" className="block text-center underline font-semibold py-2">Abrir PDF</a>}
       </div>
       {toras.isLoading && <p>Carregando etiquetas…</p>}
