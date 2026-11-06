@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ORDENS, ordenarToras, exportarExcel, exportarPdf, type Ordem } from "@/lib/relatorio";
+import { ORDENS, ordenarToras, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { ToraForm } from "@/components/ToraForm";
@@ -93,6 +93,7 @@ export function TorasList({ nova, estoque = false }: { nova?: boolean; estoque?:
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" disabled={!lista.length} onClick={() => exportarExcel(paraRelatorio())}><FileSpreadsheet /> Excel</Button>
           <Button variant="outline" disabled={!lista.length} onClick={() => exportarPdf(paraRelatorio(), estoque ? "Estoque" : "Toras")}><FileText /> PDF</Button>
+          <Button variant="outline" className="col-span-2" disabled={!lista.length} onClick={() => exportarSinaflor(paraRelatorio())}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>
         </div>
       </div>
       <div className="flex justify-between text-sm text-muted-foreground">

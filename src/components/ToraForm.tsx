@@ -35,6 +35,9 @@ export function ToraForm({ toras, arvores, onSaved }: { toras: Tora[]; arvores: 
     const plaqueta = Number(f.plaqueta);
     if (candidatas.length > 1 && !arv) { toast.error(`Árvore ${f.arvore} existe em mais de uma AUTEX — escolha qual`); return; }
     if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
+    const sec = f.secao.trim().toUpperCase();
+    const rep = toras.find((t) => t.arvore === Number(f.arvore) && (t.autex ?? "") === (autex || "") && (t.secao ?? "").trim().toUpperCase() === sec);
+    if (sec && rep) { toast.error(`Árvore ${f.arvore} já tem a secção ${sec} (plaqueta ${rep.plaqueta})`); return; }
     setBusy(true);
     const { error } = await supabase.from("toras").insert({
       plaqueta, arvore: Number(f.arvore), especie: especie ?? "Não cadastrada", nome_cientifico: arv?.nome_cientifico ?? null, autex: autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol,
