@@ -1,8 +1,9 @@
-export function resumoPorEspecie(itens: { especie: string | null; volume: number | string }[]) {
-  const m = new Map<string, { especie: string; qtd: number; volume: number }>();
+export function resumoPorEspecie(itens: { especie: string | null; nome_cientifico?: string | null; volume: number | string }[]) {
+  const m = new Map<string, { especie: string; nome_cientifico: string | null; qtd: number; volume: number }>();
   for (const t of itens) {
     const k = t.especie ?? "Não cadastrada";
-    const r = m.get(k) ?? { especie: k, qtd: 0, volume: 0 };
+    const r = m.get(k) ?? { especie: k, nome_cientifico: null, qtd: 0, volume: 0 };
+    r.nome_cientifico ??= t.nome_cientifico ?? null;
     r.qtd++;
     r.volume += Number(t.volume);
     m.set(k, r);
