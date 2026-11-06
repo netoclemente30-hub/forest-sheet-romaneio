@@ -165,8 +165,11 @@
 .tora-label { background: var(--label-paper); color: var(--label-ink); border: 1px solid var(--border); padding: 20px; break-inside: avoid; font-family: Arial, sans-serif; }
 .label-top { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 20px; align-items: center; }
 .label-identidade { min-width: 0; overflow-wrap: anywhere; }
-.label-arvore { font-size: 22px; font-weight: bold; }
-.label-plaqueta { font-family: Georgia, serif; font-size: 54px; font-weight: bold; line-height: 1.2; }
+.label-numeros { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.label-num { line-height: 1; }
+.label-num span { display: block; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+.label-num b { font-family: Georgia, serif; font-size: 46px; font-weight: bold; }
+.label-plaqueta { font-size: 20px; font-weight: bold; margin-top: 4px; }
 .label-autex { font-size: 16px; font-weight: bold; }
 .label-especie { text-align: center; font-size: 24px; font-weight: bold; margin: 12px 0 8px; overflow-wrap: anywhere; }
 .label-especie span { font-size: 16px; font-weight: normal; }
@@ -176,8 +179,9 @@
   .tora-label { padding: 12px; }
   .label-top { grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
   .label-top img { width: 120px; height: 120px; }
-  .label-arvore { font-size: 16px; }
-  .label-plaqueta { font-size: 38px; }
+  .label-num span { font-size: 10px; }
+  .label-num b { font-size: 30px; }
+  .label-plaqueta { font-size: 15px; }
   .label-autex { font-size: 12px; }
   .label-especie { font-size: 20px; }
   .label-medidas { font-size: 15px; gap: 8px; }

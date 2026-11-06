@@ -9,8 +9,11 @@ export function ToraLabel({ tora }: { tora: Tora }) {
     <div className="label-top">
       <QrImage value={qrTora(tora)} size={150} />
       <div className="label-identidade">
-        <div className="label-arvore">Árvore {tora.arvore} · Sec. {tora.secao ?? "—"}</div>
-        <div className="label-plaqueta">{tora.plaqueta}</div>
+        <div className="label-numeros">
+          <div className="label-num"><span>Árvore</span><b>{tora.arvore}</b></div>
+          <div className="label-num"><span>Secção</span><b>{tora.secao ?? "—"}</b></div>
+        </div>
+        <div className="label-plaqueta">Plaqueta {tora.plaqueta}</div>
         <div className="label-autex">Autorização: {tora.autex ?? "Não informada"}</div>
       </div>
     </div>
