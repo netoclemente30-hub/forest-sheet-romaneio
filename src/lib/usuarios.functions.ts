@@ -19,11 +19,8 @@ export const listarEmpresas = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let q = supabaseAdmin.from("empresas").select("id, nome").order("nome");
-    if (minha) q = q.eq("id", minha);
-    const { data, error } = await q;
+    const { data, error } = await supabaseAdmin.from("empresas").select("id, nome").order("nome");
     if (error) throw new Error(error.message);
     return data;
   });
@@ -34,8 +31,6 @@ export const criarEmpresa = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
-    if (minha) throw new Error("Apenas o administrador geral pode criar empresas");
     const nome = data.nome.trim();
     if (!nome) throw new Error("Informe o nome da empresa");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -98,8 +93,6 @@ export const definirEmpresa = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
-    if (minha) throw new Error("Apenas o administrador geral pode mover usuários entre empresas");
     if (data.userId === ctx.userId) throw new Error("Você não pode mudar a sua própria empresa");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("empresa_usuarios").upsert({ user_id: data.userId, empresa_id: data.empresaId });

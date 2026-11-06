@@ -52,7 +52,7 @@ function UsuariosPage() {
   }
 
   const listaEmpresas = empresas.data ?? [];
-  const souSuperAdmin = listaEmpresas.length > 1 || !listaEmpresas.length;
+  const souSuperAdmin = isAdmin;
 
   async function criar(e: React.FormEvent) {
     e.preventDefault();
