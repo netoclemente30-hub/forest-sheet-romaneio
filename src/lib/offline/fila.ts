@@ -7,6 +7,15 @@ import type { LogCapturado } from "@/lib/registro";
 export type Op =
   | { tipo: "tora_insert"; dados: Record<string, unknown>; log?: LogCapturado }
   | {
+      tipo: "tora_update";
+      plaqueta: number;
+      empresa_id: string;
+      autex: string | null;
+      dados: Record<string, unknown>;
+      log?: LogCapturado;
+    }
+  | { tipo: "tora_delete"; plaqueta: number; empresa_id: string; log?: LogCapturado }
+  | {
       tipo: "romaneio_salvar";
       cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string };
       total_volume: number;
