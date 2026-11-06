@@ -5,11 +5,43 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+  },
+  vite: {
+    plugins: [
+      VitePWA({
+        strategies: "generateSW",
+        registerType: "autoUpdate",
+        injectRegister: null, // o registro é só pelo wrapper src/lib/pwa-register.ts
+        devOptions: { enabled: false }, // nunca emite SW em dev
+        filename: "sw.js",
+        manifest: false, // manifesto servido de public/manifest.webmanifest
+        workbox: {
+          navigateFallback: "/index.html",
+          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+          runtimeCaching: [
+            {
+              // Navegações/HTML: rede primeiro, nunca cache-first
+              urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+              handler: "NetworkFirst",
+              options: { cacheName: "paginas" },
+            },
+            {
+              // Assets com hash same-origin: cache-first
+              urlPattern: ({ url, request }: { url: URL; request: Request }) =>
+                url.origin === self.location.origin && request.destination !== "document" && /\/assets\//.test(url.pathname),
+              handler: "CacheFirst",
+              options: { cacheName: "assets" },
+            },
+          ],
+        },
+      }),
+    ],
   },
 });
