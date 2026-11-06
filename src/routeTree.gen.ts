@@ -15,6 +15,7 @@ import { Route as EntradaRouteImport } from './routes/entrada'
 import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
 import { Route as ImportarRouteImport } from './routes/importar'
+import { Route as RegistrosRouteImport } from './routes/registros'
 import { Route as RomaneioRouteImport } from './routes/romaneio'
 import { Route as SerrariaRouteImport } from './routes/serraria'
 import { Route as TorasRouteImport } from './routes/toras'
@@ -50,6 +51,11 @@ const EtiquetasRoute = EtiquetasRouteImport.update({
 const ImportarRoute = ImportarRouteImport.update({
   id: '/importar',
   path: '/importar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistrosRoute = RegistrosRouteImport.update({
+  id: '/registros',
+  path: '/registros',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RomaneioRoute = RomaneioRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/estoque': typeof EstoqueRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
+  '/registros': typeof RegistrosRoute
   '/romaneio': typeof RomaneioRoute
   '/serraria': typeof SerrariaRoute
   '/toras': typeof TorasRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/estoque': typeof EstoqueRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
+  '/registros': typeof RegistrosRoute
   '/romaneio': typeof RomaneioRoute
   '/serraria': typeof SerrariaRoute
   '/toras': typeof TorasRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/estoque': typeof EstoqueRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
+  '/registros': typeof RegistrosRoute
   '/romaneio': typeof RomaneioRoute
   '/serraria': typeof SerrariaRoute
   '/toras': typeof TorasRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/etiquetas'
     | '/importar'
+    | '/registros'
     | '/romaneio'
     | '/serraria'
     | '/toras'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/etiquetas'
     | '/importar'
+    | '/registros'
     | '/romaneio'
     | '/serraria'
     | '/toras'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/etiquetas'
     | '/importar'
+    | '/registros'
     | '/romaneio'
     | '/serraria'
     | '/toras'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   EstoqueRoute: typeof EstoqueRoute
   EtiquetasRoute: typeof EtiquetasRoute
   ImportarRoute: typeof ImportarRoute
+  RegistrosRoute: typeof RegistrosRoute
   RomaneioRoute: typeof RomaneioRoute
   SerrariaRoute: typeof SerrariaRoute
   TorasRoute: typeof TorasRoute
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/importar'
       fullPath: '/importar'
       preLoaderRoute: typeof ImportarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registros': {
+      id: '/registros'
+      path: '/registros'
+      fullPath: '/registros'
+      preLoaderRoute: typeof RegistrosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/romaneio': {
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueRoute: EstoqueRoute,
   EtiquetasRoute: EtiquetasRoute,
   ImportarRoute: ImportarRoute,
+  RegistrosRoute: RegistrosRoute,
   RomaneioRoute: RomaneioRoute,
   SerrariaRoute: SerrariaRoute,
   TorasRoute: TorasRoute,
