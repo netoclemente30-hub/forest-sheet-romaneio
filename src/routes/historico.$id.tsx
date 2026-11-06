@@ -132,7 +132,8 @@ function Detalhe() {
 
   if (q.isLoading) return <p className="text-muted-foreground">Carregando…</p>;
   if (!q.data) return <p>Romaneio não encontrado.</p>;
-  const { r, itens } = q.data;
+  const { r, itens: itensBrutos } = q.data;
+  const itens = ordenarRomaneio(itensBrutos);
 
   return (
     <div className="space-y-4">
@@ -145,6 +146,7 @@ function Detalhe() {
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
+        <Button variant="secondary" className="flex-1 h-12" onClick={() => compartilharPdf(r, itens)}><Share2 /> WhatsApp</Button>
         <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>
       </div>
       <div className="bg-card border rounded-xl p-3 flex items-center gap-4">
@@ -168,7 +170,7 @@ function Detalhe() {
         {itens.map((t) => (
           <div key={t.plaqueta} className="flex items-center gap-3 p-3 text-sm">
             <div className="font-display text-lg font-bold w-14">{t.plaqueta}</div>
-            <div className="flex-1">{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore}</span></div>
+            <div className="flex-1">{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div>
             <div className="font-semibold">{fmtM3(Number(t.volume))}</div>
           </div>
         ))}
