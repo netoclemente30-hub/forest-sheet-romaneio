@@ -35,7 +35,7 @@ describe("fila offline", () => {
     const a = await f.enfileirar(opTora(1));
     await f.marcarErro(a.id, "plaqueta duplicada");
     const [item] = await f.listar();
-    expect(item.erro).toBe("plaqueta duplicada");
+    expect(item?.erro).toBe("plaqueta duplicada");
   });
 });
 
@@ -46,7 +46,7 @@ describe("sincronizar", () => {
     await f.enfileirar(opTora(2));
     const enviadas: number[] = [];
     const r = await sincronizar(f, async (op) => {
-      if (op.tipo === "tora_insert") enviadas.push(op.dados.plaqueta as number);
+      if (op.tipo === "tora_insert") enviadas.push(op.dados["plaqueta"] as number);
     });
     expect(r).toEqual({ enviados: 2, erros: 0 });
     expect(enviadas).toEqual([1, 2]);
@@ -58,12 +58,12 @@ describe("sincronizar", () => {
     await f.enfileirar(opTora(1));
     await f.enfileirar(opTora(2));
     const r = await sincronizar(f, async (op) => {
-      if (op.tipo === "tora_insert" && op.dados.plaqueta === 1) throw new Error("duplicate key");
+      if (op.tipo === "tora_insert" && op.dados["plaqueta"] === 1) throw new Error("duplicate key");
     });
     expect(r).toEqual({ enviados: 1, erros: 1 });
     const restantes = await f.listar();
     expect(restantes).toHaveLength(1);
-    expect(restantes[0].erro).toBe("duplicate key");
+    expect(restantes[0]?.erro).toBe("duplicate key");
   });
 
   it("para na falha de rede sem marcar erro", async () => {
@@ -76,6 +76,6 @@ describe("sincronizar", () => {
     expect(r).toEqual({ enviados: 0, erros: 0 });
     const restantes = await f.listar();
     expect(restantes).toHaveLength(2);
-    expect(restantes[0].erro).toBeUndefined();
+    expect(restantes[0]?.erro).toBeUndefined();
   });
 });

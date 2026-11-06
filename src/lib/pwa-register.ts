@@ -9,7 +9,7 @@ function hostnameBloqueado(hostname: string): boolean {
   const h = hostname.toLowerCase();
   for (const base of PREVIEW_HOSTS) {
     if (h === base || !h.endsWith(`.${base}`)) continue;
-    const label = h.slice(0, h.length - base.length - 1).split(".")[0];
+    const label = h.slice(0, h.length - base.length - 1).split(".")[0] ?? "";
     if (PREVIEW_LABEL.test(label)) return true;
     if (/^project--.+-dev$/.test(label)) return true;
   }
