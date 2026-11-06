@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { torasQuery } from "@/lib/data";
 import { ToraLabel } from "@/components/ToraLabel";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ function Etiquetas() {
   const { p } = Route.useSearch();
   const router = useRouter();
   const toras = useQuery(torasQuery);
+  const qc = useQueryClient();
   const lista = [...new Set(p.split(",").map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
   const selecionadas = lista.flatMap((pl) => { const t = toras.data?.find((x) => x.plaqueta === pl); return t ? [t] : []; });
   const [tam, setTam] = useState<TamanhoEtiqueta>({ largura: 100, altura: 70 });
@@ -43,6 +45,13 @@ function Etiquetas() {
     try {
       const doc = await gerarEtiquetasPdf(selecionadas, tam);
       const nome = `etiquetas-${tam.largura}x${tam.altura}mm.pdf`;
+      if (navigator.onLine) {
+        const agora = new Date().toISOString();
+        const porEmp = new Map<string, number[]>();
+        for (const t of selecionadas) { const k = t.empresa_id; porEmp.set(k, [...(porEmp.get(k) ?? []), t.plaqueta]); }
+        Promise.all([...porEmp].map(([emp, ps]) => supabase.from("toras").update({ etiqueta_impressa_em: agora }).eq("empresa_id", emp).in("plaqueta", ps)))
+          .then(() => qc.invalidateQueries({ queryKey: ["toras"] }));
+      }
       const blob = doc.output("blob");
       const file = new File([blob], nome, { type: "application/pdf" });
       if (navigator.canShare?.({ files: [file] })) {

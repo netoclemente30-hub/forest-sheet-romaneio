@@ -67,6 +67,11 @@ function Saldo() {
   const [status, setStatus] = useState<"todos" | "estoque" | "fora">("todos");
   const [edit, setEdit] = useState<Tora | null>(null);
   const [sel, setSel] = useState<number[]>([]);
+  const [impressao, setImpressao] = useState<"todas" | "impressas" | "nao">("todas");
+  const visiveis = res
+    .filter((r) => status === "todos" || (status === "estoque" ? !!r.tora : !r.tora))
+    .filter((r) => impressao === "todas" || (!!r.tora && (impressao === "impressas") === !!r.tora.etiqueta_impressa_em))
+    .filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); });
 
   async function cadastrar() {
     const ini = Number(inicio);
@@ -154,15 +159,23 @@ function Saldo() {
           </SheetContent>
         </Sheet>
         <Input placeholder="Filtrar por nome, científico, árvore ou AUTEX" aria-label="Filtrar saldo" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-12" />
+        <div className="grid grid-cols-3 gap-2">
+          {([["todas", "Etiqueta: todas"], ["impressas", "Impressas"], ["nao", "Não impressas"]] as const).map(([k, l]) => (
+            <Button key={k} size="sm" variant={impressao === k ? "default" : "outline"} onClick={() => setImpressao(k)}>{l}</Button>
+          ))}
+        </div>
+        {(() => { const ps = visiveis.flatMap((r) => r.tora ? [r.tora.plaqueta] : []); const todas = ps.length > 0 && ps.every((p) => sel.includes(p)); return (
+          <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-5 w-5 accent-primary" disabled={!ps.length} checked={todas} onChange={() => setSel((s) => todas ? s.filter((p) => !ps.includes(p)) : [...new Set([...s, ...ps])])} />Selecionar tudo ({ps.length})</label>
+        ); })()}
         <div className="bg-card border rounded-xl divide-y">
-          {res.filter((r) => status === "todos" || (status === "estoque" ? !!r.tora : !r.tora)).filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); }).map((r, i) => (
+          {visiveis.map((r, i) => (
             <div key={i} className="flex items-center gap-2 p-3">
               {r.tora ? <input type="checkbox" className="h-5 w-5 shrink-0 accent-primary" aria-label={`Selecionar plaqueta ${r.tora.plaqueta}`} checked={sel.includes(r.tora.plaqueta)} onChange={() => { const p = r.tora!.plaqueta; setSel((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]); }} /> : <span className="w-5 shrink-0" />}
               <div className="min-w-0 flex-1">
                 <div className="font-semibold leading-snug">{r.linha.especie || "Sem nome"}</div>
                 {r.linha.nome_cientifico && <div className="text-xs italic text-muted-foreground">{r.linha.nome_cientifico}</div>}
                 <div className="text-xs text-muted-foreground">{r.tora ? `Plaqueta ${r.tora.plaqueta} · ` : ""}Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"}</div>
-                <div className="text-xs text-muted-foreground">{fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³{!r.tora && <span className="font-semibold text-destructive"> · fora de estoque</span>}</div>
+                <div className="text-xs text-muted-foreground">{fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³{!r.tora && <span className="font-semibold text-destructive"> · fora de estoque</span>}{r.tora && (r.tora.etiqueta_impressa_em ? <span className="font-semibold text-primary"> · etiqueta impressa</span> : <span> · etiqueta não impressa</span>)}</div>
               </div>
               {r.tora && <div className="flex shrink-0 items-center gap-1">
                 <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora!)}><Pencil className="h-4 w-4" /></Button>
