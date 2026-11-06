@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { arvoresQuery, torasQuery } from "@/lib/data";
+import { toast } from "sonner";
+import { arvoresQuery, autexQuery, torasQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { chaveArvore } from "@/lib/import-base";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -21,14 +24,30 @@ export const Route = createFileRoute("/base")({
   component: BasePage,
 });
 
-type Filtro = "todas" | "exploradas" | "nao";
+type Filtro = "todas" | "exploradas" | "nao" | "encerradas";
 
 function BasePage() {
   const arvores = useQuery(arvoresQuery);
   const toras = useQuery(torasQuery);
+  const autex = useQuery(autexQuery);
+  const { isAdmin } = useAuth();
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [lim, setLim] = useState(100);
+  const [verManejos, setVerManejos] = useState(false);
+  const [busyAutex, setBusyAutex] = useState("");
+
+  const encerradas = useMemo(() => new Set((autex.data ?? []).filter((a) => a.encerrado).map((a) => a.numero)), [autex.data]);
+
+  async function alternarEncerrado(numero: string, encerrado: boolean) {
+    setBusyAutex(numero);
+    const { error } = await supabase.from("autex").update({ encerrado: !encerrado }).eq("numero", numero);
+    setBusyAutex("");
+    if (error) { toast.error(error.message); return; }
+    await qc.invalidateQueries({ queryKey: ["autex"] });
+    toast.success(encerrado ? "Manejo reaberto" : "Manejo encerrado e arquivado");
+  }
 
   // Mesma lógica das colunas EXPL. e VOL.EXPL da planilha
   const volExpl = useMemo(() => {
