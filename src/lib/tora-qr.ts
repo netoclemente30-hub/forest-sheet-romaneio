@@ -19,3 +19,14 @@ export function plaquetaDoQr(raw: string): number | null {
 export function selecionarToras(selecionadas: number[], visiveis: number[], marcar: boolean) {
   return marcar ? [...new Set([...selecionadas, ...visiveis])] : selecionadas.filter((p) => !visiveis.includes(p));
 }
+export function qrRomaneio(r: { id: string; placa?: string | null; data?: string | null }, plaquetas: number[]) {
+  return JSON.stringify({ tipo: "romaneio", versao: 1, id: r.id, placa: r.placa ?? "", data: r.data ?? "", plaquetas });
+}
+
+export function lerQrRomaneio(raw: string): { id: string; plaquetas: number[] } | null {
+  try {
+    const d = JSON.parse(raw.trim());
+    if (d?.tipo !== "romaneio" || d.versao !== 1 || typeof d.id !== "string" || !Array.isArray(d.plaquetas)) return null;
+    return { id: d.id, plaquetas: d.plaquetas.filter((p: unknown) => Number.isSafeInteger(p)) };
+  } catch { return null; }
+}

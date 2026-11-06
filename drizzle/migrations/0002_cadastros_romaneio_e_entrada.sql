@@ -1,0 +1,11 @@
+CREATE TABLE public.motoristas (nome text PRIMARY KEY, cpf text, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.motoristas TO authenticated;
+GRANT ALL ON public.motoristas TO service_role;
+ALTER TABLE public.motoristas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY equipe ON public.motoristas FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE TABLE public.veiculos (placa text NOT NULL, tipo text NOT NULL CHECK (tipo IN ('caminhao','reboque')), created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (placa, tipo));
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.veiculos TO authenticated;
+GRANT ALL ON public.veiculos TO service_role;
+ALTER TABLE public.veiculos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY equipe ON public.veiculos FOR ALL TO authenticated USING (true) WITH CHECK (true);
+ALTER TABLE public.romaneios ADD COLUMN recebido_em timestamptz;

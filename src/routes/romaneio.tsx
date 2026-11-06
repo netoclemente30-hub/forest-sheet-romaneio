@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { torasQuery, type Tora } from "@/lib/data";
+import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { plaquetaDoQr } from "@/lib/tora-qr";
@@ -11,7 +12,7 @@ import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, X, AlertTriangle } from "lucide-react";
+import { Camera, X, AlertTriangle, Warehouse } from "lucide-react";
 
 export const Route = createFileRoute("/romaneio")({
   head: () => ({
@@ -37,6 +38,18 @@ function RomaneioPage() {
   const [scan, setScan] = useState(false);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const cad = useQuery({
+    queryKey: ["cadastros-romaneio"],
+    queryFn: async () => {
+      const [m, v] = await Promise.all([supabase.from("motoristas").select("*").order("nome"), supabase.from("veiculos").select("*").order("placa")]);
+      return { motoristas: m.data ?? [], veiculos: v.data ?? [] };
+    },
+  });
+  const setMotorista = (nome: string) => {
+    const m = cad.data?.motoristas.find((x) => x.nome.toLowerCase() === nome.trim().toLowerCase());
+    setCab((c) => ({ ...c, motorista: nome, cpf: m?.cpf ?? c.cpf }));
+  };
 
   const mapa = useMemo(() => new Map((toras.data ?? []).map((t) => [t.plaqueta, t])), [toras.data]);
 
@@ -78,25 +91,36 @@ function RomaneioPage() {
       .in("plaqueta", itens.map((t) => t.plaqueta));
     setBusy(false);
     if (e2) { toast.error(e2.message); return; }
+    const up = (p: string, tipo: string) => p.trim() && supabase.from("veiculos").upsert({ placa: p.trim().toUpperCase(), tipo }, { ignoreDuplicates: true });
+    await Promise.all([
+      up(cab.placa, "caminhao"), up(cab.julieta, "reboque"),
+      cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null }),
+    ]);
     await qc.invalidateQueries();
     toast.success("Romaneio salvo");
     nav({ to: "/historico/$id", params: { id: data.id } });
   }
 
-  const f = (k: keyof typeof cab, label: string, type = "text") => (
+  const f = (k: keyof typeof cab, label: string, type = "text", list?: string) => (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input type={type} value={cab[k]} onChange={(e) => setCab({ ...cab, [k]: e.target.value })} className="h-11" />
+      <Input type={type} list={list} aria-label={label.trim()} value={cab[k]} onChange={(e) => (k === "motorista" ? setMotorista(e.target.value) : setCab({ ...cab, [k]: e.target.value }))} className="h-11" />
     </div>
   );
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold uppercase">Romaneio de carga</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-3xl font-bold uppercase">Romaneio de carga</h1>
+        <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
+      </div>
+      <datalist id="lista-caminhao">{cad.data?.veiculos.filter((v) => v.tipo === "caminhao").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
+      <datalist id="lista-reboque">{cad.data?.veiculos.filter((v) => v.tipo === "reboque").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
+      <datalist id="lista-motorista">{cad.data?.motoristas.map((m) => <option key={m.nome} value={m.nome}>{m.cpf ?? ""}</option>)}</datalist>
       <div className="bg-card border rounded-xl p-3 grid grid-cols-2 gap-2">
-        {f("placa", "Placa / caminhão")}
+        {f("placa", "Placa / caminhão", "text", "lista-caminhao")}
         {f("julieta", " Reboque")}
-        {f("motorista", "Motorista")}
+        {f("motorista", "Motorista", "text", "lista-motorista")}
         {f("cpf", "CPF")}
         <div className="col-span-2">{f("data", "Data", "date")}</div>
       </div>
