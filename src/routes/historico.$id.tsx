@@ -8,7 +8,18 @@ import { resumoPorEspecie } from "@/lib/romaneio";
 import { Button } from "@/components/ui/button";
 import { QrImage } from "@/components/QrImage";
 import { qrRomaneio } from "@/lib/tora-qr";
-import { FileDown, Trash2 } from "lucide-react";
+import { FileDown, Trash2, Share2 } from "lucide-react";
+
+// Ordem alfabética por espécie, depois árvore e secção (A antes de B).
+export function ordenarRomaneio(itens: Tora[]): Tora[] {
+  return [...itens].sort(
+    (a, b) =>
+      (a.especie ?? "").localeCompare(b.especie ?? "", "pt-BR") ||
+      a.arvore - b.arvore ||
+      (a.secao ?? "").localeCompare(b.secao ?? "", "pt-BR") ||
+      a.plaqueta - b.plaqueta,
+  );
+}
 
 export const Route = createFileRoute("/historico/$id")({
   head: () => ({
@@ -26,7 +37,7 @@ export const Route = createFileRoute("/historico/$id")({
 
 const dataBR = (d: string) => new Date(d + "T12:00").toLocaleDateString("pt-BR");
 
-async function gerarPdf(r: Romaneio, itens: Tora[]) {
+async function montarPdf(r: Romaneio, itens: Tora[]) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF();
@@ -63,7 +74,34 @@ async function gerarPdf(r: Romaneio, itens: Tora[]) {
     styles: { fontSize: 9 },
     headStyles: { fillColor: [46, 84, 56] },
   });
-  doc.save(`romaneio_${r.placa || "carga"}_${r.data}.pdf`);
+  return doc;
+}
+
+const nomePdf = (r: Romaneio) => `romaneio_${r.placa || "carga"}_${r.data}.pdf`;
+
+async function gerarPdf(r: Romaneio, itens: Tora[]) {
+  const doc = await montarPdf(r, itens);
+  doc.save(nomePdf(r));
+}
+
+// Compartilha o PDF (no celular abre a lista de apps, incluindo WhatsApp).
+// Se o navegador não souber compartilhar arquivos, abre o WhatsApp com o resumo em texto.
+async function compartilharPdf(r: Romaneio, itens: Tora[]) {
+  const doc = await montarPdf(r, itens);
+  const arquivo = new File([doc.output("blob")], nomePdf(r), { type: "application/pdf" });
+  if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [arquivo] })) {
+    try {
+      await navigator.share({ files: [arquivo], title: `Romaneio ${r.placa ?? ""}` });
+      return;
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return; // usuário cancelou
+    }
+  }
+  const resumo = resumoPorEspecie(itens)
+    .map((e) => `• ${e.especie}: ${e.qtd} toras · ${fmtM3(e.volume)} m³`)
+    .join("\n");
+  const texto = `ROMANEIO DE CARGA\nPlaca: ${r.placa ?? "–"} · Reboque: ${r.julieta ?? "–"}\nData: ${dataBR(r.data)} · Motorista: ${r.motorista ?? "–"}\n${itens.length} toras · ${fmtM3(Number(r.total_volume))} m³\n\n${resumo}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 }
 
 function Detalhe() {
@@ -94,7 +132,8 @@ function Detalhe() {
 
   if (q.isLoading) return <p className="text-muted-foreground">Carregando…</p>;
   if (!q.data) return <p>Romaneio não encontrado.</p>;
-  const { r, itens } = q.data;
+  const { r, itens: itensBrutos } = q.data;
+  const itens = ordenarRomaneio(itensBrutos);
 
   return (
     <div className="space-y-4">
@@ -107,6 +146,7 @@ function Detalhe() {
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
+        <Button variant="secondary" className="flex-1 h-12" onClick={() => compartilharPdf(r, itens)}><Share2 /> WhatsApp</Button>
         <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>
       </div>
       <div className="bg-card border rounded-xl p-3 flex items-center gap-4">
@@ -130,7 +170,7 @@ function Detalhe() {
         {itens.map((t) => (
           <div key={t.plaqueta} className="flex items-center gap-3 p-3 text-sm">
             <div className="font-display text-lg font-bold w-14">{t.plaqueta}</div>
-            <div className="flex-1">{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore}</span></div>
+            <div className="flex-1">{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div>
             <div className="font-semibold">{fmtM3(Number(t.volume))}</div>
           </div>
         ))}
