@@ -41,7 +41,7 @@ function BasePage() {
   const [verManejos, setVerManejos] = useState(false);
   const [busyAutex, setBusyAutex] = useState("");
   const [editando, setEditando] = useState<Arvore | null>(null);
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [form, setForm] = useState({ numero: "", nome_vulgar: "", nome_cientifico: "", cap: "", dap: "", altura: "", volume: "", categoria: "", picada: "", autex: "" });
   const [busyArvore, setBusyArvore] = useState(false);
 
   function abrirEdicao(a: Arvore) {
