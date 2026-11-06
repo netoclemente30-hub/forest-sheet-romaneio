@@ -3,11 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario } from "@/lib/usuarios.functions";
+import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa } from "@/lib/usuarios.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, Trash2, KeyRound, UserPlus } from "lucide-react";
+import { ShieldCheck, Trash2, KeyRound, UserPlus, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/usuarios")({
   head: () => ({
@@ -15,9 +15,9 @@ export const Route = createFileRoute("/usuarios")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { title: "Usuários — Manejo Florestal" },
-      { name: "description", content: "Gerencie quem tem acesso ao aplicativo." },
+      { name: "description", content: "Gerencie empresas e quem tem acesso ao aplicativo." },
       { property: "og:title", content: "Usuários — Manejo Florestal" },
-      { property: "og:description", content: "Gerencie quem tem acesso ao aplicativo." },
+      { property: "og:description", content: "Gerencie empresas e quem tem acesso ao aplicativo." },
     ],
   }),
   component: UsuariosPage,
@@ -29,12 +29,19 @@ function UsuariosPage() {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [empresaId, setEmpresaId] = useState("");
+  const [novaEmpresa, setNovaEmpresa] = useState("");
   const [novaSenha, setNovaSenha] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   const usuarios = useQuery({
     queryKey: ["usuarios"],
     queryFn: () => listarUsuarios(),
+    enabled: isAdmin,
+  });
+  const empresas = useQuery({
+    queryKey: ["empresas"],
+    queryFn: () => listarEmpresas(),
     enabled: isAdmin,
   });
 
@@ -44,15 +51,34 @@ function UsuariosPage() {
     return null;
   }
 
+  const listaEmpresas = empresas.data ?? [];
+  const souSuperAdmin = listaEmpresas.length > 1 || !listaEmpresas.length;
+
   async function criar(e: React.FormEvent) {
     e.preventDefault();
+    const emp = empresaId || listaEmpresas[0]?.id || "";
+    if (!emp) { toast.error("Escolha a empresa do novo acesso"); return; }
     setBusy(true);
     try {
-      await criarUsuario({ data: { email, password: senha } });
+      await criarUsuario({ data: { email, password: senha, empresaId: emp } });
       toast.success(`Acesso criado para ${email}. Envie a senha pelo WhatsApp.`);
       setEmail("");
       setSenha("");
       await qc.invalidateQueries({ queryKey: ["usuarios"] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+    setBusy(false);
+  }
+
+  async function cadastrarEmpresa(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await criarEmpresa({ data: { nome: novaEmpresa } });
+      toast.success(`Empresa "${novaEmpresa.trim()}" criada. Agora crie o acesso dela abaixo.`);
+      setNovaEmpresa("");
+      await qc.invalidateQueries({ queryKey: ["empresas"] });
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -82,6 +108,16 @@ function UsuariosPage() {
     }
   }
 
+  async function trocarEmpresa(userId: string, novaEmpresaId: string) {
+    try {
+      await definirEmpresa({ data: { userId, empresaId: novaEmpresaId } });
+      await qc.invalidateQueries({ queryKey: ["usuarios"] });
+      toast.success("Empresa do usuário alterada");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
   async function remover(userId: string, userEmail: string) {
     if (!confirm(`Remover o acesso de ${userEmail}?`)) return;
     try {
@@ -97,10 +133,41 @@ function UsuariosPage() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Usuários</h1>
       <p className="text-sm text-muted-foreground">
-        Só você cria acessos. Crie a conta com uma senha e envie os dados pelo WhatsApp para a pessoa.
+        Cada empresa tem um acesso próprio, compartilhado pelos funcionários. Os dados de cada empresa ficam separados.
       </p>
 
+      {souSuperAdmin && (
+        <form onSubmit={cadastrarEmpresa} className="bg-card border rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2 font-semibold text-sm">
+            <Building2 className="size-4" /> Nova empresa
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={novaEmpresa}
+              onChange={(e) => setNovaEmpresa(e.target.value)}
+              placeholder="Nome da empresa (ex.: RJ Madeiras)"
+              required
+              className="h-11"
+            />
+            <Button type="submit" className="h-11 shrink-0" disabled={busy}>Criar</Button>
+          </div>
+        </form>
+      )}
+
       <form onSubmit={criar} className="bg-card border rounded-xl p-3 space-y-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Empresa</Label>
+          <select
+            value={empresaId || listaEmpresas[0]?.id || ""}
+            onChange={(e) => setEmpresaId(e.target.value)}
+            className="w-full h-11 rounded-md border bg-background px-3 text-sm"
+            aria-label="Empresa do novo acesso"
+          >
+            {listaEmpresas.map((e) => (
+              <option key={e.id} value={e.id}>{e.nome}</option>
+            ))}
+          </select>
+        </div>
         <div className="space-y-1">
           <Label className="text-xs">E-mail</Label>
           <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
@@ -120,11 +187,18 @@ function UsuariosPage() {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="truncate font-medium">{u.email}</div>
-                {u.admin && (
-                  <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold">
-                    <ShieldCheck className="size-3" /> Administrador
-                  </span>
-                )}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  {u.empresa && (
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Building2 className="size-3" /> {u.empresa}
+                    </span>
+                  )}
+                  {u.admin && (
+                    <span className="inline-flex items-center gap-1 text-primary font-semibold">
+                      <ShieldCheck className="size-3" /> Administrador
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex gap-1 shrink-0">
                 {u.id !== session?.user.id && (
@@ -139,6 +213,19 @@ function UsuariosPage() {
                 )}
               </div>
             </div>
+            {souSuperAdmin && u.id !== session?.user.id && (
+              <select
+                value={u.empresaId ?? ""}
+                onChange={(e) => e.target.value && trocarEmpresa(u.id, e.target.value)}
+                className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                aria-label={`Empresa de ${u.email}`}
+              >
+                {!u.empresaId && <option value="">Sem empresa</option>}
+                {listaEmpresas.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nome}</option>
+                ))}
+              </select>
+            )}
             <div className="flex gap-2">
               <Input
                 type="text"
