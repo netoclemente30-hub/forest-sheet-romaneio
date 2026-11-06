@@ -134,17 +134,18 @@ export function TorasList({ nova }: { nova?: boolean }) {
       </div>
       <div className="bg-card border rounded-xl divide-y">
         {lista.slice(0, lim).map((t) => (
-          <div key={t.plaqueta} className="flex items-center gap-3 p-3">
-            <Checkbox aria-label={`Selecionar tora ${t.plaqueta}`} checked={selecionadas.includes(t.plaqueta)} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, [t.plaqueta], v === true))} />
-            <div className="font-display text-xl font-bold w-14">{t.plaqueta}</div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">{t.especie}</div>
-              <div className="text-xs text-muted-foreground">Árv. {t.arvore} · Sec. {t.secao ?? "–"} · {t.comprimento} m · AUTEX {t.autex ?? "—"} {t.carregada && <span className="text-success font-semibold">· carregada</span>}</div>
+          <div key={t.plaqueta} className="flex items-center gap-2 p-3">
+            <Checkbox aria-label={`Selecionar tora ${t.plaqueta}`} className="shrink-0" checked={selecionadas.includes(t.plaqueta)} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, [t.plaqueta], v === true))} />
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold leading-snug">{t.especie ?? "Sem espécie"}</div>
+              <div className="text-xs text-muted-foreground">Plaqueta {t.plaqueta} · Árv. {t.arvore} · Sec. {t.secao ?? "–"} · {t.comprimento ?? "–"} m</div>
+              <div className="text-xs text-muted-foreground">AUTEX {t.autex ?? "—"} · <span className="font-semibold text-foreground">{fmtM3(Number(t.volume))} m³</span>{t.carregada && <span className="font-semibold text-success"> · carregada</span>}</div>
             </div>
-            <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
-            <Button size="icon" variant="ghost" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode /></Button>
-            {isAdmin && <Button size="icon" variant="ghost" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
-            {isAdmin && <Button size="icon" variant="ghost" aria-label={`Excluir tora ${t.plaqueta}`} onClick={async () => { if (await excluirTora(t)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+            <div className="flex shrink-0 items-center gap-1">
+              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode className="h-4 w-4" /></Button>
+              {isAdmin && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
+              {isAdmin && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Excluir tora ${t.plaqueta}`} onClick={async () => { if (await excluirTora(t)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+            </div>
           </div>
         ))}
         {toras.isLoading && <div className="p-4 text-sm text-muted-foreground">Carregando…</div>}
