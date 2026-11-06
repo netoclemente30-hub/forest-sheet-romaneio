@@ -1,5 +1,6 @@
 # Tarefas
-- [ ] Corrigir abertura offline no Android: caminhos do cache publicado, preparar página inicial e testar sem rede.
+- [x] Corrigir abertura offline no Android: caminhos corrigidos, primeira navegação preparada, cache acessível sem rede; testes de abertura com worker corrigido isolado e lançamento offline passaram.
+- [ ] Validar atualização no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
 - [x] Modo offline + instalável no Android (PWA): manifest/ícones, service worker com guards, fila IndexedDB, sync, indicador. Offline só funciona no app publicado.
 - [x] Log de registros: quem inseriu, horário e coordenadas GPS (link Google Maps) para cada lançamento.
 - [x] Criar planilha modelo para importar BASE sem exigir toras.
