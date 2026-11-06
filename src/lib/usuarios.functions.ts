@@ -71,8 +71,7 @@ export const criarUsuario = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
-    const empresaId = minha ?? data.empresaId;
+    const empresaId = data.empresaId;
     if (!empresaId) throw new Error("Escolha a empresa do novo acesso");
     const email = data.email.trim().toLowerCase();
     if (!email || !data.password || data.password.length < 6) throw new Error("Informe um e-mail válido e uma senha de pelo menos 6 caracteres");
