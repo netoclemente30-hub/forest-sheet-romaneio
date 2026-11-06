@@ -80,7 +80,7 @@ export type Database = {
         Insert: {
           created_at?: string
           descricao?: string | null
-          empresa_id: string
+          empresa_id?: string
           numero: string
         }
         Update: {
@@ -153,7 +153,7 @@ export type Database = {
         Insert: {
           cpf?: string | null
           created_at?: string
-          empresa_id: string
+          empresa_id?: string
           nome: string
         }
         Update: {
@@ -180,7 +180,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          empresa_id: string
+          empresa_id?: string
           nome: string
         }
         Update: {
@@ -284,7 +284,7 @@ export type Database = {
           d_pe2?: number | null
           d_topo1?: number | null
           d_topo2?: number | null
-          empresa_id: string
+          empresa_id?: string
           especie?: string | null
           nome_cientifico?: string | null
           plaqueta: number
@@ -363,7 +363,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          empresa_id: string
+          empresa_id?: string
           placa: string
           tipo: string
         }
