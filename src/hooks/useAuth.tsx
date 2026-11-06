@@ -7,6 +7,11 @@ async function checarAdmin(userId: string): Promise<boolean> {
   return !!data;
 }
 
+async function checarSuperAdmin(userId: string): Promise<boolean> {
+  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
+  return !!data;
+}
+
 async function checarEmpresa(): Promise<string | null> {
   const { data } = await supabase.rpc("minha_empresa");
   return (data as string | null) ?? null;
@@ -15,6 +20,7 @@ async function checarEmpresa(): Promise<string | null> {
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -22,9 +28,11 @@ export function useAuth() {
       setSession(s);
       if (s?.user) {
         checarAdmin(s.user.id).then(setIsAdmin);
+        checarSuperAdmin(s.user.id).then(setIsSuperAdmin);
         checarEmpresa().then(setEmpresaId);
       } else {
         setIsAdmin(false);
+        setIsSuperAdmin(false);
         setEmpresaId(null);
       }
     });
@@ -32,11 +40,12 @@ export function useAuth() {
       setSession(data.session);
       if (data.session?.user) {
         setIsAdmin(await checarAdmin(data.session.user.id));
+        setIsSuperAdmin(await checarSuperAdmin(data.session.user.id));
         setEmpresaId(await checarEmpresa());
       }
       setLoading(false);
     });
     return () => data.subscription.unsubscribe();
   }, []);
-  return { session, loading, isAdmin, empresaId };
+  return { session, loading, isAdmin, isSuperAdmin, empresaId };
 }
