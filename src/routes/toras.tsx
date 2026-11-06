@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { useMemo, useState } from "react";
 import { ORDENS, ordenarToras, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
-import { torasQuery, arvoresQuery } from "@/lib/data";
+import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { ToraForm } from "@/components/ToraForm";
 import { QrImage } from "@/components/QrImage";
@@ -143,6 +143,8 @@ export function TorasList({ nova }: { nova?: boolean }) {
             </div>
             <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
             <Button size="icon" variant="ghost" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode /></Button>
+            {isAdmin && <Button size="icon" variant="ghost" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
+            {isAdmin && <Button size="icon" variant="ghost" aria-label={`Excluir tora ${t.plaqueta}`} onClick={async () => { if (await excluirTora(t)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
           </div>
         ))}
         {toras.isLoading && <div className="p-4 text-sm text-muted-foreground">Carregando…</div>}
@@ -157,6 +159,13 @@ export function TorasList({ nova }: { nova?: boolean }) {
           <div className="p-4 pt-0">
             <ToraForm toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => { setNovas((n) => [...n, p]); }} />
           </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={edit !== null} onOpenChange={(o) => !o && setEdit(null)}>
+        <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
+          <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
+          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
 
