@@ -29,6 +29,13 @@
       "when": 1793925581338,
       "tag": "0003_autex_na_base_e_patios",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793929523576,
+      "tag": "0004_usuarios_e_admin",
+      "breakpoints": true
     }
   ]
 }
