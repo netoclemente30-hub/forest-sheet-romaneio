@@ -91,10 +91,10 @@ function RomaneioPage() {
       .in("plaqueta", itens.map((t) => t.plaqueta));
     setBusy(false);
     if (e2) { toast.error(e2.message); return; }
-    const up = (p: string, tipo: string) => p.trim() && supabase.from("veiculos").upsert({ placa: p.trim().toUpperCase(), tipo }, { ignoreDuplicates: true });
+    const up = (p: string, tipo: string) => p.trim() && supabase.from("veiculos").upsert({ placa: p.trim().toUpperCase(), tipo }, , { onConflict: "empresa_id,placa,tipo", ignoreDuplicates: true });
     await Promise.all([
       up(cab.placa, "caminhao"), up(cab.julieta, "reboque"),
-      cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null }),
+      cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null }, { onConflict: "empresa_id,nome" }),
     ]);
     await qc.invalidateQueries();
     toast.success("Romaneio salvo");

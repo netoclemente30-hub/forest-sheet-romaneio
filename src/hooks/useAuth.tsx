@@ -7,22 +7,36 @@ async function checarAdmin(userId: string): Promise<boolean> {
   return !!data;
 }
 
+async function checarEmpresa(): Promise<string | null> {
+  const { data } = await supabase.rpc("minha_empresa");
+  return (data as string | null) ?? null;
+}
+
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (s?.user) checarAdmin(s.user.id).then(setIsAdmin);
-      else setIsAdmin(false);
+      if (s?.user) {
+        checarAdmin(s.user.id).then(setIsAdmin);
+        checarEmpresa().then(setEmpresaId);
+      } else {
+        setIsAdmin(false);
+        setEmpresaId(null);
+      }
     });
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      if (data.session?.user) setIsAdmin(await checarAdmin(data.session.user.id));
+      if (data.session?.user) {
+        setIsAdmin(await checarAdmin(data.session.user.id));
+        setEmpresaId(await checarEmpresa());
+      }
       setLoading(false);
     });
     return () => data.subscription.unsubscribe();
   }, []);
-  return { session, loading, isAdmin };
+  return { session, loading, isAdmin, empresaId };
 }
