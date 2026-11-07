@@ -20,6 +20,15 @@ export function tamanhoValido(t: TamanhoEtiqueta): boolean {
 
 const medida = (n: number | null) => (n === null ? "—" : Number(n).toFixed(2));
 
+/** Mantém o primeiro lançamento primeiro; a plaqueta desempata lançamentos simultâneos. */
+export function ordenarEtiquetasPorLancamento<T extends Pick<Tora, "created_at" | "plaqueta">>(toras: readonly T[]): T[] {
+  const instante = (t: T) => {
+    const valor = Date.parse(t.created_at);
+    return Number.isFinite(valor) ? valor : 0;
+  };
+  return [...toras].sort((a, b) => instante(a) - instante(b) || a.plaqueta - b.plaqueta);
+}
+
 /** Escreve texto reduzindo a fonte até caber na largura disponível. */
 function texto(doc: jsPDF, s: string, x: number, y: number, maxW: number, tamanho: number, bold = true, align: "left" | "center" = "left") {
   doc.setFont("helvetica", bold ? "bold" : "normal");
@@ -48,11 +57,12 @@ function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado: numbe
 
 /** Gera um PDF com uma etiqueta por página, cada página no tamanho exato da etiqueta. */
 export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Promise<jsPDF> {
+  const ordenadas = ordenarEtiquetasPorLancamento(toras);
   const { largura: W, altura: H } = t;
   const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: W >= H ? "landscape" : "portrait", compress: true });
   const m = Math.max(2, Math.min(W, H) * 0.05);
-  for (let i = 0; i < toras.length; i++) {
-    const tora = toras[i];
+  for (let i = 0; i < ordenadas.length; i++) {
+    const tora = ordenadas[i];
     if (!tora) continue;
     if (i > 0) doc.addPage([W, H], W >= H ? "landscape" : "portrait");
     const qrMm = Math.min(H - 2 * m, W * 0.48);
