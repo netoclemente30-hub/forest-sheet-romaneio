@@ -8,7 +8,7 @@ import { Printer, ArrowLeft, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { TAMANHOS_PADRAO, gerarEtiquetasPdf, tamanhoValido, type TamanhoEtiqueta } from "@/lib/etiqueta-pdf";
+import { TAMANHOS_PADRAO, gerarEtiquetasPdf, ordenarEtiquetasPorLancamento, tamanhoValido, type TamanhoEtiqueta } from "@/lib/etiqueta-pdf";
 
 export const Route = createFileRoute("/etiquetas")({
   validateSearch: (s: Record<string, unknown>) => ({ p: typeof s["p"] === "string" ? s["p"] : String(s["p"] ?? "") }),
@@ -31,7 +31,7 @@ function Etiquetas() {
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
   const lista = [...new Set(p.split(",").map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
-  const selecionadas = lista.flatMap((pl) => { const t = toras.data?.find((x) => x.plaqueta === pl); return t ? [t] : []; });
+  const selecionadas = ordenarEtiquetasPorLancamento(lista.flatMap((pl) => { const t = toras.data?.find((x) => x.plaqueta === pl); return t ? [t] : []; }));
   const [tam, setTam] = useState<TamanhoEtiqueta>({ largura: 100, altura: 70 });
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
