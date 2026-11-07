@@ -140,6 +140,15 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
         </div>
       )}
       {f.arvore && secAtual && saldo.length > 0 && !doSaldoTodas.length && !linhasSaldo.length && <div className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">Árvore {f.arvore}-{secAtual} não está no saldo</div>}
+      {medidaTora && (
+        <div className="rounded-md border-2 border-success bg-secondary p-3 text-sm space-y-1">
+          <div className="font-semibold">Já medida · plaqueta {medidaTora.plaqueta}</div>
+          <div>{medidaTora.especie}{medidaTora.nome_cientifico && <i> · {medidaTora.nome_cientifico}</i>}</div>
+          <div className="text-xs">AUTEX {medidaTora.autex ?? "—"}</div>
+          <div className="pt-1">Topo <b>{medidaTora.d_topo1 ?? "–"}×{medidaTora.d_topo2 ?? "–"}</b> · Pé <b>{medidaTora.d_pe1 ?? "–"}×{medidaTora.d_pe2 ?? "–"}</b> cm · <b>{medidaTora.comprimento ?? "–"} m</b></div>
+          <div>Volume medido: <b>{fmtM3(Number(medidaTora.volume))} m³</b></div>
+        </div>
+      )}
       {doSaldo && (
         <div className="rounded-md border-2 border-primary bg-secondary p-3 text-sm space-y-1">
           <div className="font-semibold">Tora do saldo · plaqueta {doSaldo.plaqueta}</div>
