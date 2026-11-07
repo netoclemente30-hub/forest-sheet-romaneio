@@ -69,7 +69,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
     try {
       const pendentes: IdentidadeTora[] = (await fila().listar()).flatMap(({ op }) => {
         if (op.tipo !== "tora_insert") return [];
-        return [{ arvore: Number(op.dados.arvore), secao: String(op.dados.secao ?? ""), autex: String(op.dados.autex ?? ""), empresa_id: typeof op.dados.empresa_id === "string" ? op.dados.empresa_id : empresa, plaqueta: Number(op.dados.plaqueta) }];
+        return [{ arvore: Number(op.dados["arvore"]), secao: String(op.dados["secao"] ?? ""), autex: String(op.dados["autex"] ?? ""), empresa_id: typeof op.dados["empresa_id"] === "string" ? op.dados["empresa_id"] : empresa, plaqueta: Number(op.dados["plaqueta"]) }];
       });
       const repetida = toraDuplicada(pendentes, identidade);
       if (repetida) { toast.error(avisoDuplicidade(repetida)); setBusy(false); return; }
