@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Reduzir travamentos da conferência de saldo no tablet e verificar busca, seleção e abertura da medição com dados reais.
 - [x] Adicionar botão Instalar app no canto superior direito; testes de pedido de instalação e orientação alternativa, tela autenticada e largura de celular verificados.
 - [x] Ocultar a marca Edit with Lovable na publicação.
 - [x] Explicar onde consultar dados das empresas e registros dos funcionários, incluindo a limitação de identidade em acessos compartilhados.

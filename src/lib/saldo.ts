@@ -35,9 +35,27 @@ export function lerSaldo(rows: unknown[][]): LinhaSaldo[] {
 
 /** Casa cada linha com uma tora (AUTEX + árvore + secção); sem tora = fora de estoque. */
 export function conferirSaldo<T extends ToraMin>(linhas: LinhaSaldo[], toras: T[]) {
+  const chave = (arvore: number | null, secao: unknown) => JSON.stringify([arvore, norm(secao)]);
+  const porSecao = new Map<string, T[]>();
+  const porAutex = new Map<string, T[]>();
+  for (const tora of toras) {
+    const secao = chave(tora.arvore, tora.secao);
+    const autex = JSON.stringify([secao, autexBase(tora.autex)]);
+    for (const [indice, key] of [[porSecao, secao], [porAutex, autex]] as const) {
+      const grupo = indice.get(key);
+      if (grupo) grupo.push(tora);
+      else indice.set(key, [tora]);
+    }
+  }
   const usadas = new Set<number>();
+  const posicoes = new Map<T[], number>();
   return linhas.map((l) => {
-    const t = toras.find((x) => !usadas.has(x.plaqueta) && x.arvore === l.arvore && norm(x.secao) === norm(l.secao) && (!l.autex || autexBase(x.autex) === autexBase(l.autex)));
+    const secao = chave(l.arvore, l.secao);
+    const grupo = l.autex ? porAutex.get(JSON.stringify([secao, autexBase(l.autex)])) : porSecao.get(secao);
+    let posicao = grupo ? posicoes.get(grupo) ?? 0 : 0;
+    while (grupo?.[posicao] && usadas.has(grupo[posicao]?.plaqueta ?? -1)) posicao++;
+    const t = grupo?.[posicao];
+    if (grupo) posicoes.set(grupo, posicao + 1);
     if (t) usadas.add(t.plaqueta);
     return { linha: l, tora: t ?? null };
   });
