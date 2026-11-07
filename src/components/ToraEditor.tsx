@@ -63,15 +63,16 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
       return;
     }
     const dados = dadosDaEdicao(e);
+    const mudouPlaqueta = dados.plaqueta !== e.plaqueta;
     const log = await capturarLog(
       "Tora editada",
-      `Plaqueta ${e.plaqueta} · ${dados.especie ?? "sem espécie"} · árvore ${dados.arvore}${dados.secao ? `-${dados.secao}` : ""} · ${fmtM3(dados.volume)} m³`,
+      `Plaqueta ${mudouPlaqueta ? `${e.plaqueta} → ${dados.plaqueta}` : e.plaqueta} · ${dados.especie ?? "sem espécie"} · árvore ${dados.arvore}${dados.secao ? `-${dados.secao}` : ""} · ${fmtM3(dados.volume)} m³`,
     );
     setBusy(true);
     if (!estaOnline()) {
       await fila().enfileirar({ tipo: "tora_update", plaqueta: e.plaqueta, empresa_id: e.empresa_id, autex: dados.autex, dados, log });
       setBusy(false);
-      toast.success(`Plaqueta ${e.plaqueta} salva offline — será enviada quando conectar`);
+      toast.success(`Plaqueta ${dados.plaqueta} salva offline — será enviada quando conectar`);
       onDone();
       return;
     }
@@ -93,7 +94,7 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
       return;
     }
     await gravarRegistro(log);
-    toast.success(`Plaqueta ${e.plaqueta} alterada`);
+    toast.success(mudouPlaqueta ? `Plaqueta ${e.plaqueta} alterada para ${dados.plaqueta}` : `Plaqueta ${e.plaqueta} alterada`);
     await refresh();
   }
 
@@ -119,6 +120,7 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
           {tora.serrada_em && "Ela está marcada como serrada."}
         </div>
       )}
+      {campo("plaquetaNova", "Plaqueta azul")}
       <div className="grid grid-cols-2 gap-2">
         {campo("arvore", "Nº árvore")}
         {campo("secao", "Secção", "text")}
