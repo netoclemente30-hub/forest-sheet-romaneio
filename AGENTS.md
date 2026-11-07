@@ -29,7 +29,7 @@ use the editor.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
 
-- Data is read client-side with react-query (`src/lib/data.ts`) after sign-in in `AppShell`; all signed-in users share one team dataset (RLS `authenticated` = full access). Why: field team app, SSR has no session.
+- Data is read client-side with react-query (`src/lib/data.ts`) after sign-in in `AppShell`; reads are scoped to the user's company (empresa_id). Why: field team app, SSR has no session.
 - Tora volume uses `volumeTora` in `src/lib/volume.ts` (Smalian, same as the original spreadsheet); never duplicate the formula.
 - AUTEX uses a team-shared registry referenced by logs; QR payloads are versioned and resolve to current inventory rows before loading, so printed data never overrides stock status.
 - BASE imports accept the original seven columns plus optional picada, scientific name and AUTEX (col J); trees are unique by (numero, autex) so repeated tree numbers across AUTEX stay separate; the calculations sheet is optional.
