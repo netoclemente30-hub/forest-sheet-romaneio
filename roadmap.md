@@ -1,5 +1,5 @@
 # Tarefas
-- [ ] Reduzir travamentos da conferência de saldo no tablet e verificar busca, seleção e abertura da medição com dados reais.
+- [x] Reduzir sobrecarga da conferência de saldo: comparação indexada, filtros otimizados e páginas de 50 toras; busca, seleção entre páginas e abertura/preenchimento da medição verificados com as 1.981 linhas reais em tela de tablet, sem alterar dados.
 - [x] Adicionar botão Instalar app no canto superior direito; testes de pedido de instalação e orientação alternativa, tela autenticada e largura de celular verificados.
 - [x] Ocultar a marca Edit with Lovable na publicação.
 - [x] Explicar onde consultar dados das empresas e registros dos funcionários, incluindo a limitação de identidade em acessos compartilhados.
