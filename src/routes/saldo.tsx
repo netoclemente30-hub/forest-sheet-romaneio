@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao, getEmpresaAtiva } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Input } from "@/components/ui/input";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { ToraForm } from "@/components/ToraForm";
@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { conferirSaldo, lerSaldo, novasTorasDoSaldo, type LinhaSaldo } from "@/lib/saldo";
 import { fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
-import { Printer, Upload, Ruler, Pencil, Trash2 } from "lucide-react";
+import { Printer, Upload, Ruler, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -53,14 +53,14 @@ function Saldo() {
     if (error) toast.error("Saldo não foi compartilhado: " + error.message);
   };
   const res = useMemo(() => conferirSaldo(linhas, toras.data ?? []), [linhas, toras.data]);
-  const ok = res.filter((r) => r.tora);
+  const ok = useMemo(() => res.filter((r) => r.tora), [res]);
   const fora = res.length - ok.length;
   const qc = useQueryClient();
   const arvores = useQuery(arvoresQuery);
   const [medir, setMedir] = useState(false);
   const [medidas, setMedidas] = useState<number[]>([]);
   // Toras do saldo = cadastradas só com volume; quando medidas ganham diâmetros.
-  const pendentes = (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null);
+  const pendentes = useMemo(() => (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null), [toras.data]);
   const [inicio, setInicio] = useState("");
   const [busy, setBusy] = useState(false);
   const [busca, setBusca] = useState("");
@@ -68,10 +68,24 @@ function Saldo() {
   const [edit, setEdit] = useState<Tora | null>(null);
   const [sel, setSel] = useState<number[]>([]);
   const [impressao, setImpressao] = useState<"todas" | "impressas" | "nao">("todas");
-  const visiveis = res
-    .filter((r) => status === "todos" || (status === "estoque" ? !!r.tora : !r.tora))
-    .filter((r) => impressao === "todas" || (!!r.tora && (impressao === "impressas") === !!r.tora.etiqueta_impressa_em))
-    .filter((r) => { const b = busca.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (!b) return true; return [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(b); });
+  const [pagina, setPagina] = useState(0);
+  const buscaAdiada = useDeferredValue(busca);
+  const textos = useMemo(() => res.map((r) => [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()), [res]);
+  const visiveis = useMemo(() => {
+    const termo = buscaAdiada.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    return res.filter((r, i) =>
+      (status === "todos" || (status === "estoque" ? !!r.tora : !r.tora)) &&
+      (impressao === "todas" || (!!r.tora && (impressao === "impressas") === !!r.tora.etiqueta_impressa_em)) &&
+      (!termo || textos[i]?.includes(termo)));
+  }, [res, textos, status, impressao, buscaAdiada]);
+  const selecionadas = useMemo(() => new Set(sel), [sel]);
+  const ps = useMemo(() => visiveis.flatMap((r) => r.tora ? [r.tora.plaqueta] : []), [visiveis]);
+  const todas = ps.length > 0 && ps.every((p) => selecionadas.has(p));
+  const paginas = Math.max(1, Math.ceil(visiveis.length / 50));
+  const paginaAtual = Math.min(pagina, paginas - 1);
+  const inicioPagina = paginaAtual * 50;
+  const naPagina = visiveis.slice(inicioPagina, inicioPagina + 50);
+  useEffect(() => { setPagina(0); }, [buscaAdiada, status, impressao]);
 
   async function cadastrar() {
     const ini = Number(inicio);
@@ -99,7 +113,9 @@ function Saldo() {
     try {
       const XLSX = await import("xlsx");
       const wb = /\.csv$/i.test(f.name) ? XLSX.read(await f.text(), { type: "string", FS: ";" }) : XLSX.read(await f.arrayBuffer());
-      const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0] ?? ""]!, { header: 1, raw: false }));
+      const folha = wb.Sheets[wb.SheetNames[0] ?? ""];
+      if (!folha) throw new Error("A planilha não contém uma aba de saldo");
+      const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(folha, { header: 1, raw: false }));
       await setLinhas(l);
       const autexes = [...new Set(l.map((x) => x.autex).filter(Boolean))];
       if (autexes.length && navigator.onLine) await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...empresaIdGravacao() })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
@@ -133,7 +149,7 @@ function Saldo() {
       </label>
       {res.length > 0 && <>
         <div className="grid grid-cols-2 gap-2 text-center">
-          <div className="rounded-lg bg-forest text-primary-foreground p-3"><b className="text-2xl">{ok.length}</b><div className="text-xs">em estoque · {fmtM3(ok.reduce((n, r) => n + Number(r.tora!.volume), 0))} m³</div></div>
+          <div className="rounded-lg bg-forest text-primary-foreground p-3"><b className="text-2xl">{ok.length}</b><div className="text-xs">em estoque · {fmtM3(ok.reduce((n, r) => n + Number(r.tora?.volume ?? 0), 0))} m³</div></div>
           <div className="rounded-lg bg-destructive text-destructive-foreground p-3"><b className="text-2xl">{fora}</b><div className="text-xs">fora de estoque</div></div>
         </div>
         {fora > 0 && <div className="bg-card border rounded-xl p-3 space-y-2">
@@ -145,7 +161,7 @@ function Saldo() {
         </div>}
         {sel.length > 0
           ? <div className="flex gap-2"><Button asChild className="flex-1"><Link to="/etiquetas" search={{ p: sel.join(",") }}><Printer /> Imprimir selecionadas ({sel.length})</Link></Button><Button variant="outline" onClick={() => setSel([])}>Limpar</Button></div>
-          : <Button asChild className="w-full" disabled={!ok.length}><Link to="/etiquetas" search={{ p: ok.map((r) => r.tora!.plaqueta).join(",") }}><Printer /> Imprimir todas ({ok.length})</Link></Button>}
+          : <Button asChild className="w-full" disabled={!ok.length}><Link to="/etiquetas" search={{ p: ok.map((r) => r.tora?.plaqueta ?? 0).join(",") }}><Printer /> Imprimir todas ({ok.length})</Link></Button>}
         <div className="text-xs text-muted-foreground">Marque as toras na lista para imprimir só as escolhidas.</div>
         <div className="grid grid-cols-3 gap-2">
           {([["todos", `Todas (${res.length})`], ["estoque", `No estoque (${ok.length})`], ["fora", `Fora (${fora})`]] as const).map(([k, l]) => (
@@ -164,13 +180,16 @@ function Saldo() {
             <Button key={k} size="sm" variant={impressao === k ? "default" : "outline"} onClick={() => setImpressao(k)}>{l}</Button>
           ))}
         </div>
-        {(() => { const ps = visiveis.flatMap((r) => r.tora ? [r.tora.plaqueta] : []); const todas = ps.length > 0 && ps.every((p) => sel.includes(p)); return (
-          <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-5 w-5 accent-primary" disabled={!ps.length} checked={todas} onChange={() => setSel((s) => todas ? s.filter((p) => !ps.includes(p)) : [...new Set([...s, ...ps])])} />Selecionar tudo ({ps.length})</label>
-        ); })()}
+        <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-5 w-5 accent-primary" disabled={!ps.length} checked={todas} onChange={() => setSel((s) => todas ? s.filter((p) => !ps.includes(p)) : [...new Set([...s, ...ps])])} />Selecionar tudo ({ps.length})</label>
+        <div className="flex items-center justify-between gap-2" aria-label="Páginas do saldo">
+          <Button size="icon" variant="outline" aria-label="Página anterior" disabled={paginaAtual === 0} onClick={() => setPagina(paginaAtual - 1)}><ChevronLeft /></Button>
+          <span className="text-sm text-center" aria-live="polite">{visiveis.length ? inicioPagina + 1 : 0}–{Math.min(inicioPagina + 50, visiveis.length)} de {visiveis.length} · Página {paginaAtual + 1} de {paginas}</span>
+          <Button size="icon" variant="outline" aria-label="Próxima página" disabled={paginaAtual + 1 >= paginas} onClick={() => setPagina(paginaAtual + 1)}><ChevronRight /></Button>
+        </div>
         <div className="bg-card border rounded-xl divide-y">
-          {visiveis.map((r, i) => (
+          {naPagina.map((r, i) => (
             <div key={i} className="flex items-center gap-2 p-3">
-              {r.tora ? <input type="checkbox" className="h-5 w-5 shrink-0 accent-primary" aria-label={`Selecionar plaqueta ${r.tora.plaqueta}`} checked={sel.includes(r.tora.plaqueta)} onChange={() => { const p = r.tora!.plaqueta; setSel((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]); }} /> : <span className="w-5 shrink-0" />}
+              {r.tora ? <input type="checkbox" className="h-5 w-5 shrink-0 accent-primary" aria-label={`Selecionar plaqueta ${r.tora.plaqueta}`} checked={selecionadas.has(r.tora.plaqueta)} onChange={() => { const p = r.tora?.plaqueta; if (p === undefined) return; setSel((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]); }} /> : <span className="w-5 shrink-0" />}
               <div className="min-w-0 flex-1">
                 <div className="font-semibold leading-snug">{r.linha.especie || "Sem nome"}</div>
                 {r.linha.nome_cientifico && <div className="text-xs italic text-muted-foreground">{r.linha.nome_cientifico}</div>}
@@ -178,8 +197,8 @@ function Saldo() {
                 <div className="text-xs text-muted-foreground">{fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³{!r.tora && <span className="font-semibold text-destructive"> · fora de estoque</span>}{r.tora && (r.tora.etiqueta_impressa_em ? <span className="font-semibold text-primary"> · etiqueta impressa</span> : <span> · etiqueta não impressa</span>)}</div>
               </div>
               {r.tora && <div className="flex shrink-0 items-center gap-1">
-                <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora!)}><Pencil className="h-4 w-4" /></Button>
-                <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={async () => { if (await excluirTora(r.tora!)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4" /></Button>
+                <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora)}><Pencil className="h-4 w-4" /></Button>
+                <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={async () => { if (r.tora && await excluirTora(r.tora)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4" /></Button>
               </div>}
             </div>
           ))}

@@ -24,7 +24,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
   const [autex, setAutex] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
-  const candidatas = f.arvore ? arvores.filter((a) => a.numero === Number(f.arvore)) : [];
+  const candidatas = useMemo(() => f.arvore ? arvores.filter((a) => a.numero === Number(f.arvore)) : [], [arvores, f.arvore]);
   const arv = candidatas.length === 1 ? candidatas[0] : candidatas.find((a) => a.autex === autex);
   const especie = arv?.nome_vulgar;
   const escolherArvore = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,10 +34,10 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
   };
   // Tora vinda do saldo (só volume, sem medidas) com a mesma árvore e secção: medir completa ela.
   const secAtual = f.secao.trim().toUpperCase();
-  const doSaldoTodas = f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [];
+  const doSaldoTodas = useMemo(() => f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [toras, f.arvore, secAtual]);
   const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
   // Linha do arquivo de saldo (ainda não cadastrada) com a mesma árvore e secção.
-  const linhasSaldo = !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [];
+  const linhasSaldo = useMemo(() => !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [], [saldo, doSaldoTodas.length, f.arvore, secAtual]);
   const linhaSaldo = linhasSaldo.length === 1 ? linhasSaldo[0] : linhasSaldo.find((l) => l.autex === autex);
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumeTora(medidas);

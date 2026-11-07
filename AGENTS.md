@@ -40,3 +40,5 @@ use the editor.
 - Activity log: every mutation captures capturarLog (src/lib/registro.ts: email + GPS + timestamp) and writes to public.registros — online directly, offline attached to the queued op so the original time/place is kept. Why: audit who inserted what, where.
 - PWA precache URLs strip the SSR build's client/ prefix, exclude server output, and warm navigation documents through the generated NetworkFirst worker after activation. Why: hosting serves client assets at root and the first visit is initially uncontrolled.
 - Installation UI captures beforeinstallprompt in useInstallApp at AppShell mount, invokes it only on a user click, and offers browser-specific fallback instructions without registering another worker. Why: installation availability varies by browser and lifecycle.
+
+- Stock reconciliation indexes normalized tree/section/AUTEX matches and renders only a page of filtered rows; selection spans the full filtered dataset. Why: large inventories must not freeze field tablets.
