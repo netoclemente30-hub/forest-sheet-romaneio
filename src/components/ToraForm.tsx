@@ -36,9 +36,6 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
   const secAtual = f.secao.trim().toUpperCase();
   const doSaldoTodas = useMemo(() => f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [toras, f.arvore, secAtual]);
   const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
-  // Tora já medida com a mesma árvore e secção: mostrar as medidas salvas.
-  const medidasTodas = useMemo(() => f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && (t.d_topo1 !== null || t.comprimento !== null)) : [], [toras, f.arvore, secAtual]);
-  const medidaTora = medidasTodas.length === 1 ? medidasTodas[0] : medidasTodas.find((t) => (t.autex ?? "") === autex);
   // Linha do arquivo de saldo (ainda não cadastrada) com a mesma árvore e secção.
   const linhasSaldo = useMemo(() => !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [], [saldo, doSaldoTodas.length, f.arvore, secAtual]);
   const linhaSaldo = linhasSaldo.length === 1 ? linhasSaldo[0] : linhasSaldo.find((l) => l.autex === autex);
@@ -140,15 +137,6 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
         </div>
       )}
       {f.arvore && secAtual && saldo.length > 0 && !doSaldoTodas.length && !linhasSaldo.length && <div className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">Árvore {f.arvore}-{secAtual} não está no saldo</div>}
-      {medidaTora && (
-        <div className="rounded-md border-2 border-success bg-secondary p-3 text-sm space-y-1">
-          <div className="font-semibold">Já medida · plaqueta {medidaTora.plaqueta}</div>
-          <div>{medidaTora.especie}{medidaTora.nome_cientifico && <i> · {medidaTora.nome_cientifico}</i>}</div>
-          <div className="text-xs">AUTEX {medidaTora.autex ?? "—"}</div>
-          <div className="pt-1">Topo <b>{medidaTora.d_topo1 ?? "–"}×{medidaTora.d_topo2 ?? "–"}</b> · Pé <b>{medidaTora.d_pe1 ?? "–"}×{medidaTora.d_pe2 ?? "–"}</b> cm · <b>{medidaTora.comprimento ?? "–"} m</b></div>
-          <div>Volume medido: <b>{fmtM3(Number(medidaTora.volume))} m³</b></div>
-        </div>
-      )}
       {doSaldo && (
         <div className="rounded-md border-2 border-primary bg-secondary p-3 text-sm space-y-1">
           <div className="font-semibold">Tora do saldo · plaqueta {doSaldo.plaqueta}</div>
