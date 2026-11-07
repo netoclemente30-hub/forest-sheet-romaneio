@@ -3,6 +3,7 @@
 
 import type { Tora } from "./data";
 import { volumeTora } from "./volume";
+import { avisoDuplicidade, toraDuplicada } from "./tora-duplicidade";
 
 export interface EdicaoTora {
   plaqueta: number;
@@ -67,7 +68,7 @@ export function medidasDaEdicao(e: EdicaoTora) {
 // senão uma ponta faltante sairia pela metade do volume.
 export function volumeMedido(e: EdicaoTora): number {
   const m = medidasDaEdicao(e);
-  return MEDIDAS.every((k) => m[k] != null && m[k]! > 0) ? volumeTora(m) : 0;
+  return MEDIDAS.every((k) => (m[k] ?? 0) > 0) ? volumeTora(m) : 0;
 }
 
 export function validarEdicao(e: EdicaoTora, toras: Tora[]): string | null {
@@ -81,14 +82,8 @@ export function validarEdicao(e: EdicaoTora, toras: Tora[]): string | null {
   }
   const secao = e.secao.trim().toUpperCase();
   const autex = e.autex.trim();
-  const rep = toras.find(
-    (t) =>
-      t.plaqueta !== e.plaqueta &&
-      t.arvore === arvore &&
-      (t.autex ?? "") === autex &&
-      (t.secao ?? "").trim().toUpperCase() === secao,
-  );
-  if (secao && rep) return `Árvore ${arvore} já tem a secção ${secao} (plaqueta ${rep.plaqueta})`;
+  const rep = toraDuplicada(toras, { arvore, secao, autex, empresa_id: e.empresa_id }, e.plaqueta);
+  if (rep) return avisoDuplicidade(rep);
   return null;
 }
 

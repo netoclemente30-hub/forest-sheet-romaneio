@@ -42,3 +42,4 @@ use the editor.
 - Installation UI captures beforeinstallprompt in useInstallApp at AppShell mount, invokes it only on a user click, and offers browser-specific fallback instructions without registering another worker. Why: installation availability varies by browser and lifecycle.
 
 - Stock reconciliation indexes normalized tree/section/AUTEX matches and renders only a page of filtered rows; selection spans the full filtered dataset. Why: large inventories must not freeze field tablets.
+- Log creation and editing share normalized company/tree/section/AUTEX duplicate matching; creation checks queued inserts and current online inventory with the resolved saldo AUTEX. Why: saldo autofill and offline queues must not bypass duplicate warnings.
