@@ -67,11 +67,11 @@ describe("validarEdicao", () => {
   });
 
   it("deixa trocar a plaqueta por um número livre", () => {
-    expect(validarEdicao(ed({ plaquetaNova: "50" }), [tora({}), tora({ plaqueta: 2 })])).toBeNull();
+    expect(validarEdicao(ed({ plaquetaNova: "50" }), [tora({}), tora({ plaqueta: 2, arvore: 99 })])).toBeNull();
   });
 
   it("não deixa trocar a plaqueta por um número já usado na empresa", () => {
-    expect(validarEdicao(ed({ plaquetaNova: "2" }), [tora({}), tora({ plaqueta: 2 })])).toBe("Plaqueta 2 já existe");
+    expect(validarEdicao(ed({ plaquetaNova: "2" }), [tora({}), tora({ plaqueta: 2, arvore: 99 })])).toBe("Plaqueta 2 já existe");
   });
 
   it("rejeita plaqueta que não é número inteiro positivo", () => {
