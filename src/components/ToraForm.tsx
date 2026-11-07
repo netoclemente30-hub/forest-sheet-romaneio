@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Arvore, Tora } from "@/lib/data";
 import { volumeTora, fmtM3 } from "@/lib/volume";
-import { empresaIdGravacao } from "@/lib/empresa";
+import { empresaIdGravacao, getEmpresaAtiva } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
@@ -13,11 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutexPicker } from "./AutexPicker";
 import type { LinhaSaldo } from "@/lib/saldo";
+import { useAuth } from "@/hooks/useAuth";
+import { avisoDuplicidade, toraDuplicada, type IdentidadeTora } from "@/lib/tora-duplicidade";
 
 const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
 export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[]; arvores: Arvore[]; onSaved: (plaqueta: number) => void; saldo?: LinhaSaldo[] }) {
   const qc = useQueryClient();
+  const { empresaId } = useAuth();
+  const empresa = getEmpresaAtiva() ?? empresaId;
+  const torasEmpresa = useMemo(() => toras.filter((t) => t.empresa_id === empresa), [toras, empresa]);
   const proxima = useMemo(() => toras.reduce((m, t) => Math.max(m, t.plaqueta), 0) + 1, [toras]);
   const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: "A", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   const [busy, setBusy] = useState(false);
@@ -34,29 +39,52 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
   };
   // Tora vinda do saldo (só volume, sem medidas) com a mesma árvore e secção: medir completa ela.
   const secAtual = f.secao.trim().toUpperCase();
-  const doSaldoTodas = useMemo(() => f.arvore && secAtual ? toras.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [toras, f.arvore, secAtual]);
+  const doSaldoTodas = useMemo(() => f.arvore && secAtual ? torasEmpresa.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [torasEmpresa, f.arvore, secAtual]);
   const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
   // Linha do arquivo de saldo (ainda não cadastrada) com a mesma árvore e secção.
   const linhasSaldo = useMemo(() => !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [], [saldo, doSaldoTodas.length, f.arvore, secAtual]);
   const linhaSaldo = linhasSaldo.length === 1 ? linhasSaldo[0] : linhasSaldo.find((l) => l.autex === autex);
+  const autexEfetiva = doSaldo?.autex ?? linhaSaldo?.autex ?? (autex || arv?.autex || null);
+  const identidade = { arvore: Number(f.arvore), secao: secAtual, autex: autexEfetiva, empresa_id: empresa };
+  const duplicada = toraDuplicada(torasEmpresa, identidade, doSaldo?.plaqueta);
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumeTora(medidas);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
+    if (!empresa) { toast.error("Aguarde carregar a empresa antes de salvar"); return; }
+    if (duplicada) { toast.error(avisoDuplicidade(duplicada)); return; }
     if (doSaldo) { await medirSaldo(doSaldo); return; }
     if (doSaldoTodas.length > 1) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
     if (linhasSaldo.length > 1 && !linhaSaldo) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
     const plaqueta = Number(f.plaqueta);
     if (candidatas.length > 1 && !arv) { toast.error(`Árvore ${f.arvore} existe em mais de uma AUTEX — escolha qual`); return; }
-    if (toras.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
+    if (torasEmpresa.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
     const sec = f.secao.trim().toUpperCase();
-    const rep = toras.find((t) => t.arvore === Number(f.arvore) && (t.autex ?? "") === (autex || "") && (t.secao ?? "").trim().toUpperCase() === sec);
-    if (sec && rep) { toast.error(`Árvore ${f.arvore} já tem a secção ${sec} (plaqueta ${rep.plaqueta})`); return; }
     const dados = {
-      plaqueta, arvore: Number(f.arvore), especie: linhaSaldo?.especie || especie || "Não cadastrada", nome_cientifico: linhaSaldo?.nome_cientifico || arv?.nome_cientifico || null, autex: linhaSaldo?.autex || autex || null, carregada: false, secao: f.secao, ...medidas, volume: vol, ...empresaIdGravacao(),
+      plaqueta, arvore: Number(f.arvore), especie: linhaSaldo?.especie || especie || "Não cadastrada", nome_cientifico: linhaSaldo?.nome_cientifico || arv?.nome_cientifico || null, autex: autexEfetiva, carregada: false, secao: sec || null, ...medidas, volume: vol, empresa_id: empresa,
     };
     setBusy(true);
+    try {
+      const pendentes: IdentidadeTora[] = (await fila().listar()).flatMap(({ op }) => {
+        if (op.tipo !== "tora_insert") return [];
+        return [{ arvore: Number(op.dados.arvore), secao: String(op.dados.secao ?? ""), autex: String(op.dados.autex ?? ""), empresa_id: typeof op.dados.empresa_id === "string" ? op.dados.empresa_id : empresa, plaqueta: Number(op.dados.plaqueta) }];
+      });
+      const repetida = toraDuplicada(pendentes, identidade);
+      if (repetida) { toast.error(avisoDuplicidade(repetida)); setBusy(false); return; }
+      if (pendentes.some((t) => t.empresa_id === empresa && t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe nos lançamentos offline`); setBusy(false); return; }
+      if (estaOnline()) {
+        const { data, error } = await supabase.from("toras").select("*").eq("empresa_id", empresa).eq("arvore", dados.arvore);
+        if (error) throw error;
+        const atual = toraDuplicada(data ?? [], identidade);
+        if (atual) { toast.error(avisoDuplicidade(atual)); setBusy(false); void qc.invalidateQueries({ queryKey: ["toras"] }); return; }
+      }
+    } catch (erro) {
+      setBusy(false);
+      toast.error(erro instanceof Error ? erro.message : "Não foi possível verificar se a tora já existe. Tente novamente.");
+      return;
+    }
     const log = await capturarLog("Tora lançada", `Tora ${plaqueta} · ${dados.especie} · árvore ${f.arvore} · secção ${f.secao || "–"}`);
     if (!estaOnline()) {
       await fila().enfileirar({ tipo: "tora_insert", dados, log });
@@ -103,6 +131,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
         {field("arvore", "Nº árvore")}
         {field("secao", "Secção", "text")}
       </div>
+      {duplicada && <div role="alert" className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">{avisoDuplicidade(duplicada)}. Esta tora já foi lançada.</div>}
       {candidatas.length > 1 && (
         <div className="rounded-md border border-primary p-2 space-y-1">
           <div className="text-sm font-semibold">Árvore {f.arvore} existe em {candidatas.length} AUTEX. De qual é?</div>
