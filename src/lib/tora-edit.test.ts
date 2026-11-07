@@ -65,12 +65,29 @@ describe("validarEdicao", () => {
   it("libera a secção quando a árvore é outra", () => {
     expect(validarEdicao(ed({ secao: "B", arvore: "12" }), [tora({}), tora({ plaqueta: 2, secao: "B" })])).toBeNull();
   });
+
+  it("deixa trocar a plaqueta por um número livre", () => {
+    expect(validarEdicao(ed({ plaquetaNova: "50" }), [tora({}), tora({ plaqueta: 2, arvore: 99 })])).toBeNull();
+  });
+
+  it("não deixa trocar a plaqueta por um número já usado na empresa", () => {
+    expect(validarEdicao(ed({ plaquetaNova: "2" }), [tora({}), tora({ plaqueta: 2, arvore: 99 })])).toBe("Plaqueta 2 já existe");
+  });
+
+  it("rejeita plaqueta que não é número inteiro positivo", () => {
+    expect(validarEdicao(ed({ plaquetaNova: "abc" }), [])).toMatch(/Plaqueta/);
+    expect(validarEdicao(ed({ plaquetaNova: "0" }), [])).toMatch(/Plaqueta/);
+  });
 });
 
 describe("dadosDaEdicao", () => {
   it("converte vírgula em número e guarda a secção em maiúscula", () => {
     const d = dadosDaEdicao(ed({ volume: "1,25", secao: "b", comprimento: "7,6", nome_cientifico: "  " }));
     expect(d).toMatchObject({ arvore: 11, volume: 1.25, secao: "B", comprimento: 7.6, nome_cientifico: null });
+  });
+
+  it("grava a plaqueta nova no payload", () => {
+    expect(dadosDaEdicao(ed({ plaquetaNova: "50" })).plaqueta).toBe(50);
   });
 
   it("calcula o volume de Smalian das medidas digitadas", () => {

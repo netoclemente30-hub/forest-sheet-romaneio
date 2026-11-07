@@ -7,6 +7,7 @@ import { avisoDuplicidade, toraDuplicada } from "./tora-duplicidade";
 
 export interface EdicaoTora {
   plaqueta: number;
+  plaquetaNova: string;
   empresa_id: string;
   arvore: string;
   secao: string;
@@ -39,6 +40,7 @@ export const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(","
 export function editarDe(t: Tora): EdicaoTora {
   return {
     plaqueta: t.plaqueta,
+    plaquetaNova: String(t.plaqueta),
     empresa_id: t.empresa_id,
     arvore: txt(t.arvore),
     secao: txt(t.secao),
@@ -72,6 +74,9 @@ export function volumeMedido(e: EdicaoTora): number {
 }
 
 export function validarEdicao(e: EdicaoTora, toras: Tora[]): string | null {
+  const nova = num(e.plaquetaNova);
+  if (nova == null || !Number.isSafeInteger(nova) || nova <= 0) return "Plaqueta precisa ser um número inteiro maior que zero";
+  if (toras.some((t) => t.empresa_id === e.empresa_id && t.plaqueta === nova && t.plaqueta !== e.plaqueta)) return `Plaqueta ${nova} já existe`;
   const arvore = num(e.arvore);
   if (arvore == null || !Number.isFinite(arvore) || arvore <= 0) return "Número da árvore precisa ser um número";
   const volume = num(e.volume);
@@ -89,6 +94,7 @@ export function validarEdicao(e: EdicaoTora, toras: Tora[]): string | null {
 
 export function dadosDaEdicao(e: EdicaoTora) {
   return {
+    plaqueta: Number(num(e.plaquetaNova)),
     arvore: Number(num(e.arvore)),
     secao: e.secao.trim().toUpperCase() || null,
     especie: e.especie.trim() || null,
