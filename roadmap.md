@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Madeira serrada: pacotes multi-bitola, cargas por empresa, cálculo validado, PDF paisagem e compartilhamento; verificar cadastro e expedição.
 - [x] Corrigir o aviso "Aguarde carregar a empresa" no tablet usando o vínculo de empresa já confirmado no aparelho quando a consulta online falhar; 5 testes passaram e salvamento offline verificado em tela de tablet, sem enviar dados à nuvem.
 - [x] Editar lançamentos com erro pelo aviso laranja, preservando a operação original e permitindo tentar de novo após salvar; 25 testes passaram e edição/reabertura verificadas com acesso autenticado em desktop e 384 px. Reenvio interceptado no teste sem alterar estoque real.
 - [x] Explicar acesso offline: reutilizar sessão já salva no próprio aparelho; primeiro login e validação de senha exigem internet, sem distribuir senhas ou contas dos demais usuários.
