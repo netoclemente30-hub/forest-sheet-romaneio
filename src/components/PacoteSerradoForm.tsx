@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { COMPRIMENTOS, calcularBitola, comoBitola, salvarPacote, type BitolaSerrada, type PacoteSerrado } from '@/lib/madeira-serrada';
 
-export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancelar }: { empresa:string; pacote?:PacoteSerrado; pacotes:PacoteSerrado[]; onSalvo:()=>void; onCancelar:()=>void }) {
+export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancelar }: { empresa:string; pacote?:PacoteSerrado | undefined; pacotes:PacoteSerrado[]; onSalvo:()=>void; onCancelar:()=>void }) {
   const [id] = useState(()=>pacote?.id ?? crypto.randomUUID());
   const [numero,setNumero] = useState(pacote?.numero ?? '');
   const [data,setData] = useState(pacote?.data ?? new Date().toLocaleDateString('en-CA'));
@@ -45,7 +45,7 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancela
         <label className="text-xs">Grossura (cm)<Input required type="number" min="0.01" step="0.01" aria-label={`Grossura bitola ${index+1}`} value={i.grossura || ''} onChange={e=>alterar(index,{grossura:Number(e.target.value)})} /></label>
         <label className="text-xs">Largura (cm)<Input required type="number" min="0.01" step="0.01" aria-label={`Largura bitola ${index+1}`} value={i.largura || ''} onChange={e=>alterar(index,{largura:Number(e.target.value)})} /></label>
       </div>
-      {comuns.length>0 && <label className="block text-xs">Bitolas cadastradas<select className="h-10 w-full border rounded-md bg-background px-2 text-sm" value="" aria-label={`Bitolas cadastradas ${index+1}`} onChange={e=>{const [grossura,largura]=e.target.value.split('x').map(Number);alterar(index,{grossura,largura});}}><option value="">Selecionar bitola</option>{comuns.map(b=><option key={b} value={b}>{b.replace('x',' × ')} cm</option>)}</select></label>}
+      {comuns.length>0 && <label className="block text-xs">Bitolas cadastradas<select className="h-10 w-full border rounded-md bg-background px-2 text-sm" value="" aria-label={`Bitolas cadastradas ${index+1}`} onChange={e=>{const [grossura,largura]=e.target.value.split('x').map(Number);if(grossura && largura) alterar(index,{grossura,largura});}}><option value="">Selecionar bitola</option>{comuns.map(b=><option key={b} value={b}>{b.replace('x',' × ')} cm</option>)}</select></label>}
       <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-9 gap-2">{COMPRIMENTOS.map(c=><label key={c} className="text-xs text-center font-medium">{c.replace('.',',')} m<Input type="number" inputMode="numeric" min="0" step="1" aria-label={`Peças ${c}m bitola ${index+1}`} value={i.distribuicao_pecas[c] || ''} placeholder="0" className="text-center px-1" onChange={e=>alterar(index,{distribuicao_pecas:{...i.distribuicao_pecas,[c]:Number(e.target.value)}})} /></label>)}</div>
       <div className="text-sm font-semibold text-right">{calcularBitola(i).pecas} peças · {calcularBitola(i).volume.toFixed(4).replace('.',',')} m³</div>
     </section>)}

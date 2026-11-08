@@ -27,7 +27,7 @@ export function MadeiraSerrada({empresa}:{empresa:string|null}) {
   const [gerando,setGerando]=useState(false);
   const [pdfOpen,setPdfOpen]=useState(false);
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{if(pdf)return()=>URL.revokeObjectURL(pdf.url);},[pdf]);
+  useEffect(()=>{if(!pdf)return undefined;return()=>URL.revokeObjectURL(pdf.url);},[pdf]);
   useEffect(()=>{setForm(null);setEdit(undefined);setPdf(null);setPdfOpen(false);},[empresa]);
   const todos=pacotes.data??[];
   const list=todos.filter(p=>(status==='todos'||(status==='disponiveis'?!p.carga_id:!!p.carga_id))&&`${p.numero} ${p.itens.map(i=>i.especie).join(' ')}`.toLowerCase().includes(q.toLowerCase()));

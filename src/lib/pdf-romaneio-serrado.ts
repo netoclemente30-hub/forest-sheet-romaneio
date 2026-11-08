@@ -10,7 +10,7 @@ export function linhasCarga(carga: CargaSerrada) {
     const pt = Object.fromEntries(COMPRIMENTOS.map(c => [c, 0]));
     for (const item of pacote.itens) {
       const bitola = comoBitola(item);
-      for (const c of COMPRIMENTOS) { const n = bitola.distribuicao_pecas[c] ?? 0; pt[c] += n; totais[c] += n; }
+      for (const c of COMPRIMENTOS) { const n = bitola.distribuicao_pecas[c] ?? 0; pt[c] = (pt[c] ?? 0) + n; totais[c] = (totais[c] ?? 0) + n; }
       pp += item.total_pecas; pv += Number(item.volume_m3);
       linhas.push({ subtotal:false, cells:[pacote.numero, `${item.especie}\n${item.tipo_peca}`, `${item.grossura} × ${item.largura}`, ...COMPRIMENTOS.map(c => bitola.distribuicao_pecas[c] ? String(bitola.distribuicao_pecas[c]) : '–'), String(item.total_pecas), Number(item.volume_m3).toFixed(4).replace('.',',')] });
     }
