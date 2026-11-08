@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
 import { ORDENS, ordenarToras, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
@@ -15,8 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil, Download, LoaderCircle, ExternalLink } from "lucide-react";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { registrarOperacao } from "@/lib/registro-operacao";
 
@@ -56,6 +57,31 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
   const [edit, setEdit] = useState<Tora | null>(null);
+  const [gerando, setGerando] = useState(false);
+  const [relatorioAberto, setRelatorioAberto] = useState(false);
+  const [arquivo, setArquivo] = useState<(ArquivoGerado & { url: string }) | null>(null);
+  useEffect(() => {
+    if (!arquivo) return;
+    return () => { setTimeout(() => URL.revokeObjectURL(arquivo.url), 30_000); };
+  }, [arquivo]);
+
+  async function gerarRelatorio(formato: "excel" | "pdf" | "sinaflor") {
+    if (gerando) return;
+    setGerando(true);
+    setArquivo(null);
+    setRelatorioAberto(true);
+    try {
+      const itens = paraRelatorio();
+      if (!itens.length) throw new Error("Selecione toras presentes no filtro para gerar o relatório.");
+      const resultado = await (formato === "pdf" ? exportarPdf(itens, "Toras") : formato === "excel" ? exportarExcel(itens) : exportarSinaflor(itens));
+      setArquivo({ ...resultado, url: URL.createObjectURL(resultado.blob) });
+    } catch (error) {
+      setRelatorioAberto(false);
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o relatório. Tente novamente.");
+    } finally {
+      setGerando(false);
+    }
+  }
 
   const lista = useMemo(() => {
     const t = (toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
@@ -117,9 +143,9 @@ export function TorasList({ nova }: { nova?: boolean }) {
         </label>
         <div className="text-xs text-muted-foreground">Relatório: {selecionadas.length ? `${selecionadas.length} toras selecionadas` : `${lista.length} toras do filtro`}</div>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" disabled={!lista.length} onClick={() => exportarExcel(paraRelatorio())}><FileSpreadsheet /> Excel</Button>
-          <Button variant="outline" disabled={!lista.length} onClick={() => exportarPdf(paraRelatorio(), "Toras")}><FileText /> PDF</Button>
-          <Button variant="outline" className="col-span-2" disabled={!lista.length} onClick={() => exportarSinaflor(paraRelatorio())}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>
+          <Button variant="outline" disabled={!lista.length || gerando} onClick={() => gerarRelatorio("excel")}><FileSpreadsheet /> Excel</Button>
+          <Button variant="outline" disabled={!lista.length || gerando} onClick={() => gerarRelatorio("pdf")}><FileText /> PDF</Button>
+          <Button variant="outline" className="col-span-2" disabled={!lista.length || gerando} onClick={() => gerarRelatorio("sinaflor")}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>
         </div>
       </div>
       <div className="flex justify-between text-sm text-muted-foreground">
@@ -169,6 +195,20 @@ export function TorasList({ nova }: { nova?: boolean }) {
           {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={relatorioAberto} onOpenChange={setRelatorioAberto}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{gerando ? "Gerando relatório…" : "Relatório pronto"}</DialogTitle>
+            <DialogDescription className="break-all">{arquivo?.nome ?? "Preparando o arquivo"}</DialogDescription>
+          </DialogHeader>
+          {gerando && <LoaderCircle className="mx-auto animate-spin" aria-label="Gerando arquivo" />}
+          {arquivo && <div className="space-y-2">
+            <Button className="w-full" onClick={() => { salvarArquivo(arquivo).catch(() => toast.error("Não foi possível salvar o arquivo. Tente novamente.")); }}><Download /> Salvar arquivo</Button>
+            {arquivo.blob.type === "application/pdf" && <Button asChild variant="outline" className="w-full"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir PDF</a></Button>}
+          </div>}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={qr !== null} onOpenChange={(o) => !o && setQr(null)}>
         <DialogContent className="max-w-xs">

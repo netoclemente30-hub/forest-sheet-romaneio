@@ -1,4 +1,5 @@
 # Tarefas
+- [x] Downloads PDF/Excel e SINAFLOR com arquivo preparado e botão de salvar; os três arquivos baixados com acesso autenticado, PDF renderizado e planilhas verificadas; janela conferida em 384 px. Atualização no aparelho depende da publicação.
 - [x] Numerar registros e filtrar por usuário; verificado com acesso autenticado em desktop e tela de 542 px.
 - [x] Registrar estados anteriores e permitir reversões confirmadas de toras e serraria, respeitando empresa, permissões e conflitos; lançamento, edição, exclusão, serragem e recebimento testados com dados temporários removidos ao final. Registros antigos sem cópia não podem ser restaurados. Testes de lista, edição, encaixe e fila passaram.
 - [x] Escolher sugestão de encaixe, confirmar identidade, salvar medidas com menor plaqueta azul livre e disponibilizar etiqueta; 24 testes passaram e escolha 1861-B/plaqueta 8 com PDF local validada no desktop e na largura de 562 px, sem envio à nuvem. Teste de impressão no Android publicado depende de publicação.
