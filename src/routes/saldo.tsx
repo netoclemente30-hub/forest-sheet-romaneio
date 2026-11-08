@@ -35,8 +35,23 @@ export const Route = createFileRoute("/saldo")({
 
 function Saldo() {
   const toras = useQuery(torasQuery);
-  const { empresaId } = useAuth();
-  const empresa = getEmpresaAtiva() ?? empresaId;
+  const { empresaId, session } = useAuth();
+  const [empresaOffline, setEmpresaOffline] = useState<{ usuario: string; empresa: string } | null>(null);
+  const usuario = session?.user.id;
+  useEffect(() => {
+    if (!usuario) return;
+    const chave = `encaixe-empresa:${usuario}`;
+    try {
+      if (empresaId) {
+        localStorage.setItem(chave, empresaId);
+        setEmpresaOffline({ usuario, empresa: empresaId });
+      } else {
+        const salva = localStorage.getItem(chave);
+        if (salva) setEmpresaOffline({ usuario, empresa: salva });
+      }
+    } catch { /* a empresa online continua disponível */ }
+  }, [usuario, empresaId]);
+  const empresa = getEmpresaAtiva() ?? empresaId ?? (empresaOffline?.usuario === usuario ? empresaOffline?.empresa ?? null : null);
   const filaOffline = useFilaOffline();
   const [linhas, setLinhasState] = useState<LinhaSaldo[]>([]);
   // Saldo compartilhado por empresa na nuvem; cópia local para uso offline.
