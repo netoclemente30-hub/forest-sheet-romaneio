@@ -73,13 +73,13 @@ function Importar() {
       for (const r of (calc ? XLSX.utils.sheet_to_json<Row>(calc, { header: 1 }).slice(1) : [])) {
         const pl = n(r[0]);
         const arv = n(r[1]);
-        if (!pl || arv === null) continue;
+        if (!pl || arv === null || !porNumero.get(arv)) continue;
         if (toras.has(pl)) { dup++; continue; }
         const m = { d_topo1: n(r[4]), d_topo2: n(r[5]), d_pe1: n(r[6]), d_pe2: n(r[7]), comprimento: n(r[10]) };
         toras.set(pl, {
           plaqueta: pl, arvore: arv, especie: porNumero.get(arv)?.nome_vulgar ?? "Não cadastrada", autex: porNumero.get(arv)?.autex || null,
           secao: r[3] ? String(r[3]) : null, nome_cientifico: porNumero.get(arv)?.nome_cientifico ?? null, ...m, volume: volumeTora(m),
-          carregada: String(r[12] ?? "").toLowerCase() === "carregada",
+          origem: "manejo", carregada: String(r[12] ?? "").toLowerCase() === "carregada",
         });
       }
 

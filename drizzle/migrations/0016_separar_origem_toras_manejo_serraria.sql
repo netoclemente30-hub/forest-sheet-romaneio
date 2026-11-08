@@ -1,0 +1,17 @@
+ALTER TABLE public.toras ADD COLUMN origem text;
+COMMENT ON COLUMN public.toras.origem IS 'Origem da medição: manejo (Base) ou serraria (saldo/conferência/encaixe).';
+CREATE OR REPLACE FUNCTION public.origem_tora_legada(d jsonb) RETURNS text LANGUAGE sql STABLE SET search_path=public AS $$
+ SELECT CASE WHEN EXISTS (SELECT 1 FROM public.saldos s CROSS JOIN LATERAL jsonb_array_elements(s.linhas) l WHERE s.empresa_id=(d->>'empresa_id')::uuid AND l->>'arvore'=d->>'arvore' AND upper(trim(coalesce(l->>'secao','')))=upper(trim(coalesce(d->>'secao',''))) AND regexp_replace(upper(trim(coalesce(l->>'autex',''))),'^AUTEX[[:space:]:-]*','')=regexp_replace(upper(trim(coalesce(d->>'autex',''))),'^AUTEX[[:space:]:-]*','')) THEN 'serraria' WHEN EXISTS (SELECT 1 FROM public.arvores a WHERE a.empresa_id=(d->>'empresa_id')::uuid AND a.numero=(d->>'arvore')::integer AND a.autex=coalesce(d->>'autex','')) THEN 'manejo' ELSE 'serraria' END
+$$;
+UPDATE public.toras t SET origem=CASE WHEN EXISTS (SELECT 1 FROM public.registros r CROSS JOIN LATERAL jsonb_array_elements(coalesce(r.mudancas,'[]'::jsonb)) m WHERE r.empresa_id=t.empresa_id AND r.acao IN ('Encaixe confirmado','Tora do saldo medida','Saldo cadastrado') AND m->>'tabela'='toras' AND (m->'depois'->>'plaqueta')::integer=t.plaqueta) THEN 'serraria' ELSE public.origem_tora_legada(to_jsonb(t)) END;
+UPDATE public.registros r SET mudancas=(SELECT jsonb_agg(CASE WHEN m->>'tabela'='toras' THEN m || jsonb_build_object('antes',CASE WHEN jsonb_typeof(m->'antes')='object' THEN m->'antes'||jsonb_build_object('origem',coalesce((SELECT t.origem FROM public.toras t WHERE t.empresa_id=r.empresa_id AND t.plaqueta=(m->'antes'->>'plaqueta')::integer),CASE WHEN r.acao IN ('Encaixe confirmado','Tora do saldo medida','Saldo cadastrado') THEN 'serraria' ELSE public.origem_tora_legada(m->'antes') END)) ELSE 'null'::jsonb END,'depois',CASE WHEN jsonb_typeof(m->'depois')='object' THEN m->'depois'||jsonb_build_object('origem',coalesce((SELECT t.origem FROM public.toras t WHERE t.empresa_id=r.empresa_id AND t.plaqueta=(m->'depois'->>'plaqueta')::integer),CASE WHEN r.acao IN ('Encaixe confirmado','Tora do saldo medida','Saldo cadastrado') THEN 'serraria' ELSE public.origem_tora_legada(m->'depois') END)) ELSE 'null'::jsonb END) ELSE m END ORDER BY n) FROM jsonb_array_elements(r.mudancas) WITH ORDINALITY x(m,n)) WHERE r.mudancas IS NOT NULL AND jsonb_array_length(r.mudancas)>0;
+CREATE OR REPLACE FUNCTION public.definir_origem_tora() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$
+BEGIN
+ IF NEW.origem IS NULL THEN
+  IF EXISTS (SELECT 1 FROM public.registros r WHERE r.id::text=current_setting('app.registro_contexto',true) AND r.acao IN ('Encaixe confirmado','Tora do saldo medida','Saldo cadastrado')) THEN NEW.origem:='serraria'; ELSE NEW.origem:=public.origem_tora_legada(to_jsonb(NEW)); END IF;
+ END IF;
+ IF NEW.origem='manejo' AND NOT EXISTS(SELECT 1 FROM public.arvores a WHERE a.empresa_id=NEW.empresa_id AND a.numero=NEW.arvore AND a.autex=coalesce(NEW.autex,'')) THEN RAISE EXCEPTION 'Para lançar em Toras de manejo, selecione uma árvore e AUTEX cadastradas na Base'; END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER z_definir_origem_tora BEFORE INSERT ON public.toras FOR EACH ROW EXECUTE FUNCTION public.definir_origem_tora();
+ALTER TABLE public.toras ADD CONSTRAINT toras_origem_valida CHECK (origem IN ('manejo','serraria'));

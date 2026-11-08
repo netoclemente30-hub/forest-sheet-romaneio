@@ -27,7 +27,7 @@ export async function salvarEncaixe(linha: LinhaSaldo, medidas: MedidasEncaixe, 
   const plaqueta = menorPlaquetaLivre(inventario, itens, empresa);
   const log = await deps.capturar("Encaixe confirmado", `Plaqueta ${plaqueta} · ${linha.especie} · árvore ${linha.arvore} · secção ${identidade.secao} · AUTEX ${identidade.autex} · identidade escolhida pelo usuário · saldo ${linha.volume} m³ · medido ${volume} m³`);
   const valores = Object.fromEntries(CAMPOS_ENCAIXE.map((k) => [k, Number(medidas[k].trim().replace(",", "."))])) as Record<(typeof CAMPOS_ENCAIXE)[number], number>;
-  const tora: Tora = { ...identidade, ...valores, plaqueta, volume, especie: linha.especie || null, nome_cientifico: linha.nome_cientifico || null, carregada: false, created_at: log.criado_em, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null };
+  const tora: Tora = { ...identidade, ...valores, origem: "serraria", plaqueta, volume, especie: linha.especie || null, nome_cientifico: linha.nome_cientifico || null, carregada: false, created_at: log.criado_em, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null };
   if (deps.online()) { await deps.inserir(tora, log); }
   else await deps.enfileirar({ tipo: "tora_insert", dados: tora, log });
   return tora;
@@ -42,6 +42,6 @@ export function torasEtiquetasOffline(itens: ItemFila[], empresa: string | null)
     if (!Number.isSafeInteger(arvore) || !Number.isSafeInteger(plaqueta) || plaqueta <= 0 || !Number.isFinite(volume)) return [];
     const n = (k: string) => typeof d[k] === "number" ? d[k] as number : null;
     const s = (k: string) => typeof d[k] === "string" ? d[k] as string : null;
-    return [{ arvore, plaqueta, volume, empresa_id: empresa, autex: s("autex"), secao: s("secao"), especie: s("especie"), nome_cientifico: s("nome_cientifico"), d_topo1: n("d_topo1"), d_topo2: n("d_topo2"), d_pe1: n("d_pe1"), d_pe2: n("d_pe2"), comprimento: n("comprimento"), created_at: s("created_at") ?? new Date(criadoEm).toISOString(), carregada: false, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null }];
+    return [{ arvore, plaqueta, volume, origem: s("origem") ?? "serraria", empresa_id: empresa, autex: s("autex"), secao: s("secao"), especie: s("especie"), nome_cientifico: s("nome_cientifico"), d_topo1: n("d_topo1"), d_topo2: n("d_topo2"), d_pe1: n("d_pe1"), d_pe2: n("d_pe2"), comprimento: n("comprimento"), created_at: s("created_at") ?? new Date(criadoEm).toISOString(), carregada: false, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null }];
   });
 }

@@ -16,10 +16,11 @@ import type { LinhaSaldo } from "@/lib/saldo";
 import { useAuth } from "@/hooks/useAuth";
 import { avisoDuplicidade, toraDuplicada, type IdentidadeTora } from "@/lib/tora-duplicidade";
 import { registrarOperacao } from "@/lib/registro-operacao";
+import { validarBaseManejo, type OrigemTora } from "@/lib/tora-origem";
 
 const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
-export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[]; arvores: Arvore[]; onSaved: (plaqueta: number) => void; saldo?: LinhaSaldo[] }) {
+export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serraria" }: { toras: Tora[]; arvores: Arvore[]; onSaved: (plaqueta: number) => void; saldo?: LinhaSaldo[]; origem?: OrigemTora }) {
   const qc = useQueryClient();
   const { empresaId } = useAuth();
   const empresa = getEmpresaAtiva() ?? empresaId;
@@ -30,17 +31,17 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
   const [autex, setAutex] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
-  const candidatas = useMemo(() => f.arvore ? arvores.filter((a) => a.numero === Number(f.arvore)) : [], [arvores, f.arvore]);
+  const candidatas = useMemo(() => f.arvore ? arvores.filter((a) => a.empresa_id === empresa && a.numero === Number(f.arvore)) : [], [arvores, f.arvore, empresa]);
   const arv = candidatas.length === 1 ? candidatas[0] : candidatas.find((a) => a.autex === autex);
   const especie = arv?.nome_vulgar;
   const escolherArvore = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
     set(k)(e);
-    const c = arvores.filter((a) => a.numero === Number(e.target.value));
+    const c = arvores.filter((a) => a.empresa_id === empresa && a.numero === Number(e.target.value));
     const u = c.length === 1 ? c[0] : undefined; if (u?.autex) setAutex(u.autex);
   };
   // Tora vinda do saldo (só volume, sem medidas) com a mesma árvore e secção: medir completa ela.
   const secAtual = f.secao.trim().toUpperCase();
-  const doSaldoTodas = useMemo(() => f.arvore && secAtual ? torasEmpresa.filter((t) => t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [torasEmpresa, f.arvore, secAtual]);
+  const doSaldoTodas = useMemo(() => origem === "serraria" && f.arvore && secAtual ? torasEmpresa.filter((t) => t.origem !== "manejo" && t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [torasEmpresa, f.arvore, secAtual, origem]);
   const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
   // Linha do arquivo de saldo (ainda não cadastrada) com a mesma árvore e secção.
   const linhasSaldo = useMemo(() => !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [], [saldo, doSaldoTodas.length, f.arvore, secAtual]);
@@ -55,6 +56,8 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
     e.preventDefault();
     if (busy) return;
     if (!empresa) { toast.error("Aguarde carregar a empresa antes de salvar"); return; }
+    if (origem === "manejo" && !validarBaseManejo(arv, empresa)) { toast.error("Selecione uma árvore e AUTEX cadastradas na Base para lançar no manejo"); return; }
+    if (origem === "serraria" && !doSaldo && !linhaSaldo) { toast.error("Selecione uma árvore e secção do saldo da serraria"); return; }
     if (duplicada) { toast.error(avisoDuplicidade(duplicada)); return; }
     if (doSaldo) { await medirSaldo(doSaldo); return; }
     if (doSaldoTodas.length > 1) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
@@ -64,7 +67,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
     if (torasEmpresa.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
     const sec = f.secao.trim().toUpperCase();
     const dados = {
-      plaqueta, arvore: Number(f.arvore), especie: linhaSaldo?.especie || especie || "Não cadastrada", nome_cientifico: linhaSaldo?.nome_cientifico || arv?.nome_cientifico || null, autex: autexEfetiva, carregada: false, secao: sec || null, ...medidas, volume: vol, empresa_id: empresa,
+      origem, plaqueta, arvore: Number(f.arvore), especie: linhaSaldo?.especie || especie || "Não cadastrada", nome_cientifico: linhaSaldo?.nome_cientifico || arv?.nome_cientifico || null, autex: autexEfetiva, carregada: false, secao: sec || null, ...medidas, volume: vol, empresa_id: empresa,
     };
     setBusy(true);
     try {

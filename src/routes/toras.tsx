@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { capturarLog, gravarRegistro } from "@/lib/registro";
-import { useEffect, useMemo, useState } from "react";
-import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
-import { ORDENS, ordenarToras, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
+import { capturarLog } from "@/lib/registro";
+import { useMemo, useState } from "react";
+import { RelatorioToras } from "@/components/RelatorioToras";
+import { torasDeManejo } from "@/lib/tora-origem";
+import { ordenarToras, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { ToraForm } from "@/components/ToraForm";
@@ -16,8 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil, Download, LoaderCircle, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Trash2, QrCode, Printer, Pencil } from "lucide-react";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { registrarOperacao } from "@/lib/registro-operacao";
 
@@ -27,10 +27,10 @@ export const Route = createFileRoute("/toras")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Toras — Manejo Florestal" },
-      { name: "description", content: "Cálculos de inventário: toras medidas, volumes e QR codes." },
-      { property: "og:title", content: "Toras — Manejo Florestal" },
-      { property: "og:description", content: "Cálculos de inventário: toras medidas, volumes e QR codes." },
+      { title: "Toras de manejo — Manejo Florestal" },
+      { name: "description", content: "Medições da Base de manejo, volumes, etiquetas e relatórios." },
+      { property: "og:title", content: "Toras de manejo — Manejo Florestal" },
+      { property: "og:description", content: "Medições da Base de manejo, volumes, etiquetas e relatórios." },
     ],
   }),
   component: TorasPage,
@@ -57,39 +57,12 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
   const [edit, setEdit] = useState<Tora | null>(null);
-  const [gerando, setGerando] = useState(false);
-  const [relatorioAberto, setRelatorioAberto] = useState(false);
-  const [arquivo, setArquivo] = useState<(ArquivoGerado & { url: string }) | null>(null);
-  useEffect(() => {
-    if (!arquivo) return;
-    return () => { setTimeout(() => URL.revokeObjectURL(arquivo.url), 30_000); };
-  }, [arquivo]);
-
-  async function gerarRelatorio(formato: "excel" | "pdf" | "sinaflor") {
-    if (gerando) return;
-    setGerando(true);
-    setArquivo(null);
-    setRelatorioAberto(true);
-    try {
-      const itens = paraRelatorio();
-      if (!itens.length) throw new Error("Selecione toras presentes no filtro para gerar o relatório.");
-      const resultado = await (formato === "pdf" ? exportarPdf(itens, "Toras") : formato === "excel" ? exportarExcel(itens) : exportarSinaflor(itens));
-      setArquivo({ ...resultado, url: URL.createObjectURL(resultado.blob) });
-    } catch (error) {
-      setRelatorioAberto(false);
-      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o relatório. Tente novamente.");
-    } finally {
-      setGerando(false);
-    }
-  }
-
   const lista = useMemo(() => {
-    const t = (toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
+    const t = torasDeManejo(toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
     const s = q.trim().toLowerCase();
     const f = !s ? t : t.filter((x) => String(x.plaqueta) === s || String(x.arvore) === s || (x.especie ?? "").toLowerCase().includes(s));
     return ordenarToras(f, ordem);
   }, [toras.data, q, filtro, dia, autex, ordem]);
-  const paraRelatorio = () => (selecionadas.length ? lista.filter((t) => selecionadas.includes(t.plaqueta)) : lista);
 
   const tora = toras.data?.find((t) => t.plaqueta === qr);
   const { isAdmin } = useAuth();
@@ -114,8 +87,8 @@ export function TorasList({ nova }: { nova?: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold uppercase">Toras</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-3xl font-bold uppercase">Toras de manejo</h1>
         <Button onClick={() => setOpen(true)}><Plus /> Lançar</Button>
       </div>
       {novas.length > 0 && (
@@ -135,19 +108,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
           </Button>
         ))}
       </div>
-      <div className="bg-card border rounded-xl p-3 space-y-2">
-        <label className="text-xs space-y-1 block">Ordenar por
-          <select aria-label="Ordenar toras" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} className="w-full h-10 rounded-md border bg-background px-2 text-sm">
-            {ORDENS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
-          </select>
-        </label>
-        <div className="text-xs text-muted-foreground">Relatório: {selecionadas.length ? `${selecionadas.length} toras selecionadas` : `${lista.length} toras do filtro`}</div>
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" disabled={!lista.length || gerando} onClick={() => gerarRelatorio("excel")}><FileSpreadsheet /> Excel</Button>
-          <Button variant="outline" disabled={!lista.length || gerando} onClick={() => gerarRelatorio("pdf")}><FileText /> PDF</Button>
-          <Button variant="outline" className="col-span-2" disabled={!lista.length || gerando} onClick={() => gerarRelatorio("sinaflor")}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>
-        </div>
-      </div>
+      <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" />
       <div className="flex justify-between text-sm text-muted-foreground">
         <span>{lista.length} toras</span>
         <span>{fmtM3(lista.reduce((n, x) => n + Number(x.volume), 0))} m³</span>
@@ -182,9 +143,9 @@ export function TorasList({ nova }: { nova?: boolean }) {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
-          <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Lançar tora</SheetTitle></SheetHeader>
+          <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Lançar tora de manejo</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">
-            <ToraForm toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => { setNovas((n) => [...n, p]); }} />
+            <ToraForm origem="manejo" toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => { setNovas((n) => [...n, p]); }} />
           </div>
         </SheetContent>
       </Sheet>
@@ -195,20 +156,6 @@ export function TorasList({ nova }: { nova?: boolean }) {
           {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
-
-      <Dialog open={relatorioAberto} onOpenChange={setRelatorioAberto}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{gerando ? "Gerando relatório…" : "Relatório pronto"}</DialogTitle>
-            <DialogDescription className="break-all">{arquivo?.nome ?? "Preparando o arquivo"}</DialogDescription>
-          </DialogHeader>
-          {gerando && <LoaderCircle className="mx-auto animate-spin" aria-label="Gerando arquivo" />}
-          {arquivo && <div className="space-y-2">
-            <Button className="w-full" onClick={() => { salvarArquivo(arquivo).catch(() => toast.error("Não foi possível salvar o arquivo. Tente novamente.")); }}><Download /> Salvar arquivo</Button>
-            {arquivo.blob.type === "application/pdf" && <Button asChild variant="outline" className="w-full"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir PDF</a></Button>}
-          </div>}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={qr !== null} onOpenChange={(o) => !o && setQr(null)}>
         <DialogContent className="max-w-xs">

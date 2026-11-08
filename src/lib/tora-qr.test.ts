@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { plaquetaDoQr, qrTora, selecionarToras } from "./tora-qr";
 import type { Tora } from "./data";
 
-const tora: Tora = { plaqueta: 50, arvore: 12, especie: "Jatobá", nome_cientifico: "Hymenaea courbaril", autex: "123/2026", secao: "A", d_topo1: 46, d_topo2: 45, d_pe1: 44, d_pe2: 43, comprimento: 5.8, volume: 0.9025, carregada: false, created_at: "2026-11-05T12:00:00Z", romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null, empresa_id: "a0000000-0000-0000-0000-000000000001" };
+const tora: Tora = { origem: "manejo", plaqueta: 50, arvore: 12, especie: "Jatobá", nome_cientifico: "Hymenaea courbaril", autex: "123/2026", secao: "A", d_topo1: 46, d_topo2: 45, d_pe1: 44, d_pe2: 43, comprimento: 5.8, volume: 0.9025, carregada: false, created_at: "2026-11-05T12:00:00Z", romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null, empresa_id: "a0000000-0000-0000-0000-000000000001" };
 describe("QR e seleção de toras", () => {
   it("contém autorização e todas as informações da tora", () => {
     expect(JSON.parse(qrTora(tora))).toEqual({ tipo: "tora", versao: 1, plaqueta: 50, arvore: 12, especie: "Jatobá", nome_cientifico: "Hymenaea courbaril", autex: "123/2026", secao: "A", d_topo1: 46, d_topo2: 45, d_pe1: 44, d_pe2: 43, comprimento: 5.8, volume: 0.9025 });

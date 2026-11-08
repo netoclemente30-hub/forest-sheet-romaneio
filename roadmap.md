@@ -1,4 +1,6 @@
 # Tarefas
+- [x] Explicar acesso offline: reutilizar sessão já salva no próprio aparelho; primeiro login e validação de senha exigem internet, sem distribuir senhas ou contas dos demais usuários.
+- [x] Separar Toras de manejo (medições da Base) das toras medidas na conferência/encaixe; estas aparecem no pátio da Serraria, com relatórios compartilhados, filtros e seleção. 28 testes passaram; PDF/Excel baixados com login real; medição 1861-B lançada offline, vista no pátio e excluída do manejo, removida após teste; telas em 384 px sem corte. Publicação e validação no Android continuam pendentes abaixo.
 - [x] Reforçar reabertura offline: página estática de emergência, NetworkFirst com fallback apenas em falha, preparação sem iframe e lista vazia sem cache; 14 testes passaram, worker gerado isolado reabriu página salva e fallback sem rede, links e reconexão verificados em 384 px e desktop. Verificação autenticada offline no preview não concluída; validação no Android publicado permanece pendente abaixo.
 - [x] Downloads PDF/Excel e SINAFLOR com arquivo preparado e botão de salvar; os três arquivos baixados com acesso autenticado, PDF renderizado e planilhas verificadas; janela conferida em 384 px. Atualização no aparelho depende da publicação.
 - [x] Numerar registros e filtrar por usuário; verificado com acesso autenticado em desktop e tela de 542 px.

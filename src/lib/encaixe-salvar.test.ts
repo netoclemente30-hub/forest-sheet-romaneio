@@ -23,7 +23,7 @@ describe("escolha de encaixe", () => {
   it("aplica exatamente a identidade escolhida, mantém medidas e volume Smalian, e deixa a etiqueta disponível offline", async () => {
     const d = deps();
     const tora = await salvarEncaixe(linha, medidas, "RJ", [], d);
-    expect(tora).toMatchObject({ arvore: 1861, secao: "B", autex: linha.autex, especie: "Abiurana", nome_cientifico: "Pouteria macrophylla", plaqueta: 1, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6, volume: 2.725 });
+    expect(tora).toMatchObject({ origem: "serraria", arvore: 1861, secao: "B", autex: linha.autex, especie: "Abiurana", nome_cientifico: "Pouteria macrophylla", plaqueta: 1, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6, volume: 2.725 });
     expect(d.inserir).not.toHaveBeenCalled();
     expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: "tora_insert", dados: tora, log: expect.objectContaining({ criado_em: tora.created_at }) }));
     const fila: ItemFila[] = [{ id: "1", criadoEm: 1, op: { tipo: "tora_insert", dados: tora } }];
