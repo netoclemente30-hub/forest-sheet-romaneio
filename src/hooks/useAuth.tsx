@@ -14,8 +14,20 @@ async function checarSuperAdmin(userId: string): Promise<boolean> {
 }
 
 async function checarEmpresa(): Promise<string | null> {
-  const { data } = await supabase.rpc("minha_empresa");
+  const { data, error } = await supabase.rpc("minha_empresa");
+  if (error) throw error;
   return (data as string | null) ?? null;
+}
+
+async function carregarEmpresa(userId: string): Promise<string | null> {
+  const salva = lerEmpresaSalva(userId);
+  try {
+    const empresa = await checarEmpresa();
+    if (empresa) salvarEmpresaDoUsuario(userId, empresa);
+    return empresa ?? salva;
+  } catch {
+    return salva;
+  }
 }
 
 export function useAuth() {
@@ -29,10 +41,12 @@ export function useAuth() {
     const { data } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       if (s?.user) {
+        setEmpresaId(lerEmpresaSalva(s.user.id));
         Promise.all([checarAdmin(s.user.id), checarSuperAdmin(s.user.id)])
           .then(([a, sa]) => { setIsAdmin(a); setIsSuperAdmin(sa); })
+          .catch(() => { setIsAdmin(false); setIsSuperAdmin(false); })
           .finally(() => setPermissoesCarregando(false));
-        checarEmpresa().then(setEmpresaId);
+        void carregarEmpresa(s.user.id).then(setEmpresaId);
       } else {
         setIsAdmin(false);
         setIsSuperAdmin(false);
@@ -46,10 +60,11 @@ export function useAuth() {
       // de permissões na rede. Permissões administrativas continuam verificadas.
       setLoading(false);
       if (data.session?.user) {
+        setEmpresaId(lerEmpresaSalva(data.session.user.id));
         setIsAdmin(await checarAdmin(data.session.user.id));
         setIsSuperAdmin(await checarSuperAdmin(data.session.user.id));
         setPermissoesCarregando(false);
-        setEmpresaId(await checarEmpresa());
+        setEmpresaId(await carregarEmpresa(data.session.user.id));
       } else setPermissoesCarregando(false);
      }).catch(() => { setLoading(false); setPermissoesCarregando(false); });
     return () => data.subscription.unsubscribe();
