@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
+import { navegacaoOffline } from "./src/lib/pwa-policy";
 
 export default defineConfig({
   tanstackStart: {
@@ -26,17 +27,26 @@ export default defineConfig({
           // O build SSR é examinado a partir do diretório pai, mas a hospedagem
           // serve client/ na raiz. Não precachear URLs /client/assets inexistentes.
           modifyURLPrefix: { "client/": "" },
-          globPatterns: ["**/*.{js,css,woff2,png,webmanifest}"],
+           globPatterns: ["**/*.{js,css,woff2,png,webmanifest}", "**/offline.html"],
           globIgnores: ["**/server/**", "**/sw.js", "**/workbox-*.js"],
-          // App com SSR: sem index.html estático — navegações usam NetworkFirst abaixo
+           clientsClaim: true,
+           skipWaiting: true,
+           // NavigationRoute de navigateFallback precede runtimeCaching e
+           // substituiria TODAS as páginas. Usar PrecacheFallbackPlugin apenas
+           // quando NetworkFirst não encontra rede nem a página salva.
           navigateFallback: null,
+           navigateFallbackDenylist: [/^\/~oauth/],
           runtimeCaching: [
             {
               // Navegações/HTML: rede primeiro, nunca cache-first
-               urlPattern: ({ request, url }: { request: Request; url: URL }) =>
-                 request.mode === "navigate" && !url.pathname.startsWith("/~oauth"),
+               urlPattern: navegacaoOffline,
               handler: "NetworkFirst",
-               options: { cacheName: "paginas", networkTimeoutSeconds: 3 },
+               options: {
+                 cacheName: "paginas",
+                 networkTimeoutSeconds: 3,
+                 cacheableResponse: { statuses: [200] },
+                 precacheFallback: { fallbackURL: "/offline.html" },
+               },
             },
             {
               // Assets com hash same-origin: cache-first

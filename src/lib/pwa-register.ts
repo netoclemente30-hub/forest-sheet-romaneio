@@ -1,6 +1,7 @@
 // Registro do service worker de offline (/sw.js gerado pelo vite-plugin-pwa).
 // NUNCA registra em dev nem nos previews da Lovable — SW em preview serve HTML/chunks velhos.
 // Chamar apenas a partir de useEffect (browser-only).
+import { PAGINAS_OFFLINE } from "./pwa-policy";
 
 const PREVIEW_LABEL = /^(?:id-preview|preview)(?:-[a-z0-9]+)?--.+$/;
 const PREVIEW_HOSTS = ["lovable.app", "gpt-eng.com", "gptengineer.run"];
@@ -45,10 +46,9 @@ export async function registrarServiceWorker() {
     return;
   }
   try {
-     await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+     await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
      await navigator.serviceWorker.ready;
-     // A primeira visita começou sem worker; aquecer o HTML através dele evita
-     // que a próxima abertura dependa de uma segunda visita online.
+      // Esperar clientsClaim antes de preparar documentos pelo NetworkFirst.
      if (!navigator.serviceWorker.controller) {
        await new Promise<void>((resolve) => {
          const concluir = () => {
@@ -62,25 +62,21 @@ export async function registrarServiceWorker() {
        });
      }
      if (navigator.serviceWorker.controller && navigator.onLine) {
-       const urls = [...new Set(["/", window.location.pathname])];
-       await Promise.all(urls.map((url) => {
-         // Um iframe oculto faz navegação de verdade (request.mode=navigate),
-         // atendida pelo NetworkFirst gerado; não grava HTML à mão em caches.
-         return new Promise<void>((resolve) => {
-           const frame = document.createElement("iframe");
-           // Não executar o app dentro do aquecimento (inclusive auth/sync
-           // e limpeza de workers de previews em iframe).
-           frame.setAttribute("sandbox", "allow-same-origin");
-           frame.hidden = true;
-           frame.setAttribute("aria-hidden", "true");
-           const concluir = () => { window.clearTimeout(timer); frame.remove(); resolve(); };
-           const timer = window.setTimeout(concluir, 15000);
-           frame.onload = concluir;
-           frame.onerror = concluir;
-           frame.src = url;
-           document.body.append(frame);
-         });
-       }));
+        // Requisições sequenciais de HTML (sem renderizar outro app/iframe).
+        // O worker gerado é quem grava paginas; assets/fallback são precacheados
+        // na instalação. Dados privados continuam no IndexedDB por empresa.
+        for (const url of PAGINAS_OFFLINE) {
+          if (!navigator.onLine) break;
+          try {
+            await fetch(url, {
+              headers: { "X-Manejo-Offline-Page": "1" },
+              credentials: "same-origin",
+              signal: AbortSignal.timeout(10000),
+            });
+          } catch {
+            // Uma página indisponível não impede preparar as demais.
+          }
+        }
      }
   } catch {
     // falha de registro não pode quebrar o app
