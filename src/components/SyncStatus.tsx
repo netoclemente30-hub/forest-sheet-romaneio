@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CloudOff, RefreshCw, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
+import { CloudOff, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Pencil } from "lucide-react";
 import { fila, assinarFila, type ItemFila, type Op } from "@/lib/offline/fila";
 import { sincronizar, estaOnline } from "@/lib/offline/sync";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { EditarLancamento } from "@/components/EditarLancamento";
 
 function descrever(op: Op): string {
   if (op.log?.detalhe) return `${op.log.acao} · ${op.log.detalhe}`;
@@ -32,6 +33,7 @@ export function SyncStatus() {
   const [itens, setItens] = useState<ItemFila[]>([]);
   const [sync, setSync] = useState(false);
   const [aberto, setAberto] = useState(false);
+  const [editando, setEditando] = useState<ItemFila | null>(null);
   const pendentes = itens.filter((i) => !i.erro).length;
   const comErro = itens.filter((i) => i.erro);
   const erros = comErro.length;
@@ -86,15 +88,18 @@ export function SyncStatus() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => erros && setAberto(true)}
-        className={`no-print w-full px-4 py-1.5 text-xs font-medium flex items-center justify-center gap-2 ${
-          !online ? "bg-destructive text-destructive-foreground" : erros ? "bg-amber-500 text-white" : "bg-secondary text-secondary-foreground"
+        variant="ghost"
+        className={`no-print w-full h-auto rounded-none whitespace-normal px-4 py-1.5 text-xs font-medium flex items-center justify-center gap-2 ${
+          erros ? "bg-warning text-foreground hover:bg-warning" : !online ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground"
         }`}
         role="status"
       >
-        {!online ? (
+        {erros && !sync ? (
+          <><AlertTriangle className="size-3.5 shrink-0" /> {erros} lançamento(s) com erro ao enviar — toque para ver</>
+        ) : !online ? (
           <><CloudOff className="size-3.5" /> Sem internet — {pendentes} lançamento(s) serão enviados quando conectar</>
         ) : sync ? (
           <><RefreshCw className="size-3.5 animate-spin" /> Sincronizando…</>
@@ -103,7 +108,7 @@ export function SyncStatus() {
         ) : (
           <><CheckCircle2 className="size-3.5" /> Tudo sincronizado</>
         )}
-      </button>
+      </Button>
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -115,14 +120,24 @@ export function SyncStatus() {
               <div key={i.id} className="rounded-md border p-3 space-y-2">
                 <div className="font-semibold text-sm">{descrever(i.op)}</div>
                 <div className="text-xs text-muted-foreground">{new Date(i.op.log?.criado_em ?? i.criadoEm).toLocaleString("pt-BR")}</div>
-                <div className="text-sm text-destructive">{explicar(i.erro!)}</div>
-                <div className="flex gap-2">
+                <div className="text-sm text-destructive break-words">{explicar(i.erro ?? "")}</div>
+                <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={sync} onClick={() => tentarDeNovo(i.id)}><RefreshCw /> Tentar de novo</Button>
-                  <Button size="sm" variant="destructive" onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
+                  <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>
+                  <Button size="sm" variant="destructive" disabled={sync} onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
                 </div>
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!editando} onOpenChange={(open) => { if (!open) setEditando(null); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar lançamento com erro</DialogTitle>
+            <DialogDescription>{editando ? descrever(editando.op) : ""}</DialogDescription>
+          </DialogHeader>
+          {editando && <EditarLancamento key={editando.id} item={editando} onDone={() => setEditando(null)} />}
         </DialogContent>
       </Dialog>
     </>

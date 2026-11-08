@@ -132,6 +132,7 @@ export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string)
   try {
     for (const item of await f.listar()) {
       if (!estaOnline()) break;
+      if (item.erro) continue;
       try {
         await executar(item.op, item.id);
         await f.remover(item.id);

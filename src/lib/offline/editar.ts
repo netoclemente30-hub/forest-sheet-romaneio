@@ -1,6 +1,6 @@
 import type { Op } from "./fila";
 import type { Tora } from "@/lib/data";
-import { dadosDaEdicao, editarDe, validarEdicao, type EdicaoTora } from "@/lib/tora-edit";
+import { dadosDaEdicao, validarEdicao, type EdicaoTora } from "@/lib/tora-edit";
 import { fmtM3 } from "@/lib/volume";
 
 export type CampoFila = { chave: string; rotulo: string; mode?: "numeric" | "decimal" | "text" };
@@ -70,7 +70,11 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
   };
   switch (op.tipo) {
     case "tora_delete": return { ...op, plaqueta: positivo(valores.plaqueta ?? "") };
-    case "toras_serradas": return { ...op, plaquetas: [...new Set((valores.plaquetas ?? "").split(/[,;\s]+/).filter(Boolean).map(positivo))].map((n) => n) };
+    case "toras_serradas": {
+      const plaquetas = [...new Set((valores.plaquetas ?? "").split(/[,;\s]+/).filter(Boolean).map(positivo))];
+      if (!plaquetas.length) throw new Error("Informe ao menos uma plaqueta");
+      return { ...op, plaquetas };
+    }
     case "romaneio_recebido": {
       const patio = valores.patio?.trim();
       if (!patio) throw new Error("Informe o pátio");
