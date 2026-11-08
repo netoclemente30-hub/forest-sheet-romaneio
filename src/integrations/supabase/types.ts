@@ -224,6 +224,7 @@ export type Database = {
       }
       pacotes_serrados: {
         Row: {
+          autex: string
           created_at: string
           data: string
           empresa_id: string
@@ -232,6 +233,7 @@ export type Database = {
           observacoes: string
         }
         Insert: {
+          autex?: string
           created_at?: string
           data?: string
           empresa_id?: string
@@ -240,6 +242,7 @@ export type Database = {
           observacoes?: string
         }
         Update: {
+          autex?: string
           created_at?: string
           data?: string
           empresa_id?: string

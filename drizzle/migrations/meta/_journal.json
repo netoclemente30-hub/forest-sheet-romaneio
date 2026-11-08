@@ -134,6 +134,13 @@
       "when": 1794178494174,
       "tag": "0018_madeira_serrada_validar_empresa_nula",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794178545036,
+      "tag": "0019_autex_livre_pacote_serrado",
+      "breakpoints": true
     }
   ]
 }
