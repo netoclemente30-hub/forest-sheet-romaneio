@@ -35,7 +35,7 @@ export function camposDaFila(op: Op): CampoFila[] {
 export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
   if (op.tipo === "tora_insert" || op.tipo === "tora_update") {
     const base = op.tipo === "tora_update" ? toras.find((t) => t.empresa_id === op.empresa_id && t.plaqueta === op.plaqueta) : undefined;
-    const dados = { ...base, ...op.dados };
+    const dados: Record<string, unknown> = { ...base, ...op.dados };
     return Object.fromEntries(camposTora.map(({ chave }) => [chave, String(dados[chave === "plaquetaNova" ? "plaqueta" : chave] ?? (chave === "plaquetaNova" && op.tipo === "tora_update" ? op.plaqueta : ""))]));
   }
   if (op.tipo === "romaneio_salvar") return { ...op.cab };
@@ -49,7 +49,7 @@ export function edicaoDaFila(op: Op, valores: Record<string, string>): EdicaoTor
   return {
     ...Object.fromEntries(camposTora.map(({ chave }) => [chave, valores[chave] ?? ""])),
     plaqueta: op.tipo === "tora_update" ? op.plaqueta : -1,
-    empresa_id: op.tipo === "tora_update" ? op.empresa_id : String(op.dados.empresa_id ?? ""),
+    empresa_id: op.tipo === "tora_update" ? op.empresa_id : String(op.dados["empresa_id"] ?? ""),
   } as EdicaoTora;
 }
 
@@ -61,7 +61,7 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
     if (erro) throw new Error(erro);
     const dados = dadosDaEdicao(e);
     const log = op.log ? { ...op.log, detalhe: `Plaqueta ${dados.plaqueta} · ${dados.especie ?? "sem espécie"} · árvore ${dados.arvore}${dados.secao ? `-${dados.secao}` : ""} · ${fmtM3(dados.volume)} m³ · corrigido antes do envio` } : undefined;
-    return op.tipo === "tora_update" ? { ...op, dados: { ...op.dados, ...dados }, autex: dados.autex, log } : { ...op, dados: { ...op.dados, ...dados }, log };
+    return op.tipo === "tora_update" ? { ...op, dados: { ...op.dados, ...dados }, autex: dados.autex, ...(log ? { log } : {}) } : { ...op, dados: { ...op.dados, ...dados }, ...(log ? { log } : {}) };
   }
   const positivo = (s: string) => {
     const n = Number(s.trim());
@@ -69,20 +69,23 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
     return n;
   };
   switch (op.tipo) {
-    case "tora_delete": return { ...op, plaqueta: positivo(valores.plaqueta ?? "") };
+    case "tora_delete": return { ...op, plaqueta: positivo(valores["plaqueta"] ?? "") };
     case "toras_serradas": {
-      const plaquetas = [...new Set((valores.plaquetas ?? "").split(/[,;\s]+/).filter(Boolean).map(positivo))];
+      const plaquetas = [...new Set((valores["plaquetas"] ?? "").split(/[,;\s]+/).filter(Boolean).map(positivo))];
       if (!plaquetas.length) throw new Error("Informe ao menos uma plaqueta");
       return { ...op, plaquetas };
     }
     case "romaneio_recebido": {
-      const patio = valores.patio?.trim();
+      const patio = valores["patio"]?.trim();
       if (!patio) throw new Error("Informe o pátio");
       return { ...op, patio };
     }
     case "romaneio_salvar": {
-      if (!valores.placa?.trim() || !valores.motorista?.trim() || !valores.data?.trim()) throw new Error("Preencha placa, motorista e data");
-      return { ...op, cab: { placa: valores.placa.trim().toUpperCase(), julieta: valores.julieta?.trim().toUpperCase() ?? "", motorista: valores.motorista.trim(), cpf: valores.cpf?.trim() ?? "", data: valores.data } };
+      const placa = valores["placa"]?.trim();
+      const motorista = valores["motorista"]?.trim();
+      const data = valores["data"]?.trim();
+      if (!placa || !motorista || !data) throw new Error("Preencha placa, motorista e data");
+      return { ...op, cab: { placa: placa.toUpperCase(), julieta: valores["julieta"]?.trim().toUpperCase() ?? "", motorista, cpf: valores["cpf"]?.trim() ?? "", data } };
     }
     default: throw new Error("Lançamento inválido");
   }
