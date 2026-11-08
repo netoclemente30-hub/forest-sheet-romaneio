@@ -120,6 +120,13 @@
       "when": 1794164724498,
       "tag": "0016_separar_origem_toras_manejo_serraria",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794178237076,
+      "tag": "0017_madeira_serrada_pacotes_cargas",
+      "breakpoints": true
     }
   ]
 }

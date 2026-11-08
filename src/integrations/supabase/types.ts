@@ -146,6 +146,53 @@ export type Database = {
         }
         Relationships: []
       }
+      itens_pacote_serrado: {
+        Row: {
+          distribuicao_pecas: Json
+          empresa_id: string
+          especie: string
+          grossura: number
+          id: string
+          largura: number
+          pacote_id: string
+          tipo_peca: string
+          total_pecas: number
+          volume_m3: number
+        }
+        Insert: {
+          distribuicao_pecas?: Json
+          empresa_id?: string
+          especie: string
+          grossura: number
+          id?: string
+          largura: number
+          pacote_id: string
+          tipo_peca: string
+          total_pecas?: number
+          volume_m3?: number
+        }
+        Update: {
+          distribuicao_pecas?: Json
+          empresa_id?: string
+          especie?: string
+          grossura?: number
+          id?: string
+          largura?: number
+          pacote_id?: string
+          tipo_peca?: string
+          total_pecas?: number
+          volume_m3?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_pacote_serrado_pacote_id_empresa_id_fkey"
+            columns: ["pacote_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "pacotes_serrados"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
       motoristas: {
         Row: {
           cpf: string | null
@@ -168,6 +215,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "motoristas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pacotes_serrados: {
+        Row: {
+          created_at: string
+          data: string
+          empresa_id: string
+          id: string
+          numero: string
+          observacoes: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          numero: string
+          observacoes?: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          numero?: string
+          observacoes?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pacotes_serrados_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -263,6 +345,39 @@ export type Database = {
           },
         ]
       }
+      romaneio_carga_pacotes: {
+        Row: {
+          empresa_id: string
+          pacote_id: string
+          romaneio_id: string
+        }
+        Insert: {
+          empresa_id?: string
+          pacote_id: string
+          romaneio_id: string
+        }
+        Update: {
+          empresa_id?: string
+          pacote_id?: string
+          romaneio_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "romaneio_carga_pacotes_pacote_id_empresa_id_fkey"
+            columns: ["pacote_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "pacotes_serrados"
+            referencedColumns: ["id", "empresa_id"]
+          },
+          {
+            foreignKeyName: "romaneio_carga_pacotes_romaneio_id_empresa_id_fkey"
+            columns: ["romaneio_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "romaneios_madeira_serrada"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
       romaneios: {
         Row: {
           cpf: string | null
@@ -312,6 +427,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "romaneios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      romaneios_madeira_serrada: {
+        Row: {
+          cliente_documento: string
+          cliente_nome: string
+          created_at: string
+          data: string
+          empresa_id: string
+          id: string
+          motorista_cpf: string
+          motorista_nome: string
+          numero_carga: string
+          placa_reboque: string
+          placa_veiculo: string
+          total_pecas: number
+          total_volume_m3: number
+        }
+        Insert: {
+          cliente_documento?: string
+          cliente_nome: string
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          motorista_cpf?: string
+          motorista_nome: string
+          numero_carga: string
+          placa_reboque?: string
+          placa_veiculo: string
+          total_pecas?: number
+          total_volume_m3?: number
+        }
+        Update: {
+          cliente_documento?: string
+          cliente_nome?: string
+          created_at?: string
+          data?: string
+          empresa_id?: string
+          id?: string
+          motorista_cpf?: string
+          motorista_nome?: string
+          numero_carga?: string
+          placa_reboque?: string
+          placa_veiculo?: string
+          total_pecas?: number
+          total_volume_m3?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "romaneios_madeira_serrada_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -486,6 +657,10 @@ export type Database = {
     }
     Functions: {
       admin_minha_empresa: { Args: never; Returns: string }
+      excluir_pacote_serrado: {
+        Args: { _empresa: string; _id: string; _log: Json }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -508,6 +683,26 @@ export type Database = {
       }
       reverter_registro: {
         Args: { _log: Json; _registro: string }
+        Returns: string
+      }
+      salvar_carga_serrada: {
+        Args: {
+          _cab: Json
+          _empresa: string
+          _id: string
+          _log: Json
+          _pacotes: string[]
+        }
+        Returns: string
+      }
+      salvar_pacote_serrado: {
+        Args: {
+          _cab: Json
+          _empresa: string
+          _id: string
+          _itens: Json
+          _log: Json
+        }
         Returns: string
       }
     }
