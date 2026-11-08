@@ -2,12 +2,14 @@ import type { Database, Json } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { comCache } from './offline/cache';
 import { capturarLog } from './registro';
+import type { LogCapturado } from './registro';
+import type { ItemFila } from './offline/fila';
 
 export const COMPRIMENTOS = Array.from({ length: 17 }, (_, i) => (1 + i * 0.5).toFixed(1));
 export type BitolaSerrada = { especie: string; tipo_peca: string; grossura: number; largura: number; distribuicao_pecas: Record<string, number> };
 type Tables = Database['public']['Tables'];
 export type ItemSerrado = Tables['itens_pacote_serrado']['Row'];
-export type PacoteSerrado = Tables['pacotes_serrados']['Row'] & { itens: ItemSerrado[]; carga_id: string | null };
+export type PacoteSerrado = Tables['pacotes_serrados']['Row'] & { itens: ItemSerrado[]; carga_id: string | null; fila_id?:string; erro_fila?:string };
 export type CargaSerrada = Tables['romaneios_madeira_serrada']['Row'] & { pacotes: PacoteSerrado[] };
 export type CabPacote = { numero: string; data: string; observacoes: string; autex: string };
 export type CabCarga = { numero_carga: string; data: string; cliente_nome: string; cliente_documento: string; motorista_nome: string; motorista_cpf: string; placa_veiculo: string; placa_reboque: string };
@@ -76,11 +78,29 @@ export function cargasSerradasQuery(empresa: string | null) {
   }};
 }
 function exigirConexao() { if (!navigator.onLine) throw new Error('Conecte à internet para salvar pacotes ou expedir cargas. Os dados preenchidos continuam nesta tela.'); }
-export async function salvarPacote(empresa: string, id: string, cab: CabPacote, itens: BitolaSerrada[]) {
-  exigirConexao(); validarBitolas(itens);
-  const log = await capturarLog('Pacote de madeira serrada salvo', `Pacote ${cab.numero}`);
+export function pacotesComFila(pacotes:PacoteSerrado[], fila:ItemFila[], empresa:string):PacoteSerrado[] {
+  const mapa=new Map(pacotes.filter(p=>p.empresa_id===empresa).map(p=>[p.id,p]));
+  for(const item of fila) {
+    const op=item.op; if(op.tipo!=='pacote_serrado_salvar'||op.empresa_id!==empresa)continue;
+    mapa.set(op.pacote_id,{...op.cab,id:op.pacote_id,empresa_id:empresa,created_at:op.log.criado_em,carga_id:null,fila_id:item.id,...(item.erro?{erro_fila:item.erro}:{}),itens:op.itens.map((i,n)=>{const r=calcularBitola(i);return {...i,id:`${op.pacote_id}:${n}`,empresa_id:empresa,pacote_id:op.pacote_id,total_pecas:r.pecas,volume_m3:r.volume};})});
+  }
+  return [...mapa.values()];
+}
+export async function enviarPacote(empresa:string,id:string,cab:CabPacote,itens:BitolaSerrada[],log:LogCapturado) {
+  validarBitolas(itens);
   const { error } = await supabase.rpc('salvar_pacote_serrado', { _empresa: empresa, _id: id, _cab: cab, _itens: itens as unknown as Json, _log: log as unknown as Json });
-  if (error) throw new Error(error.message);
+  if(error)throw new Error(error.message);
+}
+export async function salvarPacote(empresa: string, id: string, cab: CabPacote, itens: BitolaSerrada[]) {
+  validarBitolas(itens);
+  if(!cab.numero.trim())throw new Error('Informe o número do pacote');
+  const { fila }=await import('./offline/fila');
+  const f=fila(); const pendente=(await f.listar()).find(i=>i.op.tipo==='pacote_serrado_salvar'&&i.op.pacote_id===id&&i.op.empresa_id===empresa);
+  const log = await capturarLog('Pacote de madeira serrada salvo', `Pacote ${cab.numero}`);
+  const op={tipo:'pacote_serrado_salvar' as const,empresa_id:empresa,pacote_id:id,cab,itens,log};
+  if(pendente){await f.atualizarPacote(pendente.id,op);return;}
+  if(!navigator.onLine){await f.enfileirar(op);return;}
+  try{await enviarPacote(empresa,id,cab,itens,log);}catch(e){if(!navigator.onLine||/fetch|network/i.test(e instanceof Error?e.message:String(e))){await f.enfileirar(op);return;}throw e;}
 }
 export async function excluirPacote(empresa: string, id: string) {
   exigirConexao();

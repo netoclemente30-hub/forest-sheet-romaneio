@@ -3,8 +3,10 @@
 
 import { idb } from "./db";
 import type { LogCapturado } from "@/lib/registro";
+import type { CabPacote, BitolaSerrada } from '@/lib/madeira-serrada';
 
 export type Op =
+  | { tipo:'pacote_serrado_salvar'; empresa_id:string; pacote_id:string; cab:CabPacote; itens:BitolaSerrada[]; log:LogCapturado }
   | { tipo: "tora_insert"; dados: Record<string, unknown>; log?: LogCapturado }
   | {
       tipo: "tora_update";
@@ -66,6 +68,12 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
       if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
       // Keep the error until an explicit retry: saving must not send unexpectedly.
       await store.put({ ...item, op });
+      onMudou();
+    },
+    async atualizarPacote(id:string, op:Extract<Op,{tipo:'pacote_serrado_salvar'}>) {
+      const item=(await store.all()).find(i=>i.id===id);
+      if(!item||item.op.tipo!=='pacote_serrado_salvar'||item.op.empresa_id!==op.empresa_id||item.op.pacote_id!==op.pacote_id) throw new Error('Pacote pendente não encontrado');
+      await store.put({...item,op:{...op,log:item.op.log}});
       onMudou();
     },
     async limparErro(id: string) {
