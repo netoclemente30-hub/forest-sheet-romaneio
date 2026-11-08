@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const nav = [
   { to: "/", label: "Início", icon: Home },
   { to: "/base", label: "Base", icon: TreePine },
-  { to: "/toras", label: "Toras", icon: Layers },
+  { to: "/toras", label: "Toras de manejo", icon: Layers },
   { to: "/romaneio", label: "Romaneio", icon: Truck },
   { to: "/historico", label: "Histórico", icon: History },
   { to: "/serraria", label: "Serraria", icon: Factory },
@@ -92,7 +92,7 @@ export function AppShell() {
               key={to}
               to={to}
               activeOptions={{ exact: to === "/" }}
-              className="flex flex-col items-center gap-0.5 py-2.5 text-[11px] text-muted-foreground data-[status=active]:text-primary data-[status=active]:font-semibold"
+              className="flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2.5 text-center text-[11px] leading-tight text-muted-foreground data-[status=active]:text-primary data-[status=active]:font-semibold"
             >
               <Icon className="size-5" />
               {label}
