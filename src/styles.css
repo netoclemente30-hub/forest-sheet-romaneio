@@ -66,6 +66,11 @@
 }
 
 :root {
+  --serrado-pdf-forest: #2e5438;
+  --serrado-pdf-paper: #ffffff;
+  --serrado-pdf-ink: #24352a;
+  --serrado-pdf-muted: #eaf0eb;
+  --serrado-pdf-line: #c4cfc5;
   --label-paper: oklch(1 0 0);
   --label-ink: oklch(0 0 0);
   --radius: 0.75rem;
