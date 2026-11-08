@@ -1,5 +1,5 @@
 # Tarefas
-- [ ] Reforçar reabertura offline: página estática de emergência, NetworkFirst com fallback, preparação sem iframe e consultas sem erro quando falta cache.
+- [x] Reforçar reabertura offline: página estática de emergência, NetworkFirst com fallback apenas em falha, preparação sem iframe e lista vazia sem cache; 14 testes passaram, worker gerado isolado reabriu página salva e fallback sem rede, links e reconexão verificados em 384 px e desktop. Verificação autenticada offline no preview não concluída; validação no Android publicado permanece pendente abaixo.
 - [x] Downloads PDF/Excel e SINAFLOR com arquivo preparado e botão de salvar; os três arquivos baixados com acesso autenticado, PDF renderizado e planilhas verificadas; janela conferida em 384 px. Atualização no aparelho depende da publicação.
 - [x] Numerar registros e filtrar por usuário; verificado com acesso autenticado em desktop e tela de 542 px.
 - [x] Registrar estados anteriores e permitir reversões confirmadas de toras e serraria, respeitando empresa, permissões e conflitos; lançamento, edição, exclusão, serragem e recebimento testados com dados temporários removidos ao final. Registros antigos sem cópia não podem ser restaurados. Testes de lista, edição, encaixe e fila passaram.
