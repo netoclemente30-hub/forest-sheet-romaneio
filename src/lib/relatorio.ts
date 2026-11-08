@@ -37,6 +37,9 @@ export async function exportarExcel(toras: Tora[]) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Toras");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["AUTEX", "Qtd toras", "Volume (m³)"], ...resumoPorAutex(toras).map((r) => [r.autex, r.qtd, Number(r.volume.toFixed(4))])]), "Por AUTEX");
+  const wsEsp = XLSX.utils.aoa_to_sheet([["Espécie", "Nome científico", "Qtd toras", "Volume (m³)"], ...resumoPorEspecie(toras).map((r) => [r.especie, r.cientifico, r.qtd, Number(r.volume.toFixed(4))])]);
+  wsEsp["!cols"] = [{ wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, wsEsp, "Por espécie");
   XLSX.writeFile(wb, `${nome()}.xlsx`);
 }
 
@@ -61,6 +64,7 @@ export async function exportarPdf(toras: Tora[], titulo: string) {
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", "Volume m³"]], body: resumoPorAutex(toras).map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
+  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]], body: resumoPorEspecie(toras).map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
   doc.save(`${nome()}.pdf`);
 }
 
@@ -68,6 +72,18 @@ export function resumoPorAutex(toras: Tora[]) {
   const m = new Map<string, { autex: string; qtd: number; volume: number }>();
   for (const t of toras) { const k = t.autex || "Sem AUTEX"; const r = m.get(k) ?? { autex: k, qtd: 0, volume: 0 }; r.qtd++; r.volume += Number(t.volume); m.set(k, r); }
   return [...m.values()].sort((a, b) => a.autex.localeCompare(b.autex, "pt-BR"));
+}
+
+export function resumoPorEspecie(toras: Tora[]) {
+  const m = new Map<string, { especie: string; cientifico: string; qtd: number; volume: number }>();
+  for (const t of toras) {
+    const esp = t.especie || "Sem espécie";
+    const r = m.get(esp) ?? { especie: esp, cientifico: t.nome_cientifico ?? "", qtd: 0, volume: 0 };
+    r.qtd++; r.volume += Number(t.volume);
+    if (!r.cientifico && t.nome_cientifico) r.cientifico = t.nome_cientifico;
+    m.set(esp, r);
+  }
+  return [...m.values()].sort((a, b) => a.especie.localeCompare(b.especie, "pt-BR"));
 }
 
 export function linhaSinaflor(t: Pick<Tora, "arvore" | "d_topo1" | "d_topo2" | "d_pe1" | "d_pe2" | "comprimento">) {
