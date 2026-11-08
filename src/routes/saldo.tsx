@@ -55,6 +55,7 @@ function Saldo() {
   };
   const res = useMemo(() => conferirSaldo(linhas, toras.data ?? []), [linhas, toras.data]);
   const ok = useMemo(() => res.filter((r) => r.tora), [res]);
+  const linhasFora = useMemo(() => res.filter((r) => !r.tora).map((r) => r.linha), [res]);
   const fora = res.length - ok.length;
   const qc = useQueryClient();
   const arvores = useQuery(arvoresQuery);
@@ -133,7 +134,7 @@ function Saldo() {
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Encaixe de toras</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">
-            {linhas.length ? <EncaixeToras linhas={linhas} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
+            {linhas.length ? <EncaixeToras linhas={linhasFora} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
           </div>
         </SheetContent>
       </Sheet>
