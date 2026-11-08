@@ -19,6 +19,8 @@ import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { Warehouse, Factory } from "lucide-react";
+import { MadeiraSerrada } from "@/components/MadeiraSerrada";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/serraria")({
   head: () => ({
@@ -26,15 +28,15 @@ export const Route = createFileRoute("/serraria")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { title: "Serraria — Manejo Florestal" },
-      { name: "description", content: "Pátio de toras da empresa e baixa das toras serradas." },
+      { name: "description", content: "Pátio de toras, pacotes multi-bitola e romaneios de carga de madeira serrada da empresa." },
       { property: "og:title", content: "Serraria — Manejo Florestal" },
-      { property: "og:description", content: "Pátio de toras da empresa e baixa das toras serradas." },
+      { property: "og:description", content: "Pátio de toras, pacotes multi-bitola e romaneios de carga de madeira serrada da empresa." },
     ],
   }),
   component: Serraria,
 });
 
-type Aba = "patio" | "serradas";
+type Aba = "patio" | "serradas" | "madeira";
 
 function Serraria() {
   const qc = useQueryClient();
@@ -102,10 +104,8 @@ function Serraria() {
           <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant={aba === "patio" ? "default" : "outline"} onClick={() => { setAba("patio"); setSel([]); }}>Pátio de toras</Button>
-        <Button variant={aba === "serradas" ? "default" : "outline"} onClick={() => { setAba("serradas"); setSel([]); }}>Serradas</Button>
-      </div>
+      <Tabs value={aba} onValueChange={(v) => { setAba(v as Aba); setSel([]); }}><TabsList className="w-full h-auto"><TabsTrigger value="patio" className="flex-1 whitespace-normal">Pátio de toras</TabsTrigger><TabsTrigger value="serradas" className="flex-1 whitespace-normal">Toras serradas</TabsTrigger><TabsTrigger value="madeira" className="flex-1 whitespace-normal">Madeira serrada</TabsTrigger></TabsList></Tabs>
+      {aba === "madeira" ? <MadeiraSerrada empresa={empresa} /> : <>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant={!patio ? "default" : "outline"} onClick={() => setPatio("")}>Todos os pátios</Button>
         {patios.map((p) => <Button key={p} size="sm" variant={patio === p ? "default" : "outline"} onClick={() => setPatio(p)}>{p}</Button>)}
@@ -142,6 +142,7 @@ function Serraria() {
         {!lista.length && <div className="p-4 text-sm text-muted-foreground">{aba === "patio" ? "Nenhuma tora no pátio." : "Nenhuma tora serrada ainda."}</div>}
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 100)}>Mostrar mais</Button>}
+      </>}
     </div>
   );
 }
