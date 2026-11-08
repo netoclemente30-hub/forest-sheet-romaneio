@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
+import { navegacaoOffline } from "./src/lib/pwa-policy";
 
 export default defineConfig({
   tanstackStart: {
@@ -38,10 +39,7 @@ export default defineConfig({
           runtimeCaching: [
             {
               // Navegações/HTML: rede primeiro, nunca cache-first
-               urlPattern: ({ request, url }: { request: Request; url: URL }) =>
-                 url.origin === self.location.origin && !url.pathname.startsWith("/~oauth") &&
-                 (request.mode === "navigate" || (request.headers.get("X-Manejo-Offline-Page") === "1" &&
-                   ["/", "/toras", "/saldo", "/base", "/romaneio", "/serraria", "/entrada", "/etiquetas", "/historico"].includes(url.pathname))),
+               urlPattern: navegacaoOffline,
               handler: "NetworkFirst",
                options: {
                  cacheName: "paginas",
