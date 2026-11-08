@@ -360,6 +360,7 @@ export type Database = {
           especie: string | null
           etiqueta_impressa_em: string | null
           nome_cientifico: string | null
+          origem: string | null
           plaqueta: number
           romaneio_id: string | null
           secao: string | null
@@ -380,6 +381,7 @@ export type Database = {
           especie?: string | null
           etiqueta_impressa_em?: string | null
           nome_cientifico?: string | null
+          origem?: string | null
           plaqueta: number
           romaneio_id?: string | null
           secao?: string | null
@@ -400,6 +402,7 @@ export type Database = {
           especie?: string | null
           etiqueta_impressa_em?: string | null
           nome_cientifico?: string | null
+          origem?: string | null
           plaqueta?: number
           romaneio_id?: string | null
           secao?: string | null
@@ -491,6 +494,7 @@ export type Database = {
         Returns: boolean
       }
       minha_empresa: { Args: never; Returns: string }
+      origem_tora_legada: { Args: { d: Json }; Returns: string }
       registrar_operacao: {
         Args: {
           _alvos: Json
