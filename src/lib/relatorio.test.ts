@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ordenarToras, resumoPorAutex } from "./relatorio";
+import { ordenarToras, resumoPorAutex, resumoPorEspecie } from "./relatorio";
 import type { Tora } from "./data";
 const t = (plaqueta: number, especie: string, volume: number) => ({ plaqueta, especie, volume }) as unknown as Tora;
 const lista = [t(5, "Ipê", 1), t(12, "Angelim", 3), t(8, "Cumaru", 2)];
