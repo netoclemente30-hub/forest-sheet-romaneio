@@ -1,5 +1,6 @@
 import type { Tora } from "./data";
 import { fmtM3 } from "./volume";
+import type { ArquivoGerado } from "./arquivo";
 
 export type Ordem = "autex" | "plaqueta_desc" | "plaqueta_asc" | "volume_desc" | "especie_asc" | "especie_desc";
 export const ORDENS: { v: Ordem; label: string }[] = [
@@ -29,7 +30,7 @@ const HEAD = ["Plaqueta", "Árvore", "Seção", "Espécie", "Nome científico", 
 const linha = (t: Tora) => [t.plaqueta, t.arvore, t.secao ?? "", t.especie ?? "", t.nome_cientifico ?? "", t.d_topo1, t.d_topo2, t.d_pe1, t.d_pe2, t.comprimento, Number(Number(t.volume).toFixed(4)), t.autex ?? "", t.carregada ? "Carregada" : "No pátio"];
 const nome = () => `relatorio_toras_${new Date().toISOString().slice(0, 10)}`;
 
-export async function exportarExcel(toras: Tora[]) {
+export async function exportarExcel(toras: Tora[]): Promise<ArquivoGerado> {
   const XLSX = await import("xlsx");
   const total = toras.reduce((n, t) => n + Number(t.volume), 0);
   const ws = XLSX.utils.aoa_to_sheet([HEAD, ...toras.map(linha), [], ["TOTAL", `${toras.length} toras`, "", "", "", "", "", "", "", "", Number(total.toFixed(4))]]);
@@ -40,13 +41,13 @@ export async function exportarExcel(toras: Tora[]) {
   const wsEsp = XLSX.utils.aoa_to_sheet([["Espécie", "Nome científico", "Qtd toras", "Volume (m³)"], ...resumoPorEspecie(toras).map((r) => [r.especie, r.cientifico, r.qtd, Number(r.volume.toFixed(4))])]);
   wsEsp["!cols"] = [{ wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, wsEsp, "Por espécie");
-  XLSX.writeFile(wb, `${nome()}.xlsx`);
+  return { blob: new Blob([XLSX.write(wb, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nome: `${nome()}.xlsx` };
 }
 
-export async function exportarPdf(toras: Tora[], titulo: string) {
+export async function exportarPdf(toras: Tora[], titulo: string): Promise<ArquivoGerado> {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
-  const doc = new jsPDF({ orientation: "landscape" });
+  const doc = new jsPDF({ orientation: "landscape", compress: true });
   const total = toras.reduce((n, t) => n + Number(t.volume), 0);
   doc.setFontSize(15);
   doc.text(`RELATÓRIO DE TORAS — ${titulo.toUpperCase()}`, 14, 14);
@@ -65,7 +66,7 @@ export async function exportarPdf(toras: Tora[], titulo: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", "Volume m³"]], body: resumoPorAutex(toras).map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
   autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]], body: resumoPorEspecie(toras).map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
-  doc.save(`${nome()}.pdf`);
+  return { blob: doc.output("blob"), nome: `${nome()}.pdf` };
 }
 
 export function resumoPorAutex(toras: Tora[]) {
@@ -91,12 +92,12 @@ export function linhaSinaflor(t: Pick<Tora, "arvore" | "d_topo1" | "d_topo2" | "
   return [t.arvore, media(t.d_topo1, t.d_topo2), media(t.d_pe1, t.d_pe2), t.comprimento == null ? null : Number(t.comprimento)];
 }
 
-export async function exportarSinaflor(toras: Tora[]) {
+export async function exportarSinaflor(toras: Tora[]): Promise<ArquivoGerado> {
   const XLSX = await import("xlsx");
   const head = ["Nº Árvore", "D. Médio Topo (m)", "D. Médio Pé (m)", "Comprimento (m)"];
   const ws = XLSX.utils.aoa_to_sheet([head, ...toras.map(linhaSinaflor)]);
   ws["!cols"] = head.map((h) => ({ wch: h.length + 3 }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Repique SINAFLOR");
-  XLSX.writeFile(wb, `sinaflor_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  return { blob: new Blob([XLSX.write(wb, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nome: `sinaflor_${new Date().toISOString().slice(0, 10)}.xlsx` };
 }
