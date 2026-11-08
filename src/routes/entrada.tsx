@@ -9,6 +9,7 @@ import { empresaIdGravacao } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { registrarOperacao } from "@/lib/registro-operacao";
 import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { QrScanner } from "@/components/QrScanner";
@@ -60,23 +61,22 @@ function Entrada() {
   }
 
   async function confirmar() {
-    if (!id) return;
+    if (!id || !q.data?.r?.empresa_id) return;
+    const empresa = q.data.r.empresa_id;
     const p = patio.trim();
     if (!p) { toast.error("Escolha o pátio de destino"); return; }
     const log = await capturarLog("Entrada no pátio", `Romaneio ${r?.placa ?? id} · ${q.data?.itens.length ?? 0} toras · pátio ${p}`);
     if (!estaOnline()) {
       setBusy(true);
-      await fila().enfileirar({ tipo: "romaneio_recebido", id, patio: p, empresa_id: empresaIdGravacao().empresa_id ?? null, log });
+      await fila().enfileirar({ tipo: "romaneio_recebido", id, patio: p, empresa_id: empresa, log });
       setBusy(false);
       toast.success("Entrada salva offline — será enviada quando conectar");
       return;
     }
     setBusy(true);
-    await supabase.from("patios").upsert({ nome: p, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
-    const { error } = await supabase.from("romaneios").update({ recebido_em: new Date().toISOString(), patio: p }).eq("id", id);
+    try { await registrarOperacao("romaneio_recebido", empresa, { patio: p }, [id], log); }
+    catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível receber"); return; }
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    await gravarRegistro(log);
     await qc.invalidateQueries();
     toast.success(`Entrada de ${q.data?.itens.length ?? 0} toras confirmada no ${p}`);
   }

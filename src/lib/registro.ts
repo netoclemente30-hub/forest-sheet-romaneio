@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "./empresa";
 
 export interface LogCapturado {
+  operacao_id?: string;
   acao: string;
   detalhe: string;
   user_email: string | null;
@@ -31,6 +32,7 @@ export async function capturarLog(acao: string, detalhe: string): Promise<LogCap
      : supabase.auth.getUser().then(({ data }) => data.user);
    const [u, gps] = await Promise.all([usuario, posicaoGps()]);
   return {
+    operacao_id: crypto.randomUUID(),
     acao,
     detalhe,
      user_email: u?.email ?? null,
@@ -42,7 +44,8 @@ export async function capturarLog(acao: string, detalhe: string): Promise<LogCap
 
 // Grava o registro na nuvem (usado online e pela sincronização da fila).
 export async function gravarRegistro(log: LogCapturado): Promise<void> {
-  const { error } = await supabase.from("registros").insert({ ...log, ...empresaIdGravacao() });
+  const { operacao_id: _operacao, ...dados } = log;
+  const { error } = await supabase.from("registros").insert({ ...dados, ...empresaIdGravacao() });
   if (error) console.warn("Falha ao gravar registro:", error.message);
 }
 

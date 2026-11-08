@@ -210,6 +210,12 @@ export type Database = {
           id: string
           lat: number | null
           lng: number | null
+          mudancas: Json | null
+          numero: number
+          operacao_id: string | null
+          reversao_de: string | null
+          revertido_em: string | null
+          revertido_por: string | null
           user_email: string | null
           user_id: string | null
         }
@@ -221,6 +227,12 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          mudancas?: Json | null
+          numero?: number
+          operacao_id?: string | null
+          reversao_de?: string | null
+          revertido_em?: string | null
+          revertido_por?: string | null
           user_email?: string | null
           user_id?: string | null
         }
@@ -232,6 +244,12 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          mudancas?: Json | null
+          numero?: number
+          operacao_id?: string | null
+          reversao_de?: string | null
+          revertido_em?: string | null
+          revertido_por?: string | null
           user_email?: string | null
           user_id?: string | null
         }
@@ -473,6 +491,21 @@ export type Database = {
         Returns: boolean
       }
       minha_empresa: { Args: never; Returns: string }
+      registrar_operacao: {
+        Args: {
+          _alvos: Json
+          _dados: Json
+          _empresa: string
+          _log: Json
+          _operacao: string
+          _tipo: string
+        }
+        Returns: string
+      }
+      reverter_registro: {
+        Args: { _log: Json; _registro: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "superadmin"

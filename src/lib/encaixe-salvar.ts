@@ -11,7 +11,7 @@ export type SalvarEncaixeDeps = {
   lerInventario: () => Promise<Tora[]>;
   capturar: (acao: string, detalhe: string) => Promise<LogCapturado>;
   gravarLog: (log: LogCapturado) => Promise<void>;
-  inserir: (tora: Tora) => Promise<void>;
+  inserir: (tora: Tora, log: LogCapturado) => Promise<void>;
   enfileirar: (op: Op) => Promise<unknown>;
 };
 
@@ -28,7 +28,7 @@ export async function salvarEncaixe(linha: LinhaSaldo, medidas: MedidasEncaixe, 
   const log = await deps.capturar("Encaixe confirmado", `Plaqueta ${plaqueta} · ${linha.especie} · árvore ${linha.arvore} · secção ${identidade.secao} · AUTEX ${identidade.autex} · identidade escolhida pelo usuário · saldo ${linha.volume} m³ · medido ${volume} m³`);
   const valores = Object.fromEntries(CAMPOS_ENCAIXE.map((k) => [k, Number(medidas[k].trim().replace(",", "."))])) as Record<(typeof CAMPOS_ENCAIXE)[number], number>;
   const tora: Tora = { ...identidade, ...valores, plaqueta, volume, especie: linha.especie || null, nome_cientifico: linha.nome_cientifico || null, carregada: false, created_at: log.criado_em, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null };
-  if (deps.online()) { await deps.inserir(tora); await deps.gravarLog(log); }
+  if (deps.online()) { await deps.inserir(tora, log); }
   else await deps.enfileirar({ tipo: "tora_insert", dados: tora, log });
   return tora;
 }

@@ -15,6 +15,7 @@ import { AutexPicker } from "./AutexPicker";
 import type { LinhaSaldo } from "@/lib/saldo";
 import { useAuth } from "@/hooks/useAuth";
 import { avisoDuplicidade, toraDuplicada, type IdentidadeTora } from "@/lib/tora-duplicidade";
+import { registrarOperacao } from "@/lib/registro-operacao";
 
 const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
 
@@ -91,10 +92,9 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
       setBusy(false);
       toast.success(`Tora ${plaqueta} salva offline — será enviada quando conectar`);
     } else {
-      const { error } = await supabase.from("toras").insert(dados);
+      try { await registrarOperacao("tora_insert", empresa, dados, [], log); }
+      catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível salvar"); return; }
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
-      await gravarRegistro(log);
       toast.success(`Tora ${plaqueta} salva — ${fmtM3(vol)} m³`);
       await qc.invalidateQueries({ queryKey: ["toras"] });
     }
@@ -105,11 +105,11 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [] }: { toras: Tora[
   async function medirSaldo(t: Tora) {
     if (!estaOnline()) { toast.error("Precisa de internet para medir tora do saldo"); return; }
     setBusy(true);
-    const { error } = await supabase.from("toras").update({ ...medidas, volume: vol }).eq("plaqueta", t.plaqueta).eq("empresa_id", t.empresa_id);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
     const dif = vol - Number(t.volume);
-    await gravarRegistro(await capturarLog("Tora do saldo medida", `Tora ${t.plaqueta} · ${t.especie} · árvore ${t.arvore}-${t.secao} · saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³ (${dif >= 0 ? "+" : ""}${fmtM3(dif)})`));
+    const log = await capturarLog("Tora do saldo medida", `Tora ${t.plaqueta} · ${t.especie} · árvore ${t.arvore}-${t.secao} · saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³ (${dif >= 0 ? "+" : ""}${fmtM3(dif)})`);
+    try { await registrarOperacao("tora_update", t.empresa_id, { ...medidas, volume: vol }, [t.plaqueta], log); }
+    catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível medir"); return; }
+    setBusy(false);
     toast.success(`Tora ${t.plaqueta} medida — saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³`);
     await qc.invalidateQueries({ queryKey: ["toras"] });
     onSaved(t.plaqueta);

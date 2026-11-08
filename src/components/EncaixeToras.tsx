@@ -18,6 +18,7 @@ import { menorPlaquetaLivre } from "@/lib/encaixe";
 import { fila, type ItemFila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { registrarOperacao } from "@/lib/registro-operacao";
 
 const vazias: MedidasEncaixe = { d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" };
 const rotulos = { d_topo1: "D. topo 1 (cm)", d_topo2: "D. topo 2 (cm)", d_pe1: "D. pé 1 (cm)", d_pe2: "D. pé 2 (cm)", comprimento: "Comprimento (m)" };
@@ -48,7 +49,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
             if (!data || data.length < 1000) return todos;
           }
         },
-        inserir: async (t) => { const { error } = await supabase.from("toras").insert(t); if (error) throw error; },
+        inserir: async (t, log) => { await registrarOperacao("tora_insert", empresa, t, [], log); },
       });
       setSalva(tora); setEscolhida(null); setMedidas(vazias);
       if (estaOnline()) await qc.invalidateQueries({ queryKey: ["toras"] });
