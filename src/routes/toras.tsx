@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { capturarLog, gravarRegistro } from "@/lib/registro";
-import { useEffect, useMemo, useState } from "react";
+import { capturarLog } from "@/lib/registro";
+import { useMemo, useState } from "react";
 import { RelatorioToras } from "@/components/RelatorioToras";
 import { torasDeManejo } from "@/lib/tora-origem";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
@@ -18,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil,  } from "lucide-react";
+import { Plus, Trash2, QrCode, Printer, Pencil } from "lucide-react";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { registrarOperacao } from "@/lib/registro-operacao";
 
