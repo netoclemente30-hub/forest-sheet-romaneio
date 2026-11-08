@@ -127,6 +127,13 @@
       "when": 1794178237076,
       "tag": "0017_madeira_serrada_pacotes_cargas",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794178494174,
+      "tag": "0018_madeira_serrada_validar_empresa_nula",
+      "breakpoints": true
     }
   ]
 }
