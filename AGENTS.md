@@ -44,3 +44,4 @@ use the editor.
 - Stock reconciliation indexes normalized tree/section/AUTEX matches and renders only a page of filtered rows; selection spans the full filtered dataset. Why: large inventories must not freeze field tablets.
 - Log creation and editing share normalized company/tree/section/AUTEX duplicate matching; creation checks queued inserts and current online inventory with the resolved saldo AUTEX. Why: saldo autofill and offline queues must not bypass duplicate warnings.
 - Label ordering is centralized in the PDF module and reused by the preview; use creation timestamps with label-number tie-breaking. Why: all print paths must match the launch sequence regardless of selection order.
+- Log fitting is a read-only saldo tool using shared Smalian volume and scientific-name filtering, ordered by absolute volume difference; it never assigns identity or writes inventory automatically. Why: volume proximity suggests candidates but cannot prove a log's identity.

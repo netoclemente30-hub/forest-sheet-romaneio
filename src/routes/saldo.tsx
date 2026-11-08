@@ -8,12 +8,13 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { ToraForm } from "@/components/ToraForm";
+import { EncaixeToras } from "@/components/EncaixeToras";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { conferirSaldo, lerSaldo, novasTorasDoSaldo, type LinhaSaldo } from "@/lib/saldo";
 import { fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
-import { Printer, Upload, Ruler, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Printer, Upload, Ruler, Pencil, Trash2, ChevronLeft, ChevronRight, ScanSearch } from "lucide-react";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -58,6 +59,7 @@ function Saldo() {
   const qc = useQueryClient();
   const arvores = useQuery(arvoresQuery);
   const [medir, setMedir] = useState(false);
+  const [encaixe, setEncaixe] = useState(false);
   const [medidas, setMedidas] = useState<number[]>([]);
   // Toras do saldo = cadastradas só com volume; quando medidas ganham diâmetros.
   const pendentes = useMemo(() => (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null), [toras.data]);
@@ -126,6 +128,15 @@ function Saldo() {
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Conferir saldo</h1>
+      <Button variant="outline" className="w-full h-12" onClick={() => setEncaixe(true)}><ScanSearch /> Encaixe de toras</Button>
+      <Sheet open={encaixe} onOpenChange={setEncaixe}>
+        <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto">
+          <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Encaixe de toras</SheetTitle></SheetHeader>
+          <div className="p-4 pt-0">
+            {linhas.length ? <EncaixeToras linhas={linhas} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
+          </div>
+        </SheetContent>
+      </Sheet>
       <div className="bg-card border rounded-xl p-3 space-y-2">
         <div className="flex justify-between text-sm"><span>Toras do saldo a medir</span><b>{pendentes.length + fora}</b></div>
         {!linhas.length && !pendentes.length && <div className="text-xs text-muted-foreground">Escolha primeiro a planilha de saldo abaixo.</div>}
