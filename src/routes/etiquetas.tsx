@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useFilaOffline } from "@/hooks/useFilaOffline";
+import { useAuth } from "@/hooks/useAuth";
+import { getEmpresaAtiva } from "@/lib/empresa";
+import { torasEtiquetasOffline } from "@/lib/encaixe-salvar";
 import { Input } from "@/components/ui/input";
 import { TAMANHOS_PADRAO, gerarEtiquetasPdf, ordenarEtiquetasPorLancamento, tamanhoValido, type TamanhoEtiqueta } from "@/lib/etiqueta-pdf";
 
@@ -30,8 +34,18 @@ function Etiquetas() {
   const router = useRouter();
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
+  const { empresaId, session } = useAuth();
+  const pendentes = useFilaOffline();
+  const [empresaSalva, setEmpresaSalva] = useState<string | null>(null);
+  useEffect(() => {
+    if (!session?.user.id) return;
+    try { setEmpresaSalva(localStorage.getItem(`encaixe-empresa:${session.user.id}`)); } catch { /* sem cópia local */ }
+  }, [session?.user.id]);
+  const empresa = getEmpresaAtiva() ?? empresaId ?? empresaSalva;
+  const locais = torasEtiquetasOffline(pendentes.itens, empresa);
+  const disponiveis = [...(toras.data ?? []).filter((t) => !empresa || t.empresa_id === empresa), ...locais];
   const lista = [...new Set(p.split(",").map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
-  const selecionadas = ordenarEtiquetasPorLancamento(lista.flatMap((pl) => { const t = toras.data?.find((x) => x.plaqueta === pl); return t ? [t] : []; }));
+  const selecionadas = ordenarEtiquetasPorLancamento(lista.flatMap((pl) => { const t = disponiveis.find((x) => x.plaqueta === pl); return t ? [t] : []; }));
   const [tam, setTam] = useState<TamanhoEtiqueta>({ largura: 100, altura: 70 });
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);

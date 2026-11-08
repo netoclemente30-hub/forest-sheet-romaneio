@@ -2,6 +2,20 @@ import type { LinhaSaldo } from "./saldo";
 import { volumeTora } from "./volume";
 import type { ItemFila } from "./offline/fila";
 
+export function menorPlaquetaLivre(toras: { empresa_id: string; plaqueta: number }[], itens: ItemFila[], empresa: string): number {
+  const usadas = new Set(toras.filter((t) => t.empresa_id === empresa).map((t) => t.plaqueta));
+  for (const { op } of itens) {
+    if (op.tipo === "tora_insert" && op.dados["empresa_id"] === empresa) usadas.add(Number(op.dados["plaqueta"]));
+    if (op.tipo === "tora_update" && op.empresa_id === empresa) {
+      usadas.add(op.plaqueta);
+      usadas.add(Number(op.dados["plaqueta"]));
+    }
+  }
+  let numero = 1;
+  while (usadas.has(numero)) numero++;
+  return numero;
+}
+
 /** Pending inserts reserve their identity, even if synchronization reported an error. */
 export function linhasDisponiveisOffline(linhas: LinhaSaldo[], itens: ItemFila[], empresa: string | null) {
   if (!empresa) return [];
