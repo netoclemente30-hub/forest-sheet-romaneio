@@ -13,6 +13,11 @@ export function estaOnline(): boolean {
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
 export async function executarOp(op: Op, operacao?: string): Promise<void> {
+  if(op.tipo==='pacote_serrado_salvar') {
+    const { enviarPacote }=await import('@/lib/madeira-serrada');
+    await enviarPacote(op.empresa_id,op.pacote_id,op.cab,op.itens,op.log);
+    return;
+  }
   const suportada = ["tora_insert", "tora_update", "tora_delete", "toras_serradas", "romaneio_recebido"].includes(op.tipo);
   if (suportada && op.log) {
     let empresa = op.tipo === "tora_insert" ? String(op.dados["empresa_id"] ?? "") : "empresa_id" in op ? op.empresa_id ?? "" : "";
@@ -28,6 +33,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
 
 async function executarOpSemLog(op: Op): Promise<void> {
   switch (op.tipo) {
+    case 'pacote_serrado_salvar': return;
     case "tora_insert": {
       const { error } = await supabase.from("toras").insert(op.dados as never);
       if (error) throw new Error(error.message);

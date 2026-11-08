@@ -141,6 +141,13 @@
       "when": 1794178545036,
       "tag": "0019_autex_livre_pacote_serrado",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794178879811,
+      "tag": "0020_pacote_serrado_replay_seguro",
+      "breakpoints": true
     }
   ]
 }

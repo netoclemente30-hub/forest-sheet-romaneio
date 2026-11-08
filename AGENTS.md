@@ -30,7 +30,7 @@ use the editor.
 <!-- LOVABLE:END -->
 
 - Data is read client-side with react-query (`src/lib/data.ts`) after sign-in in `AppShell`; reads are scoped to the user's company (empresa_id). Why: field team app, SSR has no session.
-- Sawn timber uses company-scoped package/items/load relations, atomic authenticated SQL RPCs with database-calculated totals and immutable dispatched packages; queries use company-keyed offline read caches, while saves require connectivity. Why: concurrent dispatch must not reuse packages or trust client totals.
+- Sawn timber uses company-scoped atomic RPCs, database-calculated totals and immutable dispatched packages; new packages queue with stable IDs/audit and project into stock offline, while dispatch requires sync/connectivity. Sawing selection suggests identity without copying log dimensions. Why: prevent duplicate replay/dispatch and preserve measured board quantities.
 - Report exporters return prepared blobs; the report dialog calls the shared file delivery helper on a fresh user click. Why: asynchronous generation can lose mobile browser download/share activation.
 - Tora volume uses `volumeTora` in `src/lib/volume.ts` (Smalian, same as the original spreadsheet); never duplicate the formula.
 - AUTEX uses a team-shared registry referenced by logs; QR payloads are versioned and resolve to current inventory rows before loading, so printed data never overrides stock status.

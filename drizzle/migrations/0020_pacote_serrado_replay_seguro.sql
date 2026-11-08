@@ -1,0 +1,8 @@
+DO $$ DECLARE d text; BEGIN
+ d:=pg_get_functiondef('public.salvar_pacote_serrado(uuid,uuid,jsonb,jsonb,jsonb)'::regprocedure);
+ d:=replace(d,'PERFORM 1 FROM public.pacotes_serrados WHERE id = _id FOR UPDATE;', 'IF nullif(_log->>''operacao_id'','''') IS NOT NULL AND EXISTS(SELECT 1 FROM public.registros WHERE empresa_id=_empresa AND operacao_id=(_log->>''operacao_id'')::uuid AND acao=''Pacote de madeira serrada salvo'') THEN RETURN _id; END IF;
+ PERFORM 1 FROM public.pacotes_serrados WHERE id = _id FOR UPDATE;
+ IF coalesce((_cab->>''offline_criacao'')::boolean,false) AND EXISTS(SELECT 1 FROM public.pacotes_serrados WHERE id=_id) THEN RAISE EXCEPTION ''Pacote já existe na nuvem. Atualize antes de alterar para preservar alterações recentes''; END IF;');
+ d:=replace(d,'INSERT INTO public.registros(empresa_id,user_id,user_email,acao,detalhe,lat,lng,criado_em) VALUES(_empresa,auth.uid(),auth.jwt()->>''email'',''Pacote de madeira serrada salvo'',''Pacote ''||(_cab->>''numero''),nullif(_log->>''lat'','''')::double precision,nullif(_log->>''lng'','''')::double precision,coalesce((_log->>''criado_em'')::timestamptz,now()));','INSERT INTO public.registros(empresa_id,user_id,user_email,acao,detalhe,lat,lng,criado_em,operacao_id) VALUES(_empresa,auth.uid(),auth.jwt()->>''email'',''Pacote de madeira serrada salvo'',''Pacote ''||(_cab->>''numero''),nullif(_log->>''lat'','''')::double precision,nullif(_log->>''lng'','''')::double precision,coalesce((_log->>''criado_em'')::timestamptz,now()),nullif(_log->>''operacao_id'','''')::uuid);');
+ EXECUTE d;
+END $$;
