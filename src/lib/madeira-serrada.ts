@@ -9,7 +9,7 @@ type Tables = Database['public']['Tables'];
 export type ItemSerrado = Tables['itens_pacote_serrado']['Row'];
 export type PacoteSerrado = Tables['pacotes_serrados']['Row'] & { itens: ItemSerrado[]; carga_id: string | null };
 export type CargaSerrada = Tables['romaneios_madeira_serrada']['Row'] & { pacotes: PacoteSerrado[] };
-export type CabPacote = { numero: string; data: string; observacoes: string };
+export type CabPacote = { numero: string; data: string; observacoes: string; autex: string };
 export type CabCarga = { numero_carga: string; data: string; cliente_nome: string; cliente_documento: string; motorista_nome: string; motorista_cpf: string; placa_veiculo: string; placa_reboque: string };
 
 export function calcularBitola(item: BitolaSerrada) {
@@ -53,6 +53,13 @@ export function madeiraQuery(empresa: string | null) {
       }
     });
   }};
+}
+export function autexSerradasQuery(empresa: string) {
+  return { queryKey: ['autex-serradas', empresa], networkMode: 'always' as const, queryFn: () => comCache<{numero:string}>(`autex-serradas:${empresa}`, async () => {
+    const { data, error } = await supabase.from('autex').select('numero').eq('empresa_id',empresa).order('numero');
+    if(error) throw new Error(error.message);
+    return data ?? [];
+  }) };
 }
 export function cargasSerradasQuery(empresa: string | null) {
   return { queryKey: ['cargas-serradas', empresa], enabled: !!empresa, networkMode: 'always' as const, queryFn: async () => {

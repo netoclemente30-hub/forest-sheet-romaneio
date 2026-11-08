@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
-import { COMPRIMENTOS, calcularBitola, comoBitola, salvarPacote, type BitolaSerrada, type PacoteSerrado } from '@/lib/madeira-serrada';
+import { COMPRIMENTOS, autexSerradasQuery, calcularBitola, comoBitola, salvarPacote, type BitolaSerrada, type PacoteSerrado } from '@/lib/madeira-serrada';
 
 export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancelar }: { empresa:string; pacote?:PacoteSerrado | undefined; pacotes:PacoteSerrado[]; onSalvo:()=>void; onCancelar:()=>void }) {
   const [id] = useState(()=>pacote?.id ?? crypto.randomUUID());
   const [numero,setNumero] = useState(pacote?.numero ?? '');
+  const [autex,setAutex] = useState(pacote?.autex ?? '');
+  const autexCadastradas = useQuery(autexSerradasQuery(empresa));
   const [data,setData] = useState(pacote?.data ?? new Date().toLocaleDateString('en-CA'));
   const [obs,setObs] = useState(pacote?.observacoes ?? '');
   const [especie,setEspecie] = useState(pacote?.itens[0]?.especie ?? '');
@@ -21,7 +24,7 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancela
   function alterar(index:number, valores:Partial<BitolaSerrada>) { setItens(s=>s.map((i,n)=>n===index ? {...i,...valores} : i)); }
   async function salvar(e:React.FormEvent) {
     e.preventDefault(); if(busy)return; setBusy(true);
-    try { await salvarPacote(empresa,id,{numero,data,observacoes:obs},itens); toast.success('Pacote salvo'); onSalvo(); }
+    try { await salvarPacote(empresa,id,{numero,data,observacoes:obs,autex},itens); toast.success('Pacote salvo'); onSalvo(); }
     catch(e) { toast.error(e instanceof Error ? e.message : 'Não foi possível salvar'); }
     finally { setBusy(false); }
   }
@@ -36,6 +39,8 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancela
       <label className="text-sm">Espécie padrão<Input list="especies-serradas" aria-label="Espécie padrão" value={especie} onChange={e=>{setEspecie(e.target.value);setItens(s=>s.map(i=>i.especie===especie ? {...i,especie:e.target.value} : i));}} /></label>
       <label className="text-sm">Data<Input required type="date" aria-label="Data do pacote" value={data} onChange={e=>setData(e.target.value)} /></label>
     </div>
+    <label className="block text-sm">AUTEX<Input list="autex-pacotes-serrados" aria-label="AUTEX do pacote" placeholder="Selecionar ou digitar AUTEX" value={autex} onChange={e=>setAutex(e.target.value)} /></label>
+    <datalist id="autex-pacotes-serrados">{(autexCadastradas.data??[]).map(a=><option key={a.numero} value={a.numero} />)}</datalist>
     <datalist id="especies-serradas">{especies.map(e=><option key={e} value={e} />)}</datalist>
     {itens.map((i,index)=> <section key={index} className="border rounded-lg p-3 space-y-3 bg-card">
       <div className="flex items-center justify-between"><h3 className="text-lg font-bold">Bitola {index+1} · {i.grossura} × {i.largura} cm</h3><Button type="button" variant="ghost" size="icon" aria-label={`Remover bitola ${index+1}`} title="Remover bitola" disabled={busy || itens.length===1} onClick={()=>setItens(s=>s.filter((_,n)=>n!==index))}><Trash2 /></Button></div>

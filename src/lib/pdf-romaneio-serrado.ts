@@ -12,7 +12,7 @@ export function linhasCarga(carga: CargaSerrada) {
       const bitola = comoBitola(item);
       for (const c of COMPRIMENTOS) { const n = bitola.distribuicao_pecas[c] ?? 0; pt[c] = (pt[c] ?? 0) + n; totais[c] = (totais[c] ?? 0) + n; }
       pp += item.total_pecas; pv += Number(item.volume_m3);
-      linhas.push({ subtotal:false, cells:[pacote.numero, `${item.especie}\n${item.tipo_peca}`, `${item.grossura} × ${item.largura}`, ...COMPRIMENTOS.map(c => bitola.distribuicao_pecas[c] ? String(bitola.distribuicao_pecas[c]) : '–'), String(item.total_pecas), Number(item.volume_m3).toFixed(4).replace('.',',')] });
+      linhas.push({ subtotal:false, cells:[`${pacote.numero}${pacote.autex ? `\nAUTEX ${pacote.autex}` : ''}`, `${item.especie}\n${item.tipo_peca}`, `${item.grossura} × ${item.largura}`, ...COMPRIMENTOS.map(c => bitola.distribuicao_pecas[c] ? String(bitola.distribuicao_pecas[c]) : '–'), String(item.total_pecas), Number(item.volume_m3).toFixed(4).replace('.',',')] });
     }
     pecas += pp; volume += pv;
     linhas.push({ subtotal:true, cells:[`Subtotal Pacote ${pacote.numero}`, '', '', ...COMPRIMENTOS.map(c => pt[c] ? String(pt[c]) : '–'), String(pp), pv.toFixed(4).replace('.',',')] });
