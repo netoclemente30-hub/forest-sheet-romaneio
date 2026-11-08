@@ -1,5 +1,27 @@
 import type { LinhaSaldo } from "./saldo";
 import { volumeTora } from "./volume";
+import type { ItemFila } from "./offline/fila";
+
+/** Pending inserts reserve their identity, even if synchronization reported an error. */
+export function linhasDisponiveisOffline(linhas: LinhaSaldo[], itens: ItemFila[], empresa: string | null) {
+  if (!empresa) return [];
+  const normalizarAutex = (s: unknown) => String(s ?? "").trim().toUpperCase().replace(/^AUTEX[\s:-]*/, "");
+  const chaveSecao = (arvore: unknown, secao: unknown) => JSON.stringify([Number(arvore), String(secao ?? "").trim().toUpperCase()]);
+  const reservadas = new Set<string>();
+  const secoes = new Set<string>();
+  for (const { op } of itens) {
+    if (op.tipo !== "tora_insert" || op.dados["empresa_id"] !== empresa) continue;
+    const secao = chaveSecao(op.dados["arvore"], op.dados["secao"]);
+    secoes.add(secao);
+    reservadas.add(JSON.stringify([secao, normalizarAutex(op.dados["autex"])]));
+  }
+  return linhas.filter((l) => {
+    const secao = chaveSecao(l.arvore, l.secao);
+    return l.autex.trim()
+      ? !reservadas.has(JSON.stringify([secao, normalizarAutex(l.autex)]))
+      : !secoes.has(secao);
+  });
+}
 
 export const CAMPOS_ENCAIXE = ["d_topo1", "d_topo2", "d_pe1", "d_pe2", "comprimento"] as const;
 export type MedidasEncaixe = Record<(typeof CAMPOS_ENCAIXE)[number], string>;

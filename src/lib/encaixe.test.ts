@@ -1,9 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { encaixarToras, nomesCientificosEncaixe, volumeEncaixe } from "./encaixe";
+import { encaixarToras, linhasDisponiveisOffline, nomesCientificosEncaixe, volumeEncaixe } from "./encaixe";
 import type { LinhaSaldo } from "./saldo";
+import { criarFila, type ItemFila } from "./offline/fila";
 
 const linha = (arvore: number, volume: number | null, nome_cientifico = "Pouteria macrophylla", autex = "AUTEX-2011.2.2026.10587"): LinhaSaldo => ({ arvore, volume, nome_cientifico, autex, secao: "B", especie: "Abiurana" });
 describe("encaixe de toras", () => {
+  it("retira 1861-B imediatamente após lançar offline e mantém reserva ao reler a fila, inclusive com erro", async () => {
+    const itens = new Map<string, ItemFila>();
+    const store = { all: async () => [...itens.values()], put: async (i: ItemFila) => { itens.set(i.id, i); }, del: async (id: string) => { itens.delete(id); } };
+    const f = criarFila(store);
+    const saldo = [linha(1861, 2.0125), linha(1862, 2.02)];
+    expect(linhasDisponiveisOffline(saldo, await f.listar(), "RJ").map((l) => l.arvore)).toEqual([1861, 1862]);
+    const item = await f.enfileirar({ tipo: "tora_insert", dados: { empresa_id: "RJ", arvore: 1861, secao: " b ", autex: "2011.2.2026.10587", plaqueta: 50 } });
+    expect(linhasDisponiveisOffline(saldo, await f.listar(), "RJ").map((l) => l.arvore)).toEqual([1862]);
+    await f.marcarErro(item.id, "Sem conexão");
+    expect(linhasDisponiveisOffline(saldo, await criarFila(store).listar(), "RJ").map((l) => l.arvore)).toEqual([1862]);
+    await f.remover(item.id);
+    expect(linhasDisponiveisOffline(saldo, await f.listar(), "RJ").map((l) => l.arvore)).toEqual([1861, 1862]);
+  });
+  it("reserva somente a mesma empresa, AUTEX e secção, incluindo linhas repetidas do saldo", () => {
+    const itens: ItemFila[] = [{ id: "1", criadoEm: 1, op: { tipo: "tora_insert", dados: { empresa_id: "RJ", arvore: 1861, secao: "B", autex: "AUTEX-2011.2.2026.10587", plaqueta: 50 } } }];
+    const saldo = [linha(1861, 2), linha(1861, 2), linha(1861, 2, "Pouteria macrophylla", "OUTRA"), { ...linha(1861, 2), secao: "A" }];
+    expect(linhasDisponiveisOffline(saldo, itens, "RJ").map((l) => [l.autex, l.secao])).toEqual([["OUTRA", "B"], ["AUTEX-2011.2.2026.10587", "A"]]);
+    expect(linhasDisponiveisOffline(saldo, itens, "OUTRA EMPRESA")).toEqual(saldo);
+    expect(linhasDisponiveisOffline(saldo, itens, null)).toEqual([]);
+  });
   it("calcula Smalian com as cinco medidas e aceita vírgula decimal", () => {
     expect(volumeEncaixe({ d_topo1: "73", d_topo2: "68", d_pe1: "67", d_pe2: "62", comprimento: "7,6" })).toBe(2.725);
   });
