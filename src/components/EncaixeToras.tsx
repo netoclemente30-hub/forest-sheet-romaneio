@@ -40,8 +40,8 @@ export function EncaixeToras({ linhas }: { linhas: LinhaSaldo[] }) {
     </div>
     <Button variant="outline" onClick={() => { setMedidas(vazias); setLimite(10); }}><RotateCcw /> Limpar medidas</Button>
     {nome && volume !== null && <section aria-label="Opções de encaixe" className="space-y-2">
-      <h3 className="text-xl font-bold">Volumes mais próximos ({opcoes.length})</h3>
-      {!opcoes.length && <p className="text-sm text-muted-foreground">Nenhuma tora com volume válido para este nome científico no saldo.</p>}
+      <h3 className="text-xl font-bold">Volumes mais próximos fora de estoque ({opcoes.length})</h3>
+      {!opcoes.length && <p className="text-sm text-muted-foreground">Nenhuma tora fora de estoque com volume válido para este nome científico.</p>}
       <ol className="divide-y border-y">
         {opcoes.slice(0, limite).map(({ linha, indice, diferenca }, i) => <li key={indice} className="py-3 space-y-1">
           <div className="flex flex-wrap items-baseline justify-between gap-2"><b className="text-lg">{i + 1}. {linha.especie || "Sem nome popular"}</b><b>{fmtM3(linha.volume ?? 0)} m³</b></div>
