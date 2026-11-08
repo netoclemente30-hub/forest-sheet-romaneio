@@ -31,7 +31,8 @@ export async function comCache<T>(nome: string, buscar: () => Promise<T[]>): Pro
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     const cache = await lerCache<T>(nome);
     if (cache) return cache;
-    throw new Error("Sem internet e sem dados salvos neste aparelho. Abra esta tela conectado primeiro.");
+    console.warn("Sem internet e sem dados salvos para esta consulta; exibindo lista vazia.");
+    return [];
   }
   try {
     const dados = await buscar();

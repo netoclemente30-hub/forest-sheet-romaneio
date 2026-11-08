@@ -12,9 +12,18 @@ describe("consulta sem internet", () => {
     expect(await comCache("arvores", buscar)).toEqual([{ numero: 5, nome_vulgar: "Mandioqueira" }]);
     expect(buscar).not.toHaveBeenCalled();
   });
-  it("não mostra uma base vazia como se tivesse carregado quando não há cache", async () => {
+  it("retorna uma lista vazia sem consultar a rede quando não há cache offline", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     vi.spyOn(idb, "get").mockResolvedValue(undefined);
-    await expect(comCache("arvores", vi.fn())).rejects.toThrow("sem dados salvos");
+    const buscar = vi.fn();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await comCache("arvores", buscar)).toEqual([]);
+    expect(buscar).not.toHaveBeenCalled();
+  });
+  it("retorna uma lista vazia se o IndexedDB estiver indisponível offline", async () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    vi.spyOn(idb, "get").mockRejectedValue(new Error("IndexedDB indisponível"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await comCache("toras", vi.fn())).toEqual([]);
   });
 });
