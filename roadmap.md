@@ -1,4 +1,6 @@
 # Tarefas
+- [ ] Numerar registros e filtrar por usuário.
+- [ ] Registrar estados anteriores e permitir reversões confirmadas de toras e serraria, respeitando empresa, permissões e conflitos; registros antigos sem cópia não podem ser restaurados.
 - [x] Escolher sugestão de encaixe, confirmar identidade, salvar medidas com menor plaqueta azul livre e disponibilizar etiqueta; 24 testes passaram e escolha 1861-B/plaqueta 8 com PDF local validada no desktop e na largura de 562 px, sem envio à nuvem. Teste de impressão no Android publicado depende de publicação.
 - [x] Retirar das sugestões de encaixe as toras lançadas offline, imediatamente e ao reabrir no mesmo aparelho, respeitando empresa e AUTEX; 17 testes passaram e lançamento 1861-B validado offline com acesso autenticado, sem envio à nuvem.
 - [x] Adicionar Encaixe de toras na conferência: nome científico, cinco medidas e opções do saldo por proximidade de volume com AUTEX e árvore/secção; 14 testes passaram e fluxo autenticado verificado com saldo real, em desktop e celular, sem alterar estoque.
