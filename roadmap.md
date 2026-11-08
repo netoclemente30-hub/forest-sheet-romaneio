@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Retirar das sugestões de encaixe as toras lançadas offline, imediatamente e ao reabrir no mesmo aparelho, respeitando empresa e AUTEX.
 - [x] Adicionar Encaixe de toras na conferência: nome científico, cinco medidas e opções do saldo por proximidade de volume com AUTEX e árvore/secção; 14 testes passaram e fluxo autenticado verificado com saldo real, em desktop e celular, sem alterar estoque.
 - [x] Reduzir sobrecarga da conferência de saldo: comparação indexada, filtros otimizados e páginas de 50 toras; busca, seleção entre páginas e abertura/preenchimento da medição verificados com as 1.981 linhas reais em tela de tablet, sem alterar dados.
 - [x] Adicionar botão Instalar app no canto superior direito; testes de pedido de instalação e orientação alternativa, tela autenticada e largura de celular verificados.
