@@ -14,8 +14,10 @@ describe("registros numerados", () => {
     expect(filtrarRegistros(registros, "", "13").map((r) => r.numero)).toEqual([13]);
   });
   it("oferece reversão só com cópia completa e sem reversão anterior", () => {
-    expect(podeReverterRegistro(registros[0])).toBe(true);
-    expect(podeReverterRegistro(registros[1])).toBe(false);
+    const [primeiro, segundo] = registros;
+    if (!primeiro || !segundo) throw new Error("Registros de teste ausentes");
+    expect(podeReverterRegistro(primeiro)).toBe(true);
+    expect(podeReverterRegistro(segundo)).toBe(false);
     expect(podeReverterRegistro({ mudancas: [], revertido_em: null, reversao_de: null })).toBe(false);
     expect(podeReverterRegistro({ mudancas: [{}], revertido_em: "2026-11-08", reversao_de: null })).toBe(false);
     expect(podeReverterRegistro({ mudancas: [{}], revertido_em: null, reversao_de: "original" })).toBe(false);
