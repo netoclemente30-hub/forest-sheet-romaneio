@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { lerEmpresaSalva, salvarEmpresaDoUsuario } from "@/lib/empresa";
 
 async function checarAdmin(userId: string): Promise<boolean> {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });

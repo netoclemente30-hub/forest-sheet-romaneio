@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Corrigir o aviso "Aguarde carregar a empresa" no tablet usando o vínculo de empresa já confirmado no aparelho quando a consulta online falhar.
 - [x] Editar lançamentos com erro pelo aviso laranja, preservando a operação original e permitindo tentar de novo após salvar; 25 testes passaram e edição/reabertura verificadas com acesso autenticado em desktop e 384 px. Reenvio interceptado no teste sem alterar estoque real.
 - [x] Explicar acesso offline: reutilizar sessão já salva no próprio aparelho; primeiro login e validação de senha exigem internet, sem distribuir senhas ou contas dos demais usuários.
 - [x] Separar Toras de manejo (medições da Base) das toras medidas na conferência/encaixe; estas aparecem no pátio da Serraria, com relatórios compartilhados, filtros e seleção. 28 testes passaram; PDF/Excel baixados com login real; medição 1861-B lançada offline, vista no pátio e excluída do manejo, removida após teste; telas em 384 px sem corte. Publicação e validação no Android continuam pendentes abaixo.
