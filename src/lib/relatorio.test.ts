@@ -1,13 +1,18 @@
-// @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { ordenarToras, resumoPorAutex, resumoPorEspecie, exportarExcel, exportarPdf, exportarSinaflor } from "./relatorio";
 import type { Tora } from "./data";
 const t = (plaqueta: number, especie: string, volume: number) => ({ plaqueta, especie, volume }) as unknown as Tora;
 const lista = [t(5, "Ipê", 1), t(12, "Angelim", 3), t(8, "Cumaru", 2)];
+const bytes = (blob: Blob) => new Promise<ArrayBuffer>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(reader.result) : reject(new Error("Arquivo inválido"));
+  reader.onerror = () => reject(reader.error);
+  reader.readAsArrayBuffer(blob);
+});
 it("prepara Excel com toras e resumos antes do clique para salvar", async () => {
   const arquivo = await exportarExcel(lista);
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(await arquivo.blob.arrayBuffer(), { type: "array" });
+  const wb = XLSX.read(await bytes(arquivo.blob), { type: "array" });
   expect(arquivo.nome).toMatch(/\.xlsx$/);
   expect(arquivo.blob.type).toBe("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   expect(wb.SheetNames).toEqual(["Toras", "Por AUTEX", "Por espécie"]);
@@ -19,12 +24,12 @@ it("prepara PDF válido antes do clique para salvar", async () => {
   const arquivo = await exportarPdf(lista, "Toras");
   expect(arquivo.blob.type).toBe("application/pdf");
   expect(arquivo.nome).toMatch(/\.pdf$/);
-  expect(await arquivo.blob.slice(0, 5).text()).toBe("%PDF-");
+  expect(new TextDecoder().decode(await bytes(arquivo.blob.slice(0, 5)))).toBe("%PDF-");
 });
 it("prepara arquivo SINAFLOR com as quatro colunas de medidas", async () => {
   const arquivo = await exportarSinaflor([{ ...lista[0], arvore: 11, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 } as Tora]);
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(await arquivo.blob.arrayBuffer(), { type: "array" });
+  const wb = XLSX.read(await bytes(arquivo.blob), { type: "array" });
   const sheet = wb.Sheets["Repique SINAFLOR"];
   if (!sheet) throw new Error("Planilha SINAFLOR ausente");
   expect(XLSX.utils.sheet_to_json(sheet, { header: 1 })[1]).toEqual([11, 0.705, 0.645, 7.6]);
