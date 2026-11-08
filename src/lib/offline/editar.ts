@@ -21,6 +21,7 @@ const camposTora: CampoFila[] = [
 
 export function camposDaFila(op: Op): CampoFila[] {
   switch (op.tipo) {
+    case 'pacote_serrado_salvar': return [{chave:'numero',rotulo:'Número do pacote'},{chave:'autex',rotulo:'AUTEX'},{chave:'data',rotulo:'Data'},{chave:'observacoes',rotulo:'Observações'}];
     case "tora_insert": case "tora_update": return camposTora;
     case "tora_delete": return [{ chave: "plaqueta", rotulo: "Plaqueta azul", mode: "numeric" }];
     case "romaneio_recebido": return [{ chave: "patio", rotulo: "Pátio" }];
@@ -33,6 +34,7 @@ export function camposDaFila(op: Op): CampoFila[] {
 }
 
 export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
+  if(op.tipo==='pacote_serrado_salvar')return {...op.cab};
   if (op.tipo === "tora_insert" || op.tipo === "tora_update") {
     const base = op.tipo === "tora_update" ? toras.find((t) => t.empresa_id === op.empresa_id && t.plaqueta === op.plaqueta) : undefined;
     const dados: Record<string, unknown> = { ...base, ...op.dados };
@@ -69,6 +71,10 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
     return n;
   };
   switch (op.tipo) {
+    case 'pacote_serrado_salvar': {
+      if(!valores['numero']?.trim()||!valores['data'])throw new Error('Informe número e data');
+      return {...op,cab:{numero:valores['numero'].trim(),autex:valores['autex']??'',data:valores['data'],observacoes:valores['observacoes']??''}};
+    }
     case "tora_delete": return { ...op, plaqueta: positivo(valores["plaqueta"] ?? "") };
     case "toras_serradas": {
       const plaquetas = [...new Set((valores["plaquetas"] ?? "").split(/[,;\s]+/).filter(Boolean).map(positivo))];

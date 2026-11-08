@@ -6,15 +6,17 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { COMPRIMENTOS, autexSerradasQuery, calcularBitola, comoBitola, salvarPacote, type BitolaSerrada, type PacoteSerrado } from '@/lib/madeira-serrada';
+import type { SugestaoPacote } from '@/lib/pacote-de-toras';
 
-export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancelar }: { empresa:string; pacote?:PacoteSerrado | undefined; pacotes:PacoteSerrado[]; onSalvo:()=>void; onCancelar:()=>void }) {
+export function PacoteSerradoForm({ empresa, pacote, pacotes, sugestao, onSalvo, onCancelar }: { empresa:string; pacote?:PacoteSerrado | undefined; sugestao?:SugestaoPacote | undefined; pacotes:PacoteSerrado[]; onSalvo:()=>void; onCancelar:()=>void }) {
   const [id] = useState(()=>pacote?.id ?? crypto.randomUUID());
   const [numero,setNumero] = useState(pacote?.numero ?? '');
-  const [autex,setAutex] = useState(pacote?.autex ?? '');
+  const [autex,setAutex] = useState(pacote?.autex ?? sugestao?.autex ?? '');
+  const [confirmada,setConfirmada]=useState(!sugestao);
   const autexCadastradas = useQuery(autexSerradasQuery(empresa));
   const [data,setData] = useState(pacote?.data ?? new Date().toLocaleDateString('en-CA'));
   const [obs,setObs] = useState(pacote?.observacoes ?? '');
-  const [especie,setEspecie] = useState(pacote?.itens[0]?.especie ?? '');
+  const [especie,setEspecie] = useState(pacote?.itens[0]?.especie ?? sugestao?.especie ?? '');
   const nova = ():BitolaSerrada => ({especie,tipo_peca:'Viga',grossura:5,largura:15,distribuicao_pecas:Object.fromEntries(COMPRIMENTOS.map(c=>[c,0]))});
   const [itens,setItens] = useState<BitolaSerrada[]>(()=>pacote ? pacote.itens.map(comoBitola) : [nova()]);
   const [busy,setBusy] = useState(false);
@@ -23,12 +25,13 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancela
   const especies = [...new Set(pacotes.flatMap(p=>p.itens.map(i=>i.especie)))].sort();
   function alterar(index:number, valores:Partial<BitolaSerrada>) { setItens(s=>s.map((i,n)=>n===index ? {...i,...valores} : i)); }
   async function salvar(e:React.FormEvent) {
-    e.preventDefault(); if(busy)return; setBusy(true);
+    e.preventDefault(); if(busy)return; if(!confirmada){toast.error('Confirme ou altere a AUTEX sugerida');return;} setBusy(true);
     try { await salvarPacote(empresa,id,{numero,data,observacoes:obs,autex},itens); toast.success('Pacote salvo'); onSalvo(); }
     catch(e) { toast.error(e instanceof Error ? e.message : 'Não foi possível salvar'); }
     finally { setBusy(false); }
   }
   return <form onSubmit={salvar} className="space-y-4">
+    {sugestao&&<div className="border border-primary bg-secondary rounded-lg p-3 space-y-2"><p className="text-sm font-semibold">AUTEX sugerida: {sugestao.autex||'não informada'} da tora serrada · Confirmar ou alterar se necessário</p><p className="text-xs">{sugestao.especie} · {sugestao.plaquetas.length} toras selecionadas</p><Button type="button" size="sm" variant={confirmada?'outline':'default'} onClick={()=>setConfirmada(true)}>{confirmada?'AUTEX confirmada':'Confirmar AUTEX sugerida'}</Button></div>}
     <div className="bg-primary text-primary-foreground rounded-lg p-4 grid grid-cols-3 gap-2 text-center">
       <div><strong className="text-2xl font-display">{itens.length}</strong><div className="text-xs">Bitolas</div></div>
       <div><strong className="text-2xl font-display">{resumo.pecas}</strong><div className="text-xs">Peças</div></div>
@@ -39,7 +42,7 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, onSalvo, onCancela
       <label className="text-sm">Espécie padrão<Input list="especies-serradas" aria-label="Espécie padrão" value={especie} onChange={e=>{setEspecie(e.target.value);setItens(s=>s.map(i=>i.especie===especie ? {...i,especie:e.target.value} : i));}} /></label>
       <label className="text-sm">Data<Input required type="date" aria-label="Data do pacote" value={data} onChange={e=>setData(e.target.value)} /></label>
     </div>
-    <label className="block text-sm">AUTEX<Input list="autex-pacotes-serrados" aria-label="AUTEX do pacote" placeholder="Selecionar ou digitar AUTEX" value={autex} onChange={e=>setAutex(e.target.value)} /></label>
+    <label className="block text-sm">AUTEX<Input list="autex-pacotes-serrados" aria-label="AUTEX do pacote" placeholder="Selecionar ou digitar AUTEX" value={autex} onChange={e=>{setAutex(e.target.value);setConfirmada(true);}} /></label>
     <datalist id="autex-pacotes-serrados">{(autexCadastradas.data??[]).map(a=><option key={a.numero} value={a.numero} />)}</datalist>
     <datalist id="especies-serradas">{especies.map(e=><option key={e} value={e} />)}</datalist>
     {itens.map((i,index)=> <section key={index} className="border rounded-lg p-3 space-y-3 bg-card">

@@ -11,6 +11,7 @@ import { EditarLancamento } from "@/components/EditarLancamento";
 function descrever(op: Op): string {
   if (op.log?.detalhe) return `${op.log.acao} · ${op.log.detalhe}`;
   switch (op.tipo) {
+    case 'pacote_serrado_salvar': return `Pacote de madeira serrada ${op.cab.numero}`;
     case "tora_insert": return `Tora lançada · plaqueta ${String(op.dados["plaqueta"] ?? "?")}`;
     case "tora_update": return `Tora editada · plaqueta ${op.plaqueta}`;
     case "tora_delete": return `Tora excluída · plaqueta ${op.plaqueta}`;
