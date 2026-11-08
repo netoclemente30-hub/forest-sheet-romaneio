@@ -8,7 +8,7 @@ const normalizar = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g,
 export function volumeEncaixe(medidas: MedidasEncaixe): number | null {
   const valores = CAMPOS_ENCAIXE.map((k) => Number(medidas[k].trim().replace(",", ".")));
   if (valores.some((v) => !Number.isFinite(v) || v <= 0)) return null;
-  return volumeTora({ d_topo1: valores[0], d_topo2: valores[1], d_pe1: valores[2], d_pe2: valores[3], comprimento: valores[4] });
+  return volumeTora({ d_topo1: valores[0] ?? null, d_topo2: valores[1] ?? null, d_pe1: valores[2] ?? null, d_pe2: valores[3] ?? null, comprimento: valores[4] ?? null });
 }
 
 export function nomesCientificosEncaixe(linhas: LinhaSaldo[]): string[] {
