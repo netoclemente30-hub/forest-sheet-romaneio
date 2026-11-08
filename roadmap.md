@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Gerar pacote de toras serradas selecionadas, confirmar espécie/AUTEX ou escolher grupo, salvar e editar pacotes offline com sincronização e testes.
 - [x] AUTEX em Madeira Serrada: 15 opções do cadastro e texto livre, independente de toras serradas; pacote salvo/reaberto com AUTEX livre e três bitolas em teste autenticado, removido ao final. PDF inclui AUTEX. Seis testes passaram; tela 384 px sem corte.
 - [x] Madeira serrada: pacotes multi-bitola e cargas por empresa, PDF A4 paisagem com subtotais/assinaturas, download e compartilhamento. 18 testes passaram; cadastro real de duas bitolas (30 peças, 0,6600 m³), expedição e download verificados com acesso autenticado; dados temporários removidos. Tela conferida em 384 px. Salvar/expedir requer internet; compartilhamento nativo no Android aguarda teste no aparelho.
 - [x] Corrigir o aviso "Aguarde carregar a empresa" no tablet usando o vínculo de empresa já confirmado no aparelho quando a consulta online falhar; 5 testes passaram e salvamento offline verificado em tela de tablet, sem enviar dados à nuvem.
