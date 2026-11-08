@@ -35,7 +35,7 @@ describe("escolha de encaixe", () => {
     d.lerInventario = vi.fn().mockResolvedValue([{ empresa_id: "RJ", plaqueta: 1, arvore: 99, secao: "A", autex: "OUTRA" }]);
     const tora = await salvarEncaixe(linha, medidas, "RJ", [], d);
     expect(tora.plaqueta).toBe(2);
-    expect(d.inserir).toHaveBeenCalledWith(tora);
+    expect(d.inserir).toHaveBeenCalledWith(tora, expect.objectContaining({ acao: "Encaixe confirmado" }));
     expect(d.enfileirar).not.toHaveBeenCalled();
   });
   it("não reutiliza identidade escolhida que já está na fila", async () => {
