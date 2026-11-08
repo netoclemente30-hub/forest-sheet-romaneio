@@ -19,3 +19,12 @@ import { it as it2, expect as ex2 } from "vitest";
 it2("SINAFLOR: médias de topo e pé em metros", () => {
   ex2(ls({ arvore: 11, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 })).toEqual([11, 0.705, 0.645, 7.6]);
 });
+it2("resumo por espécie: agrupa qtd e volume com nome científico", () => {
+  const a = { especie: "Cupiúba", nome_cientifico: "Goupia glabra", volume: 2 } as unknown as Tora;
+  const b = { especie: "Cupiúba", nome_cientifico: "Goupia glabra", volume: 1.5 } as unknown as Tora;
+  const c = { especie: "Abiurana", nome_cientifico: "Pouteria macrophylla", volume: 1 } as unknown as Tora;
+  ex2(resumoPorEspecie([a, b, c])).toEqual([
+    { especie: "Abiurana", cientifico: "Pouteria macrophylla", qtd: 1, volume: 1 },
+    { especie: "Cupiúba", cientifico: "Goupia glabra", qtd: 2, volume: 3.5 },
+  ]);
+});
