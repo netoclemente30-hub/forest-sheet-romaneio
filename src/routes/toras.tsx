@@ -88,7 +88,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-bold uppercase">Toras de manejo</h1>
         <Button onClick={() => setOpen(true)}><Plus /> Lançar</Button>
       </div>
