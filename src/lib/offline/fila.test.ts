@@ -37,6 +37,29 @@ describe("fila offline", () => {
     const [item] = await f.listar();
     expect(item?.erro).toBe("plaqueta duplicada");
   });
+  it("edita o lançamento com erro no mesmo lugar e só envia após tentar de novo", async () => {
+    const f = criarFila(memoria());
+    const a = await f.enfileirar(opTora(1861));
+    await f.marcarErro(a.id, "plaqueta duplicada");
+    await f.editarErro(a.id, opTora(1862));
+    const [item] = await f.listar();
+    expect(item).toEqual({ ...a, op: opTora(1862), erro: "plaqueta duplicada" });
+    const enviadas: Op[] = [];
+    await sincronizar(f, async (op) => { enviadas.push(op); });
+    expect(enviadas).toHaveLength(0);
+    await f.limparErro(a.id);
+    await sincronizar(f, async (op) => { enviadas.push(op); });
+    expect(enviadas).toEqual([opTora(1862)]);
+    expect(await f.listar()).toHaveLength(0);
+  });
+  it("não recria um lançamento removido durante a edição", async () => {
+    const f = criarFila(memoria());
+    const a = await f.enfileirar(opTora(1));
+    await f.marcarErro(a.id, "erro");
+    await f.remover(a.id);
+    await expect(f.editarErro(a.id, opTora(2))).rejects.toThrow("não está mais disponível");
+    expect(await f.listar()).toHaveLength(0);
+  });
 });
 
 describe("sincronizar", () => {

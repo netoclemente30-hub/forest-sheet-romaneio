@@ -60,6 +60,14 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
       await store.del(id);
       onMudou();
     },
+    async editarErro(id: string, op: Op) {
+      const item = (await store.all()).find((i) => i.id === id);
+      if (!item?.erro) throw new Error("Este lançamento não está mais disponível para edição");
+      if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
+      // Keep the error until an explicit retry: saving must not send unexpectedly.
+      await store.put({ ...item, op });
+      onMudou();
+    },
     async limparErro(id: string) {
       const itens = await store.all();
       const item = itens.find((i) => i.id === id);
