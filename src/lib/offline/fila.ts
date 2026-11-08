@@ -25,7 +25,7 @@ export type Op =
       log?: LogCapturado;
     }
   | { tipo: "romaneio_recebido"; id: string; patio: string; empresa_id?: string | null; log?: LogCapturado }
-  | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; log?: LogCapturado };
+  | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; empresa_id?: string; log?: LogCapturado };
 
 export interface ItemFila {
   id: string;

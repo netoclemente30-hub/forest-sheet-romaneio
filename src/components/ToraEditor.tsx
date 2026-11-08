@@ -10,6 +10,7 @@ import { fmtM3 } from "@/lib/volume";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { registrarOperacao } from "@/lib/registro-operacao";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +35,11 @@ export async function excluirTora(t: Tora): Promise<boolean> {
     toast.success(`Plaqueta ${t.plaqueta} guardada para excluir — será enviada quando conectar`);
     return true;
   }
-  const { error } = await supabase.from("toras").delete().eq("plaqueta", t.plaqueta).eq("empresa_id", t.empresa_id);
-  if (error) {
-    toast.error(error.message);
+  try { await registrarOperacao("tora_delete", t.empresa_id, {}, [t.plaqueta], log); }
+  catch (error) {
+    toast.error(error instanceof Error ? error.message : "Não foi possível excluir");
     return false;
   }
-  await gravarRegistro(log);
   toast.success(`Plaqueta ${t.plaqueta} excluída`);
   return true;
 }
@@ -87,13 +87,13 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
         return;
       }
     }
-    const { error } = await supabase.from("toras").update(dados).eq("plaqueta", e.plaqueta).eq("empresa_id", e.empresa_id);
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
+    try { await registrarOperacao("tora_update", e.empresa_id, dados, [e.plaqueta], log); }
+    catch (error) {
+      setBusy(false);
+      toast.error(error instanceof Error ? error.message : "Não foi possível editar");
       return;
     }
-    await gravarRegistro(log);
+    setBusy(false);
     toast.success(mudouPlaqueta ? `Plaqueta ${e.plaqueta} alterada para ${dados.plaqueta}` : `Plaqueta ${e.plaqueta} alterada`);
     await refresh();
   }

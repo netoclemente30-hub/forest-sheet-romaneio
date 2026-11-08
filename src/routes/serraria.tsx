@@ -9,6 +9,7 @@ import { selecionarToras } from "@/lib/tora-qr";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { registrarOperacao } from "@/lib/registro-operacao";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -56,19 +57,20 @@ function Serraria() {
     if (!sel.length) return;
     if (!desfazer && !confirm(`Dar baixa de ${sel.length} toras como serradas?`)) return;
     const log = await capturarLog(desfazer ? "Toras voltaram ao pátio" : "Toras serradas", `${sel.length} toras · plaquetas ${sel.slice(0, 10).join(", ")}${sel.length > 10 ? "…" : ""}`);
+    const porEmpresa = new Map<string, number[]>();
+    for (const t of lista.filter((t) => sel.includes(t.plaqueta))) porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
     if (!estaOnline()) {
       setBusy(true);
-      await fila().enfileirar({ tipo: "toras_serradas", plaquetas: sel, desfazer, log });
+      for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log });
       setBusy(false);
       setSel([]);
       toast.success("Baixa salva offline — será enviada quando conectar");
       return;
     }
     setBusy(true);
-    const { error } = await supabase.from("toras").update({ serrada_em: desfazer ? null : new Date().toISOString() }).in("plaqueta", sel);
+    try { for (const [empresa, plaquetas] of porEmpresa) await registrarOperacao("toras_serradas", empresa, { desfazer }, plaquetas, log, crypto.randomUUID()); }
+    catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível serrar"); return; }
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    await gravarRegistro(log);
     toast.success(desfazer ? `${sel.length} toras voltaram ao pátio` : `${sel.length} toras serradas`);
     setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });

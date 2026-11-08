@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash2, QrCode, Printer, FileSpreadsheet, FileText, Pencil } from "lucide-react";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
+import { registrarOperacao } from "@/lib/registro-operacao";
 
 export const Route = createFileRoute("/toras")({
   validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
@@ -77,10 +78,9 @@ export function TorasList({ nova }: { nova?: boolean }) {
     for (const t of (toras.data ?? []).filter((x) => x.carregada && romaneadasSel.includes(x.plaqueta)))
       porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
     for (const [emp, plaquetas] of porEmpresa) {
-      const { error } = await supabase.from("toras").delete().in("plaqueta", plaquetas).eq("carregada", true).eq("empresa_id", emp);
-      if (error) { toast.error(error.message); return; }
+      try { await registrarOperacao("toras_delete", emp, {}, plaquetas, await capturarLog("Toras romaneadas excluídas", `${plaquetas.length} toras · plaquetas ${plaquetas.join(", ")}`)); }
+      catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível excluir"); return; }
     }
-    await gravarRegistro(await capturarLog("Toras romaneadas excluídas", `${romaneadasSel.length} toras · plaquetas ${romaneadasSel.slice(0, 10).join(", ")}${romaneadasSel.length > 10 ? "…" : ""}`));
     toast.success(`${romaneadasSel.length} toras excluídas`);
     setSelecionadas((s) => s.filter((p) => !romaneadasSel.includes(p)));
     await qc.invalidateQueries({ queryKey: ["toras"] });

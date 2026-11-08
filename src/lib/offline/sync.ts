@@ -5,13 +5,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import { gravarRegistro } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
+import { registrarOperacao } from "@/lib/registro-operacao";
 
 export function estaOnline(): boolean {
   return typeof navigator === "undefined" ? true : navigator.onLine;
 }
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
-export async function executarOp(op: Op): Promise<void> {
+export async function executarOp(op: Op, operacao?: string): Promise<void> {
+  const suportada = ["tora_insert", "tora_update", "tora_delete", "toras_serradas", "romaneio_recebido"].includes(op.tipo);
+  if (suportada && op.log) {
+    let empresa = op.tipo === "tora_insert" ? String(op.dados["empresa_id"] ?? "") : "empresa_id" in op ? op.empresa_id ?? "" : "";
+    if (!empresa) { const { data, error } = await supabase.rpc("minha_empresa"); if (error) throw error; empresa = data ?? ""; }
+    const dados = op.tipo === "tora_insert" || op.tipo === "tora_update" ? op.dados : op.tipo === "toras_serradas" ? { desfazer: op.desfazer } : op.tipo === "romaneio_recebido" ? { patio: op.patio } : {};
+    const alvos = op.tipo === "tora_update" || op.tipo === "tora_delete" ? [op.plaqueta] : op.tipo === "toras_serradas" ? op.plaquetas : op.tipo === "romaneio_recebido" ? [op.id] : [];
+    await registrarOperacao(op.tipo, empresa, dados, alvos, op.log, operacao);
+    return;
+  }
   await executarOpSemLog(op);
   if (op.log) await gravarRegistro(op.log);
 }
@@ -114,7 +124,7 @@ let sincronizando = false;
 
 // Envia a fila na ordem; para no primeiro erro de rede, mas marca conflitos
 // (ex.: plaqueta duplicada) e segue para os próximos.
-export async function sincronizar(f: Fila, executar: (op: Op) => Promise<void> = executarOp): Promise<{ enviados: number; erros: number }> {
+export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string) => Promise<void> = executarOp): Promise<{ enviados: number; erros: number }> {
   if (sincronizando || !estaOnline()) return { enviados: 0, erros: 0 };
   sincronizando = true;
   let enviados = 0;
@@ -123,7 +133,7 @@ export async function sincronizar(f: Fila, executar: (op: Op) => Promise<void> =
     for (const item of await f.listar()) {
       if (!estaOnline()) break;
       try {
-        await executar(item.op);
+        await executar(item.op, item.id);
         await f.remover(item.id);
         enviados++;
       } catch (e) {
