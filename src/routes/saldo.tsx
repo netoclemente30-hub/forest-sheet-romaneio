@@ -156,7 +156,7 @@ function Saldo() {
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Encaixe de toras</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">
-            {filaOffline.carregando || !empresa ? <p className="text-sm text-muted-foreground">Conferindo lançamentos neste aparelho…</p> : filaOffline.erro ? <p role="alert" className="text-sm text-destructive">Não foi possível conferir os lançamentos offline. Reabra esta página para tentar novamente.</p> : linhas.length ? <EncaixeToras linhas={linhasEncaixe} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
+            {filaOffline.carregando || !empresa || toras.isPending ? <p className="text-sm text-muted-foreground">Conferindo lançamentos neste aparelho…</p> : filaOffline.erro || toras.isError ? <p role="alert" className="text-sm text-destructive">Não foi possível conferir os lançamentos. Reabra esta página para tentar novamente.</p> : linhas.length ? <EncaixeToras linhas={linhasEncaixe} toras={toras.data ?? []} itens={filaOffline.itens} empresa={empresa} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
           </div>
         </SheetContent>
       </Sheet>
