@@ -8,6 +8,9 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { ToraForm } from "@/components/ToraForm";
+import { useAuth } from "@/hooks/useAuth";
+import { useFilaOffline } from "@/hooks/useFilaOffline";
+import { linhasDisponiveisOffline } from "@/lib/encaixe";
 import { EncaixeToras } from "@/components/EncaixeToras";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -32,6 +35,9 @@ export const Route = createFileRoute("/saldo")({
 
 function Saldo() {
   const toras = useQuery(torasQuery);
+  const { empresaId } = useAuth();
+  const empresa = getEmpresaAtiva() ?? empresaId;
+  const filaOffline = useFilaOffline();
   const [linhas, setLinhasState] = useState<LinhaSaldo[]>([]);
   // Saldo compartilhado por empresa na nuvem; cópia local para uso offline.
   useEffect(() => {
@@ -56,6 +62,7 @@ function Saldo() {
   const res = useMemo(() => conferirSaldo(linhas, toras.data ?? []), [linhas, toras.data]);
   const ok = useMemo(() => res.filter((r) => r.tora), [res]);
   const linhasFora = useMemo(() => res.filter((r) => !r.tora).map((r) => r.linha), [res]);
+  const linhasEncaixe = useMemo(() => linhasDisponiveisOffline(linhasFora, filaOffline.itens, empresa), [linhasFora, filaOffline.itens, empresa]);
   const fora = res.length - ok.length;
   const qc = useQueryClient();
   const arvores = useQuery(arvoresQuery);
@@ -134,7 +141,7 @@ function Saldo() {
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Encaixe de toras</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">
-            {linhas.length ? <EncaixeToras linhas={linhasFora} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
+            {filaOffline.carregando || !empresa ? <p className="text-sm text-muted-foreground">Conferindo lançamentos neste aparelho…</p> : filaOffline.erro ? <p role="alert" className="text-sm text-destructive">Não foi possível conferir os lançamentos offline. Reabra esta página para tentar novamente.</p> : linhas.length ? <EncaixeToras linhas={linhasEncaixe} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
           </div>
         </SheetContent>
       </Sheet>
