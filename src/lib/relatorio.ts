@@ -64,6 +64,7 @@ export async function exportarPdf(toras: Tora[], titulo: string) {
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", "Volume m³"]], body: resumoPorAutex(toras).map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
+  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]], body: resumoPorEspecie(toras).map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
   doc.save(`${nome()}.pdf`);
 }
 
