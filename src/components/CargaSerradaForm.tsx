@@ -12,7 +12,7 @@ export function CargaSerradaForm({empresa,pacotes,onSalvo,onCancelar}:{empresa:s
   const [sel,setSel] = useState<string[]>([]);
   const [q,setQ] = useState('');
   const [busy,setBusy] = useState(false);
-  const disponiveis = pacotes.filter(p=>!p.carga_id);
+  const disponiveis = pacotes.filter(p=>!p.carga_id&&!p.fila_id);
   const filtrados = disponiveis.filter(p=>`${p.numero} ${p.itens.map(i=>i.especie).join(' ')}`.toLowerCase().includes(q.toLowerCase()));
   const resumo = resumoPacotes(disponiveis.filter(p=>sel.includes(p.id)));
   const campos:{key:keyof CabCarga;label:string;required?:boolean;type?:string}[] = [

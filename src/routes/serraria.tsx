@@ -21,6 +21,8 @@ import { getEmpresaAtiva } from "@/lib/empresa";
 import { Warehouse, Factory } from "lucide-react";
 import { MadeiraSerrada } from "@/components/MadeiraSerrada";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PacoteDeToras } from '@/components/PacoteDeToras';
+import { gruposParaPacote, type SugestaoPacote } from '@/lib/pacote-de-toras';
 
 export const Route = createFileRoute("/serraria")({
   head: () => ({
@@ -47,6 +49,7 @@ function Serraria() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [gruposPacote,setGruposPacote]=useState<SugestaoPacote[]>([]);
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
@@ -81,7 +84,7 @@ function Serraria() {
       setBusy(true);
       for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log });
       setBusy(false);
-      setSel([]);
+      if(!desfazer)setAba('serradas');else setSel([]);
       toast.success("Baixa salva offline — será enviada quando conectar");
       return;
     }
@@ -90,7 +93,7 @@ function Serraria() {
     catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível serrar"); return; }
     setBusy(false);
     toast.success(desfazer ? `${selecionadasVisiveis.length} toras voltaram ao pátio` : `${selecionadasVisiveis.length} toras serradas`);
-    setSel([]);
+    if(!desfazer)setAba('serradas');else setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }
 
@@ -127,6 +130,7 @@ function Serraria() {
           : <Button variant="outline" disabled={busy || !selecionadasVisiveis.length} onClick={() => serrar(true)}>Voltar ao pátio ({selecionadasVisiveis.length})</Button>}
       </div>
       {sel.length > 0 && <Button size="sm" variant="ghost" onClick={() => setSel([])}>Limpar seleção</Button>}
+      {aba==='serradas'&&<Button className="w-full h-auto whitespace-normal py-3" disabled={busy||!empresa||!selecionadasVisiveis.length} onClick={()=>{if(empresa){const grupos=gruposParaPacote(selecionadasVisiveis,empresa);if(grupos.length)setGruposPacote(grupos);else toast.error('Selecione toras serradas da empresa ativa');}}}>Gerar pacote a partir destas toras ({selecionadasVisiveis.length})</Button>}
       <div className="bg-card border rounded-xl divide-y">
         {lista.slice(0, lim).map((t) => (
           <label key={t.plaqueta} className="flex items-center gap-3 p-3 cursor-pointer">
@@ -143,6 +147,7 @@ function Serraria() {
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 100)}>Mostrar mais</Button>}
       </>}
+      {empresa&&gruposPacote.length>0&&<PacoteDeToras key={JSON.stringify(gruposPacote)} empresa={empresa} grupos={gruposPacote} onFechar={()=>setGruposPacote([])} onSalvo={()=>{setGruposPacote([]);setSel([]);setAba('madeira');}}/>}
     </div>
   );
 }

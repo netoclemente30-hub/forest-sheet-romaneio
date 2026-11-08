@@ -97,7 +97,7 @@ export async function salvarPacote(empresa: string, id: string, cab: CabPacote, 
   const { fila }=await import('./offline/fila');
   const f=fila(); const pendente=(await f.listar()).find(i=>i.op.tipo==='pacote_serrado_salvar'&&i.op.pacote_id===id&&i.op.empresa_id===empresa);
   const log = await capturarLog('Pacote de madeira serrada salvo', `Pacote ${cab.numero}`);
-  const op={tipo:'pacote_serrado_salvar' as const,empresa_id:empresa,pacote_id:id,cab,itens,log};
+  const op={tipo:'pacote_serrado_salvar' as const,empresa_id:empresa,pacote_id:id,cab:{...cab,offline_criacao:true},itens,log};
   if(pendente){await f.atualizarPacote(pendente.id,op);return;}
   if(!navigator.onLine){await f.enfileirar(op);return;}
   try{await enviarPacote(empresa,id,cab,itens,log);}catch(e){if(!navigator.onLine||/fetch|network/i.test(e instanceof Error?e.message:String(e))){await f.enfileirar(op);return;}throw e;}
