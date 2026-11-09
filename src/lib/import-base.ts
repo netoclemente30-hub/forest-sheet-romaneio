@@ -9,7 +9,7 @@ export function numeroInventario(v: unknown): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-export const normalizarColuna = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+export const normalizarColuna = (v: unknown) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export type ArvoreBase = { numero: number; nome_vulgar: string; nome_cientifico: string | null; autex: string; cap: number | null; dap: number | null; altura: number | null; volume: number | null; categoria: string | null; picada: string | null };
 
@@ -47,7 +47,7 @@ export function analisarBase(rows: unknown[][]) {
   let repetidas = 0;
   for (const r of rows) {
     const marcacao = r.map((c) => String(c ?? "").match(/^\s*(?:picada|faixa|trilha)\s*[:\-]\s*(.+)$/i)).find(Boolean);
-    if (marcacao) { picada = marcacao[1].trim(); continue; }
+    if (marcacao?.[1]) { picada = marcacao[1].trim(); continue; }
     const header: Partial<Record<Campo, number>> = {};
     r.forEach((cell, index) => { const campo = campoInventario(cell); if (campo) header[campo] = index; });
     if (header.numero !== undefined && header.nome_vulgar !== undefined) {

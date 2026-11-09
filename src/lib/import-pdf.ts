@@ -33,7 +33,12 @@ export function linhasPDF(pages: TextoPDF[][]): unknown[][] {
       for (const item of line) {
         const center = item.x + item.width / 2;
         let nearest = 0;
-        anchors.forEach((a, i) => { if (Math.abs(center - a.x) < Math.abs(center - (anchors[nearest]?.x ?? 0))) nearest = i; });
+        anchors.forEach((a, i) => {
+          const next = anchors[i + 1];
+          if (!next) return;
+          const boundary = a.campo === "numero" && next.campo === "nome_vulgar" ? a.x + 10 : (a.x + next.x) / 2;
+          if (center > boundary) nearest = i + 1;
+        });
         cells[nearest] = `${cells[nearest]} ${item.str}`.trim();
       }
       rows.push(cells);
@@ -61,5 +66,5 @@ export async function lerPDFInventario(file: File, progress: (s: string) => void
     const resultado = analisarBase(linhasPDF(pages));
     if (!resultado.arvores.size) throw new Error("Não foi possível reconhecer árvores neste PDF. Para fichas escaneadas, envie Excel ou um PDF com texto selecionável.");
     return resultado;
-  } finally { await pdf.destroy(); }
+  } finally { await task.destroy(); }
 }
