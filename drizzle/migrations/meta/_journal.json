@@ -162,6 +162,13 @@
       "when": 1794186060487,
       "tag": "0022_separar_percursos_gps",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794215296013,
+      "tag": "0023_add_exploration_map_pdfs",
+      "breakpoints": true
     }
   ]
 }
