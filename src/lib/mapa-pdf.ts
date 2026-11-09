@@ -4,6 +4,7 @@ import type { ArquivoGerado } from "@/lib/arquivo";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { comCache } from "@/lib/offline/cache";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { idb } from "@/lib/offline/db";
 
 export const MAPA_PDF_BUCKET = "mapas-exploracao";
 export const MAPA_PDF_MAX_BYTES = 25 * 1024 * 1024;
@@ -79,13 +80,24 @@ export async function enviarMapaPdf({ file, autex, empresa, atual, userId }: {
     throw new Error(`O arquivo foi enviado, mas não foi possível vinculá-lo à AUTEX: ${error?.message ?? "resposta vazia"}`);
   }
   await gravarRegistro(log);
+  await guardarPdfLocal(data, file);
   return data;
 }
 
+const chavePdf = (mapa: MapaPdf) => `geopdf:${mapa.empresa_id}:${mapa.autex}`;
+async function guardarPdfLocal(mapa: MapaPdf, blob: Blob) {
+  try { await idb.put("cache", { versao: mapa.atualizado_em, path: mapa.arquivo_path, blob }, chavePdf(mapa)); }
+  catch { /* File still accessible online; local storage may be full. */ }
+}
+
 export async function baixarMapaPdf(mapa: MapaPdf): Promise<ArquivoGerado> {
-  if (!navigator.onLine) throw new Error("Conecte-se à internet para abrir ou baixar este PDF");
+  let local: { versao: string; path: string; blob: Blob } | undefined;
+  try { local = await idb.get("cache", chavePdf(mapa)); } catch { /* cache unavailable */ }
+  if (local?.versao === mapa.atualizado_em && local.path === mapa.arquivo_path) return { blob: local.blob, nome: mapa.nome_arquivo };
+  if (!navigator.onLine) throw new Error("Abra este mapa uma vez com internet neste aparelho para usá-lo offline");
   const { data, error } = await supabase.storage.from(MAPA_PDF_BUCKET).download(mapa.arquivo_path);
   if (error || !data) throw new Error(`Não foi possível carregar o PDF: ${error?.message ?? "arquivo indisponível"}`);
   const blob = data.type === "application/pdf" ? data : new Blob([data], { type: "application/pdf" });
+  await guardarPdfLocal(mapa, blob);
   return { blob, nome: mapa.nome_arquivo };
 }
