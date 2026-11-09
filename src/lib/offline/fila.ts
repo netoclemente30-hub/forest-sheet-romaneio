@@ -4,6 +4,8 @@
 import { idb } from "./db";
 import type { LogCapturado } from "@/lib/registro";
 import type { CabPacote, BitolaSerrada } from '@/lib/madeira-serrada';
+import type { PontoRastro } from '@/lib/exploracao';
+import type { DadosArvoreGPS } from '@/lib/exploracao-salvar';
 
 export type Op =
   | { tipo:'pacote_serrado_salvar'; empresa_id:string; pacote_id:string; cab:CabPacote; itens:BitolaSerrada[]; log:LogCapturado }
@@ -27,7 +29,9 @@ export type Op =
       log?: LogCapturado;
     }
   | { tipo: "romaneio_recebido"; id: string; patio: string; empresa_id?: string | null; log?: LogCapturado }
-  | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; empresa_id?: string; log?: LogCapturado };
+  | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; empresa_id?: string; log?: LogCapturado }
+  | { tipo: "arvore_gps"; id: string; empresa_id: string; autex: string; dados: DadosArvoreGPS; log: LogCapturado }
+  | { tipo: "rastro_salvar"; empresa_id: string; autex: string; pontos: PontoRastro[]; log: LogCapturado };
 
 export interface ItemFila {
   id: string;

@@ -123,6 +123,23 @@ async function executarOpSemLog(op: Op): Promise<void> {
       if (error) throw new Error(error.message);
       return;
     }
+    case "arvore_gps": {
+      const { error } = await supabase
+        .from("arvores")
+        .update(op.dados)
+        .eq("id", op.id)
+        .eq("empresa_id", op.empresa_id)
+        .eq("autex", op.autex);
+      if (error) throw new Error(error.message);
+      return;
+    }
+    case "rastro_salvar": {
+      const { error } = await supabase
+        .from("rastros_gps")
+        .upsert(op.pontos, { onConflict: "id", ignoreDuplicates: true });
+      if (error) throw new Error(error.message);
+      return;
+    }
   }
 }
 

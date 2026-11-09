@@ -11,7 +11,7 @@ export function numeroInventario(v: unknown): number | null {
 
 export const normalizarColuna = (v: unknown) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
-export type ArvoreBase = { numero: number; nome_vulgar: string; nome_cientifico: string | null; autex: string; cap: number | null; dap: number | null; altura: number | null; volume: number | null; categoria: string | null; picada: string | null };
+export type ArvoreBase = { numero: number; nome_vulgar: string; nome_cientifico: string | null; autex: string; cap: number | null; dap: number | null; altura: number | null; volume: number | null; categoria: string | null; picada: string | null; latitude: number | null; longitude: number | null };
 
 type Campo = keyof ArvoreBase;
 const aliases: Record<Campo, string[]> = {
@@ -25,6 +25,8 @@ const aliases: Record<Campo, string[]> = {
   categoria: ["categoria", "classe", "classificacao", "situacao", "destinacao"],
   picada: ["picada", "faixa", "linha", "trilha"],
   autex: ["autex", "numeroautex", "autorizacao", "autorizacaodeexploracao"],
+  latitude: ["latitude", "lat", "latitudewgs84", "coordenadalatitude"],
+  longitude: ["longitude", "lng", "long", "longitudewgs84", "coordenadalongitude"],
 };
 export function campoInventario(v: unknown): Campo | undefined {
   const key = normalizarColuna(v);
@@ -64,7 +66,10 @@ export function analisarBase(rows: unknown[][]) {
     const autex = text("autex");
     const key = chaveArvore(numero, autex);
     if (arvores.has(key)) repetidas++;
-    arvores.set(key, { numero, nome_vulgar: text("nome_vulgar"), cap, dap, altura: numeroInventario(cell("altura")), volume: numeroInventario(cell("volume")), categoria: text("categoria") || null, picada: text("picada") || picada, nome_cientifico: text("nome_cientifico") || null, autex });
+    const latitude = numeroInventario(cell("latitude"));
+    const longitude = numeroInventario(cell("longitude"));
+    const coordenadas = latitude !== null && longitude !== null && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+    arvores.set(key, { numero, nome_vulgar: text("nome_vulgar"), cap, dap, altura: numeroInventario(cell("altura")), volume: numeroInventario(cell("volume")), categoria: text("categoria") || null, picada: text("picada") || picada, nome_cientifico: text("nome_cientifico") || null, autex, latitude: coordenadas ? latitude : null, longitude: coordenadas ? longitude : null });
   }
   return { arvores, invalidas, repetidas };
 }

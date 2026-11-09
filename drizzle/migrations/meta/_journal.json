@@ -148,6 +148,20 @@
       "when": 1794178879811,
       "tag": "0020_pacote_serrado_replay_seguro",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794185953820,
+      "tag": "0021_mapa_exploracao_gps",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794186060487,
+      "tag": "0022_separar_percursos_gps",
+      "breakpoints": true
     }
   ]
 }
