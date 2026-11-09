@@ -24,6 +24,16 @@ it("preserva DAP informado e picada com cabeçalhos repetidos e totais", () => {
   expect(arvores.get(chaveArvore(35, ""))?.picada).toBe("03");
 });
 it("preserva formato original da BASE", () => expect(lerBase([["Picada: 02"], [2, "Ipê", 140, 44, 18, 2, "Comercial"]]).get(chaveArvore(2, ""))?.picada).toBe("02"));
+it("importa latitude e longitude quando a ficha já trouxer coordenadas", () => {
+  const a = lerBase([["Nº", "Espécie", "Latitude", "Longitude"], [8, "Cedro", "-9,123456", "-63,654321"]]).get(chaveArvore(8, ""));
+  expect(a?.latitude).toBe(-9.123456);
+  expect(a?.longitude).toBe(-63.654321);
+});
+it("descarta coordenadas incompletas ou fora dos limites", () => {
+  const a = lerBase([["Nº", "Espécie", "Latitude", "Longitude"], [8, "Cedro", "-91", "-63"]]).get(chaveArvore(8, ""));
+  expect(a?.latitude).toBeNull();
+  expect(a?.longitude).toBeNull();
+});
 it("mesmo número de árvore em AUTEX diferentes vira duas árvores", () => {
   const b = lerBase([[7, "Mandioqueiro", 1, 1, 1, 1, "C", "01", "Qualea", "AUTEX-1"], [7, "Mandioqueiro", 1, 1, 1, 1, "C", "01", "Qualea", "AUTEX-2"]]);
   expect(b.size).toBe(2);
