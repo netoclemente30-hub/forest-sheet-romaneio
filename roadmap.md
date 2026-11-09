@@ -1,4 +1,7 @@
 # Tarefas
+- [ ] Abrir cada AUTEX como manejo dentro da Base após a importação, manter a ficha vinculada até o encerramento e preservar o acesso ao histórico arquivado.
+- [ ] Mapa exploratório offline por manejo: rastreio GPS, posição atual, árvores localizadas e registro/edição de abatimento vinculado à árvore importada.
+- [ ] Importar coordenadas quando existirem na ficha e validar o fluxo autenticado em celular, inclusive reabertura offline e sincronização.
 - [x] Importar fichas PDF/Excel pela Base com prévia, colunas variadas, números locais e DAP por CAP; PDF anexado reconheceu 388 árvores e 26 picadas. Excel temporário salvo/relido/excluído com login real; 9 testes passaram e tela 384 px sem corte. PDF escaneado sem texto requer Excel; gravação exige internet. Publicação/validação Android aguardam aparelho.
 - [x] Gerar pacote de toras serradas selecionadas, confirmar espécie/AUTEX ou escolher grupo; novos pacotes persistem em IndexedDB, editam offline e sincronizam sem duplicar auditoria. 26 testes passaram; baixa local de tora real, sugestão, pacote offline, reabertura, envio e leitura na nuvem verificados com login real; pacote temporário removido e baixa de teste não enviada. Tela de 384 px conferida. Validação Android publicado continua dependente do aparelho.
 - [x] AUTEX em Madeira Serrada: 15 opções do cadastro e texto livre, independente de toras serradas; pacote salvo/reaberto com AUTEX livre e três bitolas em teste autenticado, removido ao final. PDF inclui AUTEX. Seis testes passaram; tela 384 px sem corte.
