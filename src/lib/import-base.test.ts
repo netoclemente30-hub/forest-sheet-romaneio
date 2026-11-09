@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { lerBase, chaveArvore, numeroInventario } from "./import-base";
 it("importa modelo BASE com picada e nome científico sem cálculos", () => {
-  expect([...lerBase([["Número", "Espécie"], [1, "Jatobá", 150, "47,75", 20, 3.1, "Comercial", "01", "Hymenaea courbaril"]]).values()]).toEqual([{ numero: 1, nome_vulgar: "Jatobá", cap: 150, dap: 47.75, altura: 20, volume: 3.1, categoria: "Comercial", picada: "01", nome_cientifico: "Hymenaea courbaril", autex: "" }]);
+  expect([...lerBase([["Número", "Espécie"], [1, "Jatobá", 150, "47,75", 20, 3.1, "Comercial", "01", "Hymenaea courbaril"]]).values()]).toEqual([{ numero: 1, nome_vulgar: "Jatobá", cap: 150, dap: 47.75, altura: 20, volume: 3.1, categoria: "Comercial", picada: "01", nome_cientifico: "Hymenaea courbaril", autex: "", latitude: null, longitude: null }]);
 });
 it("reconhece colunas reordenadas e calcula DAP do CAP quando faltar", () => {
   const a = [...lerBase([["Categoria", "Nome Popular", "Altura (m)", "Nº Árvore", "CAP (cm)", "Volume (m³)"], ["Explorável", "Sorva", "15", 1, "198", "3,2757"]]).values()][0];

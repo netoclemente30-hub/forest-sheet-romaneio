@@ -26,6 +26,8 @@ export function camposDaFila(op: Op): CampoFila[] {
     case "tora_delete": return [{ chave: "plaqueta", rotulo: "Plaqueta azul", mode: "numeric" }];
     case "romaneio_recebido": return [{ chave: "patio", rotulo: "Pátio" }];
     case "toras_serradas": return [{ chave: "plaquetas", rotulo: "Plaquetas (separadas por vírgula)" }];
+    case "arvore_gps": return [{ chave: "latitude", rotulo: "Latitude", mode: "decimal" }, { chave: "longitude", rotulo: "Longitude", mode: "decimal" }, { chave: "gps_precisao", rotulo: "Precisão GPS (m)", mode: "decimal" }];
+    case "rastro_salvar": return [];
     case "romaneio_salvar": return [
       { chave: "placa", rotulo: "Placa do caminhão" }, { chave: "julieta", rotulo: "Placa do reboque" },
       { chave: "motorista", rotulo: "Motorista" }, { chave: "cpf", rotulo: "CPF" }, { chave: "data", rotulo: "Data" },
@@ -42,6 +44,8 @@ export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
   }
   if (op.tipo === "romaneio_salvar") return { ...op.cab };
   if (op.tipo === "romaneio_recebido") return { patio: op.patio };
+  if (op.tipo === "arvore_gps") return { latitude: String(op.dados.latitude), longitude: String(op.dados.longitude), gps_precisao: String(op.dados.gps_precisao ?? "") };
+  if (op.tipo === "rastro_salvar") return {};
   if (op.tipo === "tora_delete") return { plaqueta: String(op.plaqueta) };
   return { plaquetas: op.plaquetas.join(", ") };
 }
@@ -74,6 +78,15 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
     case 'pacote_serrado_salvar': {
       if(!valores['numero']?.trim()||!valores['data'])throw new Error('Informe número e data');
       return {...op,cab:{numero:valores['numero'].trim(),autex:valores['autex']??'',data:valores['data'],observacoes:valores['observacoes']??''}};
+    }
+    case "arvore_gps": {
+      const latitude = Number(valores["latitude"]);
+      const longitude = Number(valores["longitude"]);
+      const precisaoTexto = valores["gps_precisao"]?.trim();
+      const gps_precisao = precisaoTexto ? Number(precisaoTexto) : null;
+      if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new Error("Informe latitude e longitude válidas");
+      if (gps_precisao !== null && (!Number.isFinite(gps_precisao) || gps_precisao < 0)) throw new Error("Informe uma precisão GPS válida");
+      return { ...op, dados: { ...op.dados, latitude, longitude, gps_precisao } };
     }
     case "tora_delete": return { ...op, plaqueta: positivo(valores["plaqueta"] ?? "") };
     case "toras_serradas": {

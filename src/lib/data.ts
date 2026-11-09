@@ -51,6 +51,19 @@ export const arvoresQuery = {
   queryKey: ["arvores"],
   queryFn: () => comCache("arvores", () => fetchAll<Arvore>("arvores", "numero")),
 };
+export const rastrosQuery = (autex: string) => ({
+  networkMode: "always" as const,
+  queryKey: ["rastros", autex],
+  queryFn: () => comCache<RastroGPS>(`rastros:${autex}`, async () => {
+    let q = supabase.from("rastros_gps").select("*").eq("autex", autex).order("capturado_em");
+    const emp = getEmpresaAtiva();
+    if (emp) q = q.eq("empresa_id", emp);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data;
+  }),
+});
+
 export const romaneiosQuery = {
   networkMode: "always" as const,
   queryKey: ["romaneios"],
