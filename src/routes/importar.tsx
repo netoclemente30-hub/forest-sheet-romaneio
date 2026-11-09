@@ -96,6 +96,11 @@ function Importar() {
     setBusy(true);
     try {
       const arvores = preparado.arvores.map((a) => ({ ...a, autex: a.autex || autexPadrao.trim() }));
+      if (arvores.some((a) => !a.autex)) {
+        toast.error("Informe a AUTEX para vincular a ficha ao manejo e ao mapa exploratório");
+        setBusy(false);
+        return;
+      }
 
       const porNumero = new Map<number, ArvoreBase>();
       for (const a of arvores) if (!porNumero.has(a.numero)) porNumero.set(a.numero, a);
@@ -123,7 +128,11 @@ function Importar() {
       setStatus(`Enviando ${av.length} árvores…`);
       const emp = empresaIdGravacao();
       await chunks(av, 500, async (c) => {
-        const { error } = await supabase.from("arvores").upsert(c.map((a) => ({ ...a, ...emp })), { onConflict: "empresa_id,numero,autex" });
+        const { error } = await supabase.from("arvores").upsert(c.map((a) => {
+          const temCoordenadas = a.latitude !== null && a.longitude !== null;
+          const { latitude, longitude, ...inventario } = a;
+          return { ...inventario, ...emp, ...(temCoordenadas ? { latitude, longitude, localizado_em: new Date().toISOString() } : {}) };
+        }), { onConflict: "empresa_id,numero,autex" });
         if (error) throw error;
       }, (d) => setStatus(`Árvores: ${d}/${av.length}`));
 
@@ -136,8 +145,10 @@ function Importar() {
 
       await qc.invalidateQueries();
       setStatus(`Pronto! ${av.length} árvores e ${tv.length} toras importadas.${dup ? ` ${dup} plaqueta(s) repetida(s) ignorada(s).` : ""}`);
-      toast.success("Planilha importada");
+      toast.success("Ficha importada e vinculada ao manejo");
       setPreparado(null);
+      if (autexes.length === 1) nav({ to: "/base/$autex", params: { autex: autexes[0]! } });
+      else nav({ to: "/base" });
     } catch (e) {
       toast.error((e as Error).message);
       setStatus("");
@@ -149,7 +160,7 @@ function Importar() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Importar planilha</h1>
       <p className="text-sm text-muted-foreground">
-        PDF · Excel (.xlsx, .xlsm, .xls). Árvores já cadastradas com o mesmo número e AUTEX serão atualizadas.
+        PDF · Excel (.xlsx, .xlsm, .xls). Árvores já cadastradas com o mesmo número e AUTEX serão atualizadas sem apagar o GPS. Se houver colunas Latitude e Longitude, as posições também serão importadas.
       </p>
       <Button asChild variant="outline"><a href={modelo.url} download="modelo-base.xlsx"><Download /> Baixar planilha modelo</a></Button>
       <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary p-8 text-center bg-card ${busy ? "opacity-50" : "cursor-pointer"}`}>
