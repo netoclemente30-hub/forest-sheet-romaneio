@@ -26,6 +26,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MapaPdf } from "@/components/MapaPdf";
+import { GeoPdfMapa } from "@/components/GeoPdfMapa";
+import { arvoresProximas } from "@/lib/geopdf";
 
 function textoErroGps(codigo: number): string {
   if (codigo === 1) return "Permita o acesso à localização do aparelho para usar o mapa";
@@ -48,6 +50,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const [posicaoEdicao, setPosicaoEdicao] = useState<Coordenada | null>(null);
   const [busy, setBusy] = useState(false);
   const [capturando, setCapturando] = useState(false);
+  const [raio, setRaio] = useState(50);
   const carregou = useRef("");
 
   useEffect(() => {
@@ -91,7 +94,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             lat: coordenada.lat,
             lng: coordenada.lng,
             precisao: coordenada.precisao ?? null,
-            capturado_em: coordenada.capturado_em!,
+            capturado_em: coordenada.capturado_em ?? new Date().toISOString(),
             user_id: session?.user.id ?? null,
           }];
         });
@@ -110,10 +113,11 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const abatidas = useMemo(() => arvores.filter((a) => a.abatida_em), [arvores]);
   const todosPontos = useMemo(() => mesclarRastros<PontoRastro>(rastros.data ?? [], pontosAtivos), [rastros.data, pontosAtivos]);
   const distanciaAtiva = comprimentoRastro(pontosAtivos);
+  const proximas = useMemo(() => arvoresProximas(arvores, atual, raio), [arvores, atual, raio]);
 
   const projecao = useMemo(() => {
     const pontos = [
-      ...localizadas.map((a) => pontoDaArvore(a)!),
+      ...localizadas.flatMap((a) => { const p = pontoDaArvore(a); return p ? [p] : []; }),
       ...todosPontos.map((p) => ({ id: p.id, lat: p.lat, lng: p.lng })),
       ...(atual ? [{ id: "posicao-atual", lat: atual.lat, lng: atual.lng }] : []),
     ];
@@ -126,7 +130,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
       const chave = ponto.sessao_id ?? "antigo";
       grupos.set(chave, [...(grupos.get(chave) ?? []), ponto]);
     }
-    return [...grupos.values()].map((pontos) => pontos.map((p) => projecao.get(p.id)).filter(Boolean).map((p) => `${p!.x},${p!.y}`).join(" ")).filter((p) => p.includes(" "));
+    return [...grupos.values()].map((pontos) => pontos.flatMap((p) => { const tela = projecao.get(p.id); return tela ? [`${tela.x},${tela.y}`] : []; }).join(" ")).filter((p) => p.includes(" "));
   }, [todosPontos, projecao]);
 
   function iniciarRastreio() {
@@ -166,9 +170,9 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
     }
   }
 
-  function abrirArvore(a: Arvore) {
+  function abrirArvore(a: Arvore, posicao?: Coordenada) {
     setEditando(a);
-    setPosicaoEdicao(a.latitude != null && a.longitude != null ? { lat: Number(a.latitude), lng: Number(a.longitude), precisao: a.gps_precisao == null ? null : Number(a.gps_precisao) } : null);
+    setPosicaoEdicao(posicao ?? (a.latitude != null && a.longitude != null ? { lat: Number(a.latitude), lng: Number(a.longitude), precisao: a.gps_precisao == null ? null : Number(a.gps_precisao) } : null));
   }
 
   function capturarPosicao() {
@@ -215,6 +219,12 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
       </div>
 
       <MapaPdf autex={autex} encerrado={encerrado} />
+      <GeoPdfMapa autex={autex} arvores={arvores} atual={atual} rastros={todosPontos} encerrado={encerrado} onArvore={abrirArvore} />
+
+      {!encerrado && <section className="space-y-2" aria-label="Árvores próximas ao GPS">
+        <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">Árvores próximas</h2><select aria-label="Distância das árvores próximas" value={raio} onChange={(e) => setRaio(Number(e.target.value))} className="h-9 rounded-md border bg-background px-2 text-sm">{[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n} m</option>)}</select></div>
+        {!atual ? <p className="text-sm text-muted-foreground">Aguardando posição GPS.</p> : atual.precisao != null && atual.precisao > 100 ? <p className="text-sm text-destructive">GPS impreciso; aguarde melhorar o sinal.</p> : !proximas.length ? <p className="text-sm text-muted-foreground">Nenhuma árvore em pé com posição registrada a até {raio} m.</p> : <div className="divide-y">{proximas.slice(0, 10).map(({ arvore, distancia }) => <div key={arvore.id} className="flex items-center gap-2 py-2"><TreePine className="size-5 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="break-words text-sm font-semibold">Árvore {arvore.numero} · {arvore.nome_vulgar}</div><div className="text-xs text-muted-foreground">{Math.round(distancia)} m · Picada {arvore.picada ?? "—"}</div></div><Button size="sm" variant="outline" onClick={() => abrirArvore(arvore)}>Selecionar</Button></div>)}</div>}
+      </section>}
 
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center justify-between gap-2 border-b p-3 text-xs text-muted-foreground">
@@ -236,7 +246,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
               </g>
             );
           })}
-          {atual && projecao.get("posicao-atual") && <g aria-label="Sua posição atual"><circle cx={projecao.get("posicao-atual")!.x} cy={projecao.get("posicao-atual")!.y} r="14" fill="var(--color-accent)" stroke="var(--color-card)" strokeWidth="4" /><Navigation x={projecao.get("posicao-atual")!.x - 7} y={projecao.get("posicao-atual")!.y - 7} width="14" height="14" color="var(--color-accent-foreground)" /></g>}
+          {(() => { const p = atual ? projecao.get("posicao-atual") : null; return p ? <g aria-label="Sua posição atual"><circle cx={p.x} cy={p.y} r="14" fill="var(--color-accent)" stroke="var(--color-card)" strokeWidth="4" /><Navigation x={p.x - 7} y={p.y - 7} width="14" height="14" color="var(--color-accent-foreground)" /></g> : null; })()}
           {!localizadas.length && !todosPontos.length && !atual && <text x="320" y="205" textAnchor="middle" fontSize="16" fill="var(--color-muted-foreground)">Inicie o rastreio ou localize uma árvore pelo GPS</text>}
           <text x="608" y="36" textAnchor="middle" fontSize="24" fontWeight="700" fill="var(--color-foreground)">N</text>
           <path d="M608 44 L598 68 L608 62 L618 68 Z" fill="var(--color-foreground)" />
