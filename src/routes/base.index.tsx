@@ -98,6 +98,20 @@ function BasePage() {
     toast.success(encerrado ? "Manejo reaberto" : "Manejo encerrado e arquivado");
   }
 
+  async function excluirManejo(numero: string) {
+    if ((toras.data ?? []).some((t) => t.autex === numero)) { toast.error("Este manejo tem toras lançadas e não pode ser excluído. Use Encerrar."); return; }
+    const n = (arvores.data ?? []).filter((a) => a.autex === numero).length;
+    if (!window.confirm(`Excluir o manejo ${numero} e suas ${n} árvores da Base? Essa ação não pode ser desfeita.`)) return;
+    setBusyAutex(numero);
+    let { error } = await supabase.from("rastros_gps").delete().eq("autex", numero);
+    if (!error) ({ error } = await supabase.from("arvores").delete().eq("autex", numero));
+    if (!error) ({ error } = await supabase.from("autex").delete().eq("numero", numero));
+    setBusyAutex("");
+    if (error) { toast.error(error.message.includes("foreign") ? "Há registros vinculados a este manejo; não foi possível excluir." : error.message); return; }
+    await Promise.all([qc.invalidateQueries({ queryKey: ["autex"] }), qc.invalidateQueries({ queryKey: ["arvores"] })]);
+    toast.success("Manejo excluído");
+  }
+
   // Mesma lógica das colunas EXPL. e VOL.EXPL da planilha
   const volExpl = useMemo(() => {
     const m = new Map<string, number>();
@@ -109,7 +123,7 @@ function BasePage() {
     const s = q.trim().toLowerCase();
     return (arvores.data ?? []).filter((a) => {
       const enc = encerradas.has(a.autex);
-      if (filtro === "encerradas" ? !enc : enc) return false;
+      if (filtro === "encerradas" && !enc) return false;
       const expl = volExpl.has(chaveArvore(a.numero, a.autex));
       if (filtro === "exploradas" && !expl) return false;
       if (filtro === "nao" && expl) return false;
@@ -160,6 +174,7 @@ function BasePage() {
               <Button size="sm" variant={a.encerrado ? "outline" : "secondary"} disabled={busyAutex === a.numero} onClick={() => alternarEncerrado(a.numero, a.encerrado)}>
                 {a.encerrado ? "Reabrir" : "Encerrar"}
               </Button>
+              <Button size="sm" variant="ghost" aria-label={`Excluir manejo ${a.numero}`} disabled={busyAutex === a.numero} onClick={() => excluirManejo(a.numero)}><Trash2 /></Button>
             </div>
           ))}
           {autex.data?.length === 0 && <div className="p-3 text-sm text-muted-foreground">Nenhuma AUTEX cadastrada ainda.</div>}
