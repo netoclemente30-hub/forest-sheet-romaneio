@@ -40,7 +40,8 @@ async function chunks<T>(arr: T[], size: number, fn: (c: T[]) => Promise<void>, 
 
 function Importar() {
   const qc = useQueryClient();
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, isSuperAdmin, loading, permissoesCarregando } = useAuth();
+  const podeImportar = isAdmin || isSuperAdmin;
   const nav = useNavigate();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,13 +49,13 @@ function Importar() {
   const [autexPadrao, setAutexPadrao] = useState("");
 
   useEffect(() => {
-    if (!loading && !isAdmin) {
+    if (!loading && !permissoesCarregando && !podeImportar) {
       toast.error("Só o administrador pode importar planilhas");
       nav({ to: "/" });
     }
-  }, [loading, isAdmin, nav]);
+  }, [loading, permissoesCarregando, podeImportar, nav]);
 
-  if (loading || !isAdmin) return null;
+  if (loading || permissoesCarregando || !podeImportar) return null;
 
   async function processar(file: File) {
     setPreparado(null);
