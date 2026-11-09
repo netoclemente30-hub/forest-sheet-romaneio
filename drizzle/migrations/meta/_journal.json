@@ -169,6 +169,13 @@
       "when": 1794215296013,
       "tag": "0023_add_exploration_map_pdfs",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794221359523,
+      "tag": "0024_excluir_manejo",
+      "breakpoints": true
     }
   ]
 }

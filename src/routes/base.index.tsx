@@ -103,11 +103,10 @@ function BasePage() {
     const n = (arvores.data ?? []).filter((a) => a.autex === numero).length;
     if (!window.confirm(`Excluir o manejo ${numero} e suas ${n} árvores da Base? Essa ação não pode ser desfeita.`)) return;
     setBusyAutex(numero);
-    let { error } = await supabase.from("rastros_gps").delete().eq("autex", numero);
-    if (!error) ({ error } = await supabase.from("arvores").delete().eq("autex", numero));
-    if (!error) ({ error } = await supabase.from("autex").delete().eq("numero", numero));
+    // Exclui mapas_exploracao, rastros_gps, arvores e a AUTEX numa única transação no banco
+    const { error } = await supabase.rpc("excluir_manejo", { _autex: numero });
     setBusyAutex("");
-    if (error) { toast.error(error.message.includes("foreign") ? "Há registros vinculados a este manejo; não foi possível excluir." : error.message); return; }
+    if (error) { toast.error(error.message); return; }
     await Promise.all([qc.invalidateQueries({ queryKey: ["autex"] }), qc.invalidateQueries({ queryKey: ["arvores"] })]);
     toast.success("Manejo excluído");
   }

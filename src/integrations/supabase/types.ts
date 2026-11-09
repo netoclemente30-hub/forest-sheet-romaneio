@@ -780,6 +780,7 @@ export type Database = {
     }
     Functions: {
       admin_minha_empresa: { Args: never; Returns: string }
+      excluir_manejo: { Args: { _autex: string }; Returns: undefined }
       excluir_pacote_serrado: {
         Args: { _empresa: string; _id: string; _log: Json }
         Returns: undefined
