@@ -11,7 +11,7 @@ export function numeroInventario(v: unknown): number | null {
 
 export const normalizarColuna = (v: unknown) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
-export type ArvoreBase = { numero: number; nome_vulgar: string; nome_cientifico: string | null; autex: string; cap: number | null; dap: number | null; altura: number | null; volume: number | null; categoria: string | null; picada: string | null };
+export type ArvoreBase = { numero: number; nome_vulgar: string; nome_cientifico: string | null; autex: string; cap: number | null; dap: number | null; altura: number | null; volume: number | null; categoria: string | null; picada: string | null; latitude: number | null; longitude: number | null };
 
 type Campo = keyof ArvoreBase;
 const aliases: Record<Campo, string[]> = {

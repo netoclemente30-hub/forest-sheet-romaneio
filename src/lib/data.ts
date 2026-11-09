@@ -6,6 +6,7 @@ import { comCache } from "./offline/cache";
 export type Tora = Database["public"]["Tables"]["toras"]["Row"];
 export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];
 export type Romaneio = Database["public"]["Tables"]["romaneios"]["Row"];
+export type RastroGPS = Database["public"]["Tables"]["rastros_gps"]["Row"];
 
 export const autexQuery = {
   networkMode: "always" as const,

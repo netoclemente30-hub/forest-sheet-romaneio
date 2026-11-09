@@ -18,6 +18,8 @@ function descrever(op: Op): string {
     case "romaneio_salvar": return `Romaneio ${op.cab.placa} · ${op.qtd_toras} toras`;
     case "romaneio_recebido": return `Entrada no pátio ${op.patio}`;
     case "toras_serradas": return `${op.desfazer ? "Voltar ao pátio" : "Serrar"} · ${op.plaquetas.length} toras`;
+    case "arvore_gps": return `Árvore localizada · AUTEX ${op.autex}`;
+    case "rastro_salvar": return `Rastreio GPS · AUTEX ${op.autex} · ${op.pontos.length} pontos`;
   }
 }
 
@@ -124,7 +126,7 @@ export function SyncStatus() {
                 <div className="text-sm text-destructive break-words">{explicar(i.erro ?? "")}</div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={sync} onClick={() => tentarDeNovo(i.id)}><RefreshCw /> Tentar de novo</Button>
-                  <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>
+                  {i.op.tipo !== "rastro_salvar" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
                   <Button size="sm" variant="destructive" disabled={sync} onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
                 </div>
               </div>

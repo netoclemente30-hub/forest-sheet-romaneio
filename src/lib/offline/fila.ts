@@ -4,6 +4,8 @@
 import { idb } from "./db";
 import type { LogCapturado } from "@/lib/registro";
 import type { CabPacote, BitolaSerrada } from '@/lib/madeira-serrada';
+import type { PontoRastro } from '@/lib/exploracao';
+import type { DadosArvoreGPS } from '@/lib/exploracao-salvar';
 
 export type Op =
   | { tipo:'pacote_serrado_salvar'; empresa_id:string; pacote_id:string; cab:CabPacote; itens:BitolaSerrada[]; log:LogCapturado }
