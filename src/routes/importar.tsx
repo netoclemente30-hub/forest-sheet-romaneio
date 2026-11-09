@@ -96,7 +96,7 @@ function Importar() {
     try {
       const arvores = preparado.arvores.map((a) => ({ ...a, autex: a.autex || autexPadrao.trim() }));
 
-      const porNumero = new Map<number, ReturnType<typeof arvores.get>>();
+      const porNumero = new Map<number, ArvoreBase>();
       for (const a of arvores) if (!porNumero.has(a.numero)) porNumero.set(a.numero, a);
       const toras = new Map<number, Record<string, unknown>>();
       let dup = 0;
