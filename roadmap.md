@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Anexar um PDF de referência por AUTEX dentro do mapa exploratório, com envio, substituição, visualização e download privados por empresa; preservar após encerramento e validar em celular com login real.
 - [x] Abrir cada AUTEX como manejo dentro da Base após a importação, manter a ficha vinculada até o encerramento e preservar o histórico arquivado; abertura automática, encerramento, consulta da ficha e reabertura verificados com login real em 384 px.
 - [x] Mapa exploratório offline por manejo: posição atual, percursos separados, árvores localizadas e abatimento com desfazer; rastro online/offline, retomada após recarregar e sincronização verificados com GPS simulado, sem erros nem corte horizontal.
 - [x] Importar Latitude/Longitude quando existirem, exigir AUTEX para o vínculo e preservar GPS/abatimento ao reimportar sem coordenadas; persistência na nuvem confirmada e 124 testes passaram. Dados temporários removidos. GPS físico no Android permanece pendente abaixo.
