@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { caminhoMapaPdf, MAPA_PDF_MAX_BYTES, validarMapaPdf } from "./mapa-pdf";
 
-function arquivo(nome = "mapa.pdf", size = 8, type = "application/pdf", conteudo = "%PDF-1.7") {
-  return new File([conteudo], nome, { type: type || undefined, ...(size === 0 ? {} : {}) }) as File & { size: number };
+function arquivo(nome = "mapa.pdf", _size = 8, type = "application/pdf", conteudo = "%PDF-1.7") {
+  return new File([conteudo], nome, { type });
 }
 
 describe("PDF do mapa exploratório", () => {
