@@ -32,7 +32,7 @@ export async function validarMapaPdf(file: ArquivoPdfParaValidar): Promise<void>
   }
   if (file.size <= 0) throw new Error("O PDF está vazio");
   if (file.size > MAPA_PDF_MAX_BYTES) throw new Error("O PDF deve ter no máximo 25 MB");
-  const assinatura = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer());
+  const assinatura = new TextDecoder().decode(await new Response(file.slice(0, 5)).arrayBuffer());
   if (assinatura !== "%PDF-") throw new Error("O arquivo não contém um PDF válido");
 }
 
