@@ -4,6 +4,11 @@ import { coordenadaValida, distanciaMetros } from "./exploracao";
 export type Matriz = [number, number, number, number, number, number];
 export type GeoReferencia = { pagina: number; bbox: number[]; crs: string; matriz: Matriz };
 export type MapaRenderizado = { imagem: string; largura: number; altura: number; viewport: Matriz; geo: GeoReferencia };
+function numero(ns: number[], i: number): number {
+  const n = ns[i];
+  if (n === undefined || !Number.isFinite(n)) throw new Error("Controle geográfico incompleto");
+  return n;
+}
 
 export function aplicarMatriz(m: Matriz, x: number, y: number): [number, number] {
   return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
@@ -17,14 +22,14 @@ export function ajustarControle(local: number[], mundo: number[]): Matriz {
   if (local.length < 6 || local.length !== mundo.length || [...local, ...mundo].some((n) => !Number.isFinite(n))) throw new Error("Controle geográfico inválido no PDF");
   // Use a non-collinear triple and validate ALL remaining controls.
   for (let i = 2; i < local.length / 2; i++) {
-    const base: Matriz = [local[2] - local[0], local[3] - local[1], local[i * 2] - local[0], local[i * 2 + 1] - local[1], local[0], local[1]];
+    const base: Matriz = [numero(local, 2) - numero(local, 0), numero(local, 3) - numero(local, 1), numero(local, i * 2) - numero(local, 0), numero(local, i * 2 + 1) - numero(local, 1), numero(local, 0), numero(local, 1)];
     if (Math.abs(base[0] * base[3] - base[1] * base[2]) < 1e-8) continue;
     const inv = inverterMatriz(base);
-    const a = mundo[2] - mundo[0], b = mundo[3] - mundo[1], c = mundo[i * 2] - mundo[0], d = mundo[i * 2 + 1] - mundo[1];
-    const m: Matriz = [a * inv[0] + c * inv[1], b * inv[0] + d * inv[1], a * inv[2] + c * inv[3], b * inv[2] + d * inv[3], a * inv[4] + c * inv[5] + mundo[0], b * inv[4] + d * inv[5] + mundo[1]];
+    const a = numero(mundo, 2) - numero(mundo, 0), b = numero(mundo, 3) - numero(mundo, 1), c = numero(mundo, i * 2) - numero(mundo, 0), d = numero(mundo, i * 2 + 1) - numero(mundo, 1);
+    const m: Matriz = [a * inv[0] + c * inv[1], b * inv[0] + d * inv[1], a * inv[2] + c * inv[3], b * inv[2] + d * inv[3], a * inv[4] + c * inv[5] + numero(mundo, 0), b * inv[4] + d * inv[5] + numero(mundo, 1)];
     for (let j = 0; j < local.length; j += 2) {
-      const [x, y] = aplicarMatriz(m, local[j], local[j + 1]);
-      if (Math.hypot(x - mundo[j], y - mundo[j + 1]) > 3) throw new Error("Alinhamento do GeoPDF inconsistente; confira o arquivo original");
+      const [x, y] = aplicarMatriz(m, numero(local, j), numero(local, j + 1));
+      if (Math.hypot(x - numero(mundo, j), y - numero(mundo, j + 1)) > 3) throw new Error("Alinhamento do GeoPDF inconsistente; confira o arquivo original");
     }
     return m;
   }
@@ -70,9 +75,11 @@ export async function lerGeoReferencia(bytes: Uint8Array): Promise<GeoReferencia
       if (bbox.length !== 4 || lpts.length !== gpts.length) throw new Error("GeoPDF com coordenadas incompletas");
       const local: number[] = [], mundo: number[] = [];
       for (let j = 0; j < lpts.length; j += 2) {
-        if (!coordenadaValida(gpts[j], gpts[j + 1])) throw new Error("Coordenadas geográficas inválidas no PDF");
-        local.push(bbox[0] + lpts[j] * (bbox[2] - bbox[0]), bbox[1] + lpts[j + 1] * (bbox[3] - bbox[1]));
-        mundo.push(...proj4("EPSG:4326", crs, [gpts[j + 1], gpts[j]]));
+        if (!coordenadaValida(numero(gpts, j), numero(gpts, j + 1))) throw new Error("Coordenadas geográficas inválidas no PDF");
+        local.push(numero(bbox, 0) + numero(lpts, j) * (numero(bbox, 2) - numero(bbox, 0)), numero(bbox, 1) + numero(lpts, j + 1) * (numero(bbox, 3) - numero(bbox, 1)));
+        const xy: [number, number] = [numero(gpts, j + 1), numero(gpts, j)];
+        const convertido = proj4("EPSG:4326", crs, xy);
+        mundo.push(convertido[0], convertido[1]);
       }
       return { pagina: index + 1, bbox, crs, matriz: ajustarControle(local, mundo) };
     }
@@ -103,7 +110,8 @@ export async function conversorMapa(mapa: MapaRenderizado) {
   const proj4 = (await import("proj4")).default;
   return {
     tela(pos: Coordenada): [number, number] {
-      const mundo = proj4("EPSG:4326", mapa.geo.crs, [pos.lng, pos.lat]);
+      const xy: [number, number] = [pos.lng, pos.lat];
+      const mundo = proj4("EPSG:4326", mapa.geo.crs, xy);
       const pdf = aplicarMatriz(inverterMatriz(mapa.geo.matriz), mundo[0], mundo[1]);
       return aplicarMatriz(mapa.viewport, pdf[0], pdf[1]);
     },
