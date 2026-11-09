@@ -36,7 +36,7 @@ export async function salvarArvoreGPS({ arvore, empresa, posicao, abatida }: {
   arvore: Arvore;
   empresa: string;
   posicao: Coordenada;
-  abatida: boolean;
+  abatida: boolean | null;
 }): Promise<{ op: Extract<Op, { tipo: "arvore_gps" }>; offline: boolean }> {
   const agora = new Date().toISOString();
   const dados: DadosArvoreGPS = {
@@ -44,9 +44,9 @@ export async function salvarArvoreGPS({ arvore, empresa, posicao, abatida }: {
     longitude: posicao.lng,
     gps_precisao: posicao.precisao ?? null,
     localizado_em: posicao.capturado_em ?? agora,
-    abatida_em: abatida ? arvore.abatida_em ?? agora : null,
+    abatida_em: abatida === null ? arvore.abatida_em : abatida ? arvore.abatida_em ?? agora : null,
   };
-  const acao = abatida ? "Árvore abatida registrada" : arvore.abatida_em ? "Abatimento desfeito" : "Localização de árvore registrada";
+  const acao = abatida === true ? "Árvore abatida registrada" : abatida === false ? "Abatimento desfeito" : "Localização de árvore registrada";
   const log = await capturarLog(acao, `Árvore ${arvore.numero} · ${arvore.nome_vulgar} · AUTEX ${arvore.autex} · ${posicao.lat.toFixed(6)}, ${posicao.lng.toFixed(6)}`);
   const op = { tipo: "arvore_gps" as const, id: arvore.id, empresa_id: empresa, autex: arvore.autex, dados, log };
   const offline = await executarOuEnfileirar(op);
