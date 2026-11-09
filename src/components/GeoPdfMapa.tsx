@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Crosshair, LoaderCircle, Map, Minus, Plus } from "lucide-react";
+import { Crosshair, LoaderCircle, Map as MapIcon, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { baixarMapaPdf, mapaPdfQuery } from "@/lib/mapa-pdf";
 import { conversorMapa, renderizarGeoPdf, type MapaRenderizado } from "@/lib/geopdf";
@@ -59,7 +59,7 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, onArvore
   return <section className="space-y-3" aria-label="Leitor GeoPDF">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 className="font-semibold">Mapa GeoPDF</h2>
-      <Button variant="outline" size="sm" onClick={carregar} disabled={busy}><Map />{busy ? "Lendo mapa…" : mapa ? "Recarregar mapa" : "Ler GeoPDF"}</Button>
+      <Button variant="outline" size="sm" onClick={carregar} disabled={busy}><MapIcon />{busy ? "Lendo mapa…" : mapa ? "Recarregar mapa" : "Ler GeoPDF"}</Button>
     </div>
     {busy && <div role="status" className="flex items-center gap-2 text-sm"><LoaderCircle className="size-4 animate-spin" />Preparando mapa e coordenadas…</div>}
     {erro && <p role="alert" className="text-sm text-destructive">{erro}</p>}
