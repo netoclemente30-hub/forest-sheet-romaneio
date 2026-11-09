@@ -5,7 +5,7 @@ import { fila, type Op } from "@/lib/offline/fila";
 import { estaOnline, executarOp } from "@/lib/offline/sync";
 import { idb } from "@/lib/offline/db";
 import { lerCache, salvarCache } from "@/lib/offline/cache";
-import { atualizarDataAbatimento, mesclarRastros, type Coordenada, type PontoRastro } from "@/lib/exploracao";
+import { atualizarDataAbatimento, comprimentoRastro, mesclarRastros, type Coordenada, type PontoRastro } from "@/lib/exploracao";
 
 export type DadosArvoreGPS = {
   latitude: number;
@@ -59,14 +59,7 @@ export async function salvarRastro({ empresa, autex, pontos }: {
   pontos: PontoRastro[];
 }): Promise<{ op: Extract<Op, { tipo: "rastro_salvar" }>; offline: boolean }> {
   if (!pontos.length) throw new Error("Nenhum ponto do rastro foi capturado");
-  const distancia = pontos.slice(1).reduce((n, p, i) => {
-    const a = pontos[i]!;
-    const rad = Math.PI / 180;
-    const dLat = (p.lat - a.lat) * rad;
-    const dLng = (p.lng - a.lng) * rad;
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(p.lat * rad) * Math.sin(dLng / 2) ** 2;
-    return n + 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-  }, 0);
+  const distancia = comprimentoRastro(pontos);
   const log = await capturarLog("Rastreio GPS encerrado", `AUTEX ${autex} · ${pontos.length} pontos · ${Math.round(distancia)} m percorridos`);
   const op = { tipo: "rastro_salvar" as const, empresa_id: empresa, autex, pontos, log };
   const offline = await executarOuEnfileirar(op);
