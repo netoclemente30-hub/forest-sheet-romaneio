@@ -31,9 +31,9 @@ export function listarTorasEncaixadas(registros: RegistroEncaixe[], toras: Tora[
   };
   for (const r of registros) {
     if (r.empresa_id !== empresa || r.acao !== 'Encaixe confirmado' || r.revertido_em) continue;
-    const snapshot = Array.isArray(r.mudancas) ? r.mudancas.find(m => objeto(m) && m.tabela === 'toras' && objeto(m.depois)) : null;
-    const d = objeto(snapshot) && objeto(snapshot.depois) ? snapshot.depois : null;
-    if (d && d.empresa_id === empresa && typeof d.plaqueta === 'number' && typeof d.arvore === 'number' && typeof d.volume === 'number') {
+    const snapshot = Array.isArray(r.mudancas) ? r.mudancas.find(m => objeto(m) && m['tabela'] === 'toras' && objeto(m['depois'])) : null;
+    const d = objeto(snapshot) && objeto(snapshot['depois']) ? snapshot['depois'] : null;
+    if (d && d['empresa_id'] === empresa && typeof d['plaqueta'] === 'number' && typeof d['arvore'] === 'number' && typeof d['volume'] === 'number') {
       adicionar(r.id, r.detalhe, r.criado_em, d as unknown as Tora);
     } else {
       const p = numero(r.detalhe?.match(/^Plaqueta\s+(\d+)/)?.[1]);
@@ -43,10 +43,10 @@ export function listarTorasEncaixadas(registros: RegistroEncaixe[], toras: Tora[
   }
   for (const i of itens) {
     const op = i.op;
-    if (op.tipo !== 'tora_insert' || op.dados.empresa_id !== empresa || op.log?.acao !== 'Encaixe confirmado') continue;
+    if (op.tipo !== 'tora_insert' || op.dados['empresa_id'] !== empresa || op.log?.acao !== 'Encaixe confirmado') continue;
     const d = op.dados;
-    if (typeof d.plaqueta !== 'number' || typeof d.arvore !== 'number' || typeof d.volume !== 'number') continue;
-    if (saida.some(r => r.tora.plaqueta === d.plaqueta && Date.parse(r.data) === Date.parse(op.log?.criado_em ?? ''))) continue;
+    if (typeof d['plaqueta'] !== 'number' || typeof d['arvore'] !== 'number' || typeof d['volume'] !== 'number') continue;
+    if (saida.some(r => r.tora.plaqueta === d['plaqueta'] && Date.parse(r.data) === Date.parse(op.log?.criado_em ?? ''))) continue;
     adicionar(i.id, op.log.detalhe, op.log.criado_em, d as unknown as Tora, i.erro ? 'Pendente com erro' : 'Pendente de envio');
   }
   return saida.sort((a, b) => Date.parse(b.data) - Date.parse(a.data) || b.tora.plaqueta - a.tora.plaqueta);
