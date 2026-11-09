@@ -73,7 +73,6 @@ function ManejoPage() {
                 <div className="text-right text-sm font-semibold">{fmtM3(Number(a.volume ?? 0))}</div>
               </div>
               <div className="ml-[4.25rem] mt-1 text-xs">
-                {a.latitude != null && a.longitude != null ? <span className="text-success">Localizada · {Number(a.latitude).toFixed(6)}, {Number(a.longitude).toFixed(6)}</span> : <span className="text-muted-foreground">Aguardando localização GPS</span>}
                 {a.abatida_em && <div className="font-semibold text-destructive">Abatida em {new Date(a.abatida_em).toLocaleString("pt-BR")}</div>}
               </div>
             </div>)}
