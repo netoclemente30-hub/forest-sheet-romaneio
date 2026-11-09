@@ -155,7 +155,7 @@ function Importar() {
       <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary p-8 text-center bg-card ${busy ? "opacity-50" : "cursor-pointer"}`}>
         <FileSpreadsheet className="size-10 text-primary" />
         <span className="font-semibold">Escolher arquivo</span>
-        <input type="file" aria-label="Importar ficha de campo" accept=".pdf,.xlsx,.xlsm,.xls" className="hidden" disabled={busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) void processar(file); e.target.value = ""; }} />
+        <input type="file" aria-label="Importar ficha de campo" accept=".pdf,.xlsx,.xlsm,.xls" className="hidden" disabled={busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) void processar(file); }} />
       </label>
       {preparado && <section className="space-y-3 border-t pt-4">
         <div className="text-sm break-all">{preparado.arquivo}</div>
