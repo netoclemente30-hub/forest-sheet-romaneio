@@ -311,6 +311,7 @@ export type Database = {
           lat: number
           lng: number
           precisao: number | null
+          sessao_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -322,6 +323,7 @@ export type Database = {
           lat: number
           lng: number
           precisao?: number | null
+          sessao_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -333,6 +335,7 @@ export type Database = {
           lat?: number
           lng?: number
           precisao?: number | null
+          sessao_id?: string | null
           user_id?: string | null
         }
         Relationships: [
