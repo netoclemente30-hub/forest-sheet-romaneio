@@ -25,6 +25,7 @@ import {
 } from "@/lib/exploracao-salvar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MapaPdf } from "@/components/MapaPdf";
 
 function textoErroGps(codigo: number): string {
   if (codigo === 1) return "Permita o acesso à localização do aparelho para usar o mapa";
@@ -212,6 +213,8 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
         <div className="rounded-lg border bg-card p-2"><div className="text-xs text-muted-foreground">Abatidas</div><div className="font-display text-xl font-bold">{abatidas.length}</div></div>
         <div className="rounded-lg border bg-card p-2"><div className="text-xs text-muted-foreground">Percurso atual</div><div className="font-display text-xl font-bold">{Math.round(distanciaAtiva)} m</div></div>
       </div>
+
+      <MapaPdf autex={autex} encerrado={encerrado} />
 
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center justify-between gap-2 border-b p-3 text-xs text-muted-foreground">

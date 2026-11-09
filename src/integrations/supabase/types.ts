@@ -208,6 +208,57 @@ export type Database = {
           },
         ]
       }
+      mapas_exploracao: {
+        Row: {
+          arquivo_path: string
+          atualizado_em: string
+          autex: string
+          created_at: string
+          empresa_id: string
+          enviado_por: string | null
+          id: string
+          nome_arquivo: string
+          tamanho_bytes: number
+        }
+        Insert: {
+          arquivo_path: string
+          atualizado_em?: string
+          autex: string
+          created_at?: string
+          empresa_id?: string
+          enviado_por?: string | null
+          id?: string
+          nome_arquivo: string
+          tamanho_bytes: number
+        }
+        Update: {
+          arquivo_path?: string
+          atualizado_em?: string
+          autex?: string
+          created_at?: string
+          empresa_id?: string
+          enviado_por?: string | null
+          id?: string
+          nome_arquivo?: string
+          tamanho_bytes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mapas_exploracao_empresa_autex_fkey"
+            columns: ["empresa_id", "autex"]
+            isOneToOne: true
+            referencedRelation: "autex"
+            referencedColumns: ["empresa_id", "numero"]
+          },
+          {
+            foreignKeyName: "mapas_exploracao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       motoristas: {
         Row: {
           cpf: string | null

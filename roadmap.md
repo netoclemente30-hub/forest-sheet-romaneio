@@ -1,4 +1,5 @@
 # Tarefas
+- [x] Anexar um PDF de referência por AUTEX dentro do mapa exploratório, com envio, substituição, visualização e download privados por empresa; preservado após encerramento. Exemplo real enviado/substituído/aberto/baixado com login em 384 px, conteúdo idêntico ao original, sem erros nem corte; 130 testes passaram e dados temporários foram removidos. Envio e abertura exigem internet; validação no Android publicado permanece na pendência do aparelho.
 - [x] Abrir cada AUTEX como manejo dentro da Base após a importação, manter a ficha vinculada até o encerramento e preservar o histórico arquivado; abertura automática, encerramento, consulta da ficha e reabertura verificados com login real em 384 px.
 - [x] Mapa exploratório offline por manejo: posição atual, percursos separados, árvores localizadas e abatimento com desfazer; rastro online/offline, retomada após recarregar e sincronização verificados com GPS simulado, sem erros nem corte horizontal.
 - [x] Importar Latitude/Longitude quando existirem, exigir AUTEX para o vínculo e preservar GPS/abatimento ao reimportar sem coordenadas; persistência na nuvem confirmada e 124 testes passaram. Dados temporários removidos. GPS físico no Android permanece pendente abaixo.
@@ -22,7 +23,7 @@
 - [x] Ocultar a marca Edit with Lovable na publicação.
 - [x] Explicar onde consultar dados das empresas e registros dos funcionários, incluindo a limitação de identidade em acessos compartilhados.
 - [x] Corrigir abertura offline no Android: caminhos corrigidos, primeira navegação preparada, cache acessível sem rede; testes de abertura com worker corrigido isolado e lançamento offline passaram.
-- [ ] Validar atualização, abertura offline e GPS do mapa no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
+- [ ] Validar atualização, abertura offline, GPS e envio/abertura do PDF do mapa no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
 - [x] Modo offline + instalável no Android (PWA): manifest/ícones, service worker com guards, fila IndexedDB, sync, indicador. Offline só funciona no app publicado.
 - [x] Log de registros: quem inseriu, horário e coordenadas GPS (link Google Maps) para cada lançamento.
 - [x] Criar planilha modelo para importar BASE sem exigir toras.
