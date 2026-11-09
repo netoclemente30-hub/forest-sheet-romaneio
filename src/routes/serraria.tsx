@@ -23,6 +23,7 @@ import { MadeiraSerrada } from "@/components/MadeiraSerrada";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PacoteDeToras } from '@/components/PacoteDeToras';
 import { gruposParaPacote, type SugestaoPacote } from '@/lib/pacote-de-toras';
+import { TorasEncaixadas } from '@/components/TorasEncaixadas';
 
 export const Route = createFileRoute("/serraria")({
   head: () => ({
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/serraria")({
   component: Serraria,
 });
 
-type Aba = "patio" | "serradas" | "madeira";
+type Aba = "patio" | "serradas" | "madeira" | "encaixadas";
 
 function Serraria() {
   const qc = useQueryClient();
@@ -107,8 +108,8 @@ function Serraria() {
           <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
         </div>
       </div>
-      <Tabs value={aba} onValueChange={(v) => { setAba(v as Aba); setSel([]); }}><TabsList className="w-full h-auto"><TabsTrigger value="patio" className="flex-1 whitespace-normal">Pátio de toras</TabsTrigger><TabsTrigger value="serradas" className="flex-1 whitespace-normal">Toras serradas</TabsTrigger><TabsTrigger value="madeira" className="flex-1 whitespace-normal">Madeira serrada</TabsTrigger></TabsList></Tabs>
-      {aba === "madeira" ? <MadeiraSerrada empresa={empresa} /> : <>
+      <Tabs value={aba} onValueChange={(v) => { setAba(v as Aba); setSel([]); }}><TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-4"><TabsTrigger value="patio" className="whitespace-normal">Pátio de toras</TabsTrigger><TabsTrigger value="serradas" className="whitespace-normal">Toras serradas</TabsTrigger><TabsTrigger value="encaixadas" className="whitespace-normal">Toras Encaixadas</TabsTrigger><TabsTrigger value="madeira" className="whitespace-normal">Madeira serrada</TabsTrigger></TabsList></Tabs>
+      {aba === "madeira" ? <MadeiraSerrada empresa={empresa} /> : aba === "encaixadas" ? <TorasEncaixadas empresa={empresa} toras={estoque} itens={pendentes.itens} /> : <>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant={!patio ? "default" : "outline"} onClick={() => setPatio("")}>Todos os pátios</Button>
         {patios.map((p) => <Button key={p} size="sm" variant={patio === p ? "default" : "outline"} onClick={() => setPatio(p)}>{p}</Button>)}
