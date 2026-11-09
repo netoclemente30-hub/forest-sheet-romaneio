@@ -107,7 +107,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
 
   const localizadas = useMemo(() => arvores.filter((a) => pontoDaArvore(a)), [arvores]);
   const abatidas = useMemo(() => arvores.filter((a) => a.abatida_em), [arvores]);
-  const todosPontos = useMemo(() => mesclarRastros<PontoRastro>((rastros.data ?? []).map((p) => ({ ...p, sessao_id: p.sessao_id ?? "antigo" })), pontosAtivos), [rastros.data, pontosAtivos]);
+  const todosPontos = useMemo(() => mesclarRastros<PontoRastro>(rastros.data ?? [], pontosAtivos), [rastros.data, pontosAtivos]);
   const distanciaAtiva = comprimentoRastro(pontosAtivos);
 
   const projecao = useMemo(() => {

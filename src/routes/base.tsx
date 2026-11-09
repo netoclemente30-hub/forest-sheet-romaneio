@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2, FileUp, Map, ChevronRight } from "lucide-react";
+import { Pencil, Trash2, FileUp, Map as MapIcon, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/base")({
   head: () => ({
@@ -130,7 +130,7 @@ function BasePage() {
         <div className="grid gap-2 sm:grid-cols-2">
           {(autex.data ?? []).filter((a) => filtro === "encerradas" ? a.encerrado : !a.encerrado).map((a) => {
             const total = (arvores.data ?? []).filter((arvore) => arvore.autex === a.numero).length;
-            return <Button asChild key={a.numero} variant="outline" className="h-auto min-h-20 justify-start p-3 text-left"><Link to="/base/$autex" params={{ autex: a.numero }}><Map className="shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block break-words font-display text-lg font-bold">{a.numero}</span><span className="block text-xs font-normal text-muted-foreground">{total} árvores{a.encerrado ? " · encerrado" : " · em andamento"}</span></span><ChevronRight className="shrink-0" /></Link></Button>;
+            return <Button asChild key={a.numero} variant="outline" className="h-auto min-h-20 justify-start p-3 text-left"><Link to="/base/$autex" params={{ autex: a.numero }}><MapIcon className="shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block break-words font-display text-lg font-bold">{a.numero}</span><span className="block text-xs font-normal text-muted-foreground">{total} árvores{a.encerrado ? " · encerrado" : " · em andamento"}</span></span><ChevronRight className="shrink-0" /></Link></Button>;
           })}
         </div>
         {!autex.isLoading && !(autex.data ?? []).some((a) => filtro === "encerradas" ? a.encerrado : !a.encerrado) && <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Nenhum manejo nesta situação. Importe uma ficha com AUTEX para começar.</div>}

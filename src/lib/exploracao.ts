@@ -5,7 +5,7 @@ export type PontoRastro = {
   id: string;
   empresa_id: string;
   autex: string;
-  sessao_id: string;
+  sessao_id: string | null;
   lat: number;
   lng: number;
   precisao: number | null;
