@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Pencil, Trash2, FileUp, Map as MapIcon, ChevronRight } from "lucide-react";
 
-export const Route = createFileRoute("/base")({
+export const Route = createFileRoute("/base/")({
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

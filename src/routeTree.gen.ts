@@ -20,6 +20,7 @@ import { Route as SaldoRouteImport } from './routes/saldo'
 import { Route as SerrariaRouteImport } from './routes/serraria'
 import { Route as TorasRouteImport } from './routes/toras'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as BaseIndexRouteImport } from './routes/base.index'
 import { Route as BaseAutexRouteImport } from './routes/base.$autex'
 import { Route as HistoricoIndexRouteImport } from './routes/historico.index'
 import { Route as HistoricoIdRouteImport } from './routes/historico.$id'
@@ -79,6 +80,11 @@ const UsuariosRoute = UsuariosRouteImport.update({
   path: '/usuarios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BaseIndexRoute = BaseIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BaseRoute,
+} as any)
 const BaseAutexRoute = BaseAutexRouteImport.update({
   id: '/$autex',
   path: '/$autex',
@@ -109,11 +115,11 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
   '/historico/$id': typeof HistoricoIdRoute
+  '/base/': typeof BaseIndexRoute
   '/historico/': typeof HistoricoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/base': typeof BaseRouteWithChildren
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
@@ -125,6 +131,7 @@ export interface FileRoutesByTo {
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
   '/historico/$id': typeof HistoricoIdRoute
+  '/base': typeof BaseIndexRoute
   '/historico': typeof HistoricoIndexRoute
 }
 export interface FileRoutesById {
@@ -142,6 +149,7 @@ export interface FileRoutesById {
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
   '/historico/$id': typeof HistoricoIdRoute
+  '/base/': typeof BaseIndexRoute
   '/historico/': typeof HistoricoIndexRoute
 }
 export interface FileRouteTypes {
@@ -160,11 +168,11 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/base/$autex'
     | '/historico/$id'
+    | '/base/'
     | '/historico/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/base'
     | '/entrada'
     | '/etiquetas'
     | '/importar'
@@ -176,6 +184,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/base/$autex'
     | '/historico/$id'
+    | '/base'
     | '/historico'
   id:
     | '__root__'
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/base/$autex'
     | '/historico/$id'
+    | '/base/'
     | '/historico/'
   fileRoutesById: FileRoutesById
 }
@@ -290,6 +300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsuariosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/base/': {
+      id: '/base/'
+      path: '/'
+      fullPath: '/base/'
+      preLoaderRoute: typeof BaseIndexRouteImport
+      parentRoute: typeof BaseRoute
+    }
     '/base/$autex': {
       id: '/base/$autex'
       path: '/$autex'
@@ -316,10 +333,12 @@ declare module '@tanstack/react-router' {
 
 interface BaseRouteChildren {
   BaseAutexRoute: typeof BaseAutexRoute
+  BaseIndexRoute: typeof BaseIndexRoute
 }
 
 const BaseRouteChildren: BaseRouteChildren = {
   BaseAutexRoute: BaseAutexRoute,
+  BaseIndexRoute: BaseIndexRoute,
 }
 
 const BaseRouteWithChildren = BaseRoute._addFileChildren(BaseRouteChildren)
