@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { torasQuery, arvoresQuery, romaneiosQuery } from "@/lib/data";
+import { torasQuery, arvoresQuery, romaneiosQuery, autexQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { Truck, Plus, Upload } from "lucide-react";
 
@@ -32,6 +32,8 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 function Index() {
   const toras = useQuery(torasQuery);
   const arvores = useQuery(arvoresQuery);
+  const autexLista = useQuery(autexQuery);
+  const encerradasPainel = new Set((autexLista.data ?? []).filter((a) => a.encerrado).map((a) => a.numero));
   const roms = useQuery(romaneiosQuery);
   const s = useMemo(() => {
     const t = toras.data ?? [];
@@ -52,7 +54,7 @@ function Index() {
         </Link>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Stat label="Árvores (BASE)" value={String(arvores.data?.length ?? "–")} />
+        <Stat label="Árvores (BASE)" value={arvores.data ? String(arvores.data.filter((a) => !encerradasPainel.has(a.autex)).length) : "–"} />
         <Stat label="Toras medidas" value={String(s.total)} sub={`${fmtM3(s.vol)} m³`} />
         <Stat label="No pátio" value={String(s.patio)} sub={`${fmtM3(s.volPatio)} m³`} />
         <Stat label="Carregadas" value={String(s.carr)} sub={`${fmtM3(s.volCarr)} m³`} />

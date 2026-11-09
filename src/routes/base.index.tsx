@@ -123,7 +123,7 @@ function BasePage() {
     const s = q.trim().toLowerCase();
     return (arvores.data ?? []).filter((a) => {
       const enc = encerradas.has(a.autex);
-      if (filtro === "encerradas" && !enc) return false;
+      if (filtro === "encerradas" ? !enc : enc) return false;
       const expl = volExpl.has(chaveArvore(a.numero, a.autex));
       if (filtro === "exploradas" && !expl) return false;
       if (filtro === "nao" && expl) return false;
