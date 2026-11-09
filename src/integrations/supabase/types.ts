@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       arvores: {
         Row: {
+          abatida_em: string | null
           altura: number | null
           autex: string
           cap: number | null
@@ -23,7 +24,11 @@ export type Database = {
           created_at: string
           dap: number | null
           empresa_id: string | null
+          gps_precisao: number | null
           id: string
+          latitude: number | null
+          localizado_em: string | null
+          longitude: number | null
           nome_cientifico: string | null
           nome_vulgar: string
           numero: number
@@ -31,6 +36,7 @@ export type Database = {
           volume: number | null
         }
         Insert: {
+          abatida_em?: string | null
           altura?: number | null
           autex?: string
           cap?: number | null
@@ -38,7 +44,11 @@ export type Database = {
           created_at?: string
           dap?: number | null
           empresa_id?: string | null
+          gps_precisao?: number | null
           id?: string
+          latitude?: number | null
+          localizado_em?: string | null
+          longitude?: number | null
           nome_cientifico?: string | null
           nome_vulgar?: string
           numero: number
@@ -46,6 +56,7 @@ export type Database = {
           volume?: number | null
         }
         Update: {
+          abatida_em?: string | null
           altura?: number | null
           autex?: string
           cap?: number | null
@@ -53,7 +64,11 @@ export type Database = {
           created_at?: string
           dap?: number | null
           empresa_id?: string | null
+          gps_precisao?: number | null
           id?: string
+          latitude?: number | null
+          localizado_em?: string | null
+          longitude?: number | null
           nome_cientifico?: string | null
           nome_vulgar?: string
           numero?: number
@@ -279,6 +294,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "patios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rastros_gps: {
+        Row: {
+          autex: string
+          capturado_em: string
+          created_at: string
+          empresa_id: string
+          id: string
+          lat: number
+          lng: number
+          precisao: number | null
+          user_id: string | null
+        }
+        Insert: {
+          autex: string
+          capturado_em?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lat: number
+          lng: number
+          precisao?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          autex?: string
+          capturado_em?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lat?: number
+          lng?: number
+          precisao?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rastros_gps_empresa_autex_fkey"
+            columns: ["empresa_id", "autex"]
+            isOneToOne: false
+            referencedRelation: "autex"
+            referencedColumns: ["empresa_id", "numero"]
+          },
+          {
+            foreignKeyName: "rastros_gps_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
