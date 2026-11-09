@@ -1,7 +1,7 @@
 # Tarefas
-- [ ] Abrir cada AUTEX como manejo dentro da Base após a importação, manter a ficha vinculada até o encerramento e preservar o acesso ao histórico arquivado.
-- [ ] Mapa exploratório offline por manejo: rastreio GPS, posição atual, árvores localizadas e registro/edição de abatimento vinculado à árvore importada.
-- [ ] Importar coordenadas quando existirem na ficha e validar o fluxo autenticado em celular, inclusive reabertura offline e sincronização.
+- [x] Abrir cada AUTEX como manejo dentro da Base após a importação, manter a ficha vinculada até o encerramento e preservar o histórico arquivado; abertura automática, encerramento, consulta da ficha e reabertura verificados com login real em 384 px.
+- [x] Mapa exploratório offline por manejo: posição atual, percursos separados, árvores localizadas e abatimento com desfazer; rastro online/offline, retomada após recarregar e sincronização verificados com GPS simulado, sem erros nem corte horizontal.
+- [x] Importar Latitude/Longitude quando existirem, exigir AUTEX para o vínculo e preservar GPS/abatimento ao reimportar sem coordenadas; persistência na nuvem confirmada e 124 testes passaram. Dados temporários removidos. GPS físico no Android permanece pendente abaixo.
 - [x] Importar fichas PDF/Excel pela Base com prévia, colunas variadas, números locais e DAP por CAP; PDF anexado reconheceu 388 árvores e 26 picadas. Excel temporário salvo/relido/excluído com login real; 9 testes passaram e tela 384 px sem corte. PDF escaneado sem texto requer Excel; gravação exige internet. Publicação/validação Android aguardam aparelho.
 - [x] Gerar pacote de toras serradas selecionadas, confirmar espécie/AUTEX ou escolher grupo; novos pacotes persistem em IndexedDB, editam offline e sincronizam sem duplicar auditoria. 26 testes passaram; baixa local de tora real, sugestão, pacote offline, reabertura, envio e leitura na nuvem verificados com login real; pacote temporário removido e baixa de teste não enviada. Tela de 384 px conferida. Validação Android publicado continua dependente do aparelho.
 - [x] AUTEX em Madeira Serrada: 15 opções do cadastro e texto livre, independente de toras serradas; pacote salvo/reaberto com AUTEX livre e três bitolas em teste autenticado, removido ao final. PDF inclui AUTEX. Seis testes passaram; tela 384 px sem corte.
@@ -22,7 +22,7 @@
 - [x] Ocultar a marca Edit with Lovable na publicação.
 - [x] Explicar onde consultar dados das empresas e registros dos funcionários, incluindo a limitação de identidade em acessos compartilhados.
 - [x] Corrigir abertura offline no Android: caminhos corrigidos, primeira navegação preparada, cache acessível sem rede; testes de abertura com worker corrigido isolado e lançamento offline passaram.
-- [ ] Validar atualização no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
+- [ ] Validar atualização, abertura offline e GPS do mapa no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
 - [x] Modo offline + instalável no Android (PWA): manifest/ícones, service worker com guards, fila IndexedDB, sync, indicador. Offline só funciona no app publicado.
 - [x] Log de registros: quem inseriu, horário e coordenadas GPS (link Google Maps) para cada lançamento.
 - [x] Criar planilha modelo para importar BASE sem exigir toras.
