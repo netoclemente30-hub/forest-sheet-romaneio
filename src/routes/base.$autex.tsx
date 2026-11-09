@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Archive, Map, RotateCcw, Trees } from "lucide-react";
+import { ArrowLeft, Archive, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { arvoresQuery, autexQuery } from "@/lib/data";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { MapaExploracao } from "@/components/MapaExploracao";
 import { Button } from "@/components/ui/button";
 import { fmtM3 } from "@/lib/volume";
 
@@ -15,9 +14,9 @@ export const Route = createFileRoute("/base/$autex")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Mapa exploratório do manejo — Manejo Florestal" },
-      { name: "description", content: "Ficha de campo vinculada, rastreio GPS e registro das árvores abatidas por AUTEX." },
-      { property: "og:title", content: "Mapa exploratório do manejo — Manejo Florestal" },
+      { title: "Ficha de campo do manejo — Manejo Florestal" },
+      { name: "description", content: "Ficha de campo vinculada por AUTEX." },
+      { property: "og:title", content: "Ficha de campo do manejo — Manejo Florestal" },
       { property: "og:description", content: "Acompanhe a exploração florestal e a localização das árvores por AUTEX." },
     ],
   }),
@@ -30,7 +29,7 @@ function ManejoPage() {
   const autex = useQuery(autexQuery);
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
-  const [aba, setAba] = useState<"mapa" | "ficha">("mapa");
+  const [aba] = useState<"ficha">("ficha");
   const [busy, setBusy] = useState(false);
   const manejo = (autex.data ?? []).find((a) => a.numero === numero);
   const lista = useMemo(() => (arvores.data ?? []).filter((a) => a.autex === numero).sort((a, b) => a.numero - b.numero), [arvores.data, numero]);
@@ -40,7 +39,7 @@ function ManejoPage() {
     if (!manejo || busy) return;
     if (!navigator.onLine) { toast.error("Precisa de internet para encerrar ou reabrir o manejo"); return; }
     const acao = encerrado ? "reabrir" : "encerrar";
-    if (!window.confirm(`Deseja ${acao} o manejo ${numero}? A ficha, o mapa e os rastros serão preservados.`)) return;
+    if (!window.confirm(`Deseja ${acao} o manejo ${numero}? A ficha será preservada.`)) return;
     setBusy(true);
     const { error } = await supabase.from("autex").update({ encerrado: !encerrado }).eq("numero", numero);
     setBusy(false);
@@ -63,12 +62,7 @@ function ManejoPage() {
         {isAdmin && manejo && <Button variant={encerrado ? "outline" : "secondary"} size="sm" disabled={busy} onClick={alternarEncerrado}>{encerrado ? <RotateCcw /> : <Archive />}{encerrado ? "Reabrir" : "Encerrar manejo"}</Button>}
       </header>
 
-      <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Conteúdo do manejo">
-        <Button role="tab" aria-selected={aba === "mapa"} variant={aba === "mapa" ? "default" : "outline"} onClick={() => setAba("mapa")}><Map /> Mapa exploratório</Button>
-        <Button role="tab" aria-selected={aba === "ficha"} variant={aba === "ficha" ? "default" : "outline"} onClick={() => setAba("ficha")}><Trees /> Ficha de campo</Button>
-      </div>
-
-      {aba === "mapa" ? <MapaExploracao key={numero} autex={numero} arvores={lista} encerrado={encerrado} /> : (
+      {aba === "ficha" && (
         <section className="overflow-hidden rounded-xl border bg-card">
           <div className="border-b p-3 text-sm text-muted-foreground">Esta ficha permanece vinculada à AUTEX {numero}, inclusive depois do encerramento.</div>
           <div className="divide-y">
