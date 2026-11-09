@@ -77,6 +77,11 @@ export function projetarMapa<T extends PontoMapa>(pontos: T[], largura = 640, al
   }));
 }
 
+export function atualizarDataAbatimento(anterior: string | null, acao: boolean | null, agora: string): string | null {
+  if (acao === null) return anterior;
+  return acao ? anterior ?? agora : null;
+}
+
 export function pontoDaArvore(a: Arvore): PontoMapa & { arvore: Arvore } | null {
   if (a.latitude == null || a.longitude == null || !coordenadaValida(Number(a.latitude), Number(a.longitude))) return null;
   return { id: a.id, lat: Number(a.latitude), lng: Number(a.longitude), arvore: a };

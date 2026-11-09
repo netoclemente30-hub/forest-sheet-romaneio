@@ -5,7 +5,7 @@ import { fila, type Op } from "@/lib/offline/fila";
 import { estaOnline, executarOp } from "@/lib/offline/sync";
 import { idb } from "@/lib/offline/db";
 import { lerCache, salvarCache } from "@/lib/offline/cache";
-import { mesclarRastros, type Coordenada, type PontoRastro } from "@/lib/exploracao";
+import { atualizarDataAbatimento, mesclarRastros, type Coordenada, type PontoRastro } from "@/lib/exploracao";
 
 export type DadosArvoreGPS = {
   latitude: number;
@@ -44,7 +44,7 @@ export async function salvarArvoreGPS({ arvore, empresa, posicao, abatida }: {
     longitude: posicao.lng,
     gps_precisao: posicao.precisao ?? null,
     localizado_em: posicao.capturado_em ?? agora,
-    abatida_em: abatida === null ? arvore.abatida_em : abatida ? arvore.abatida_em ?? agora : null,
+    abatida_em: atualizarDataAbatimento(arvore.abatida_em, abatida, agora),
   };
   const acao = abatida === true ? "Árvore abatida registrada" : abatida === false ? "Abatimento desfeito" : "Localização de árvore registrada";
   const log = await capturarLog(acao, `Árvore ${arvore.numero} · ${arvore.nome_vulgar} · AUTEX ${arvore.autex} · ${posicao.lat.toFixed(6)}, ${posicao.lng.toFixed(6)}`);

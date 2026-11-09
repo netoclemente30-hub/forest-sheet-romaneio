@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aceitarPontoRastro, comprimentoRastro, coordenadaValida, distanciaMetros, mesclarRastros, projetarMapa } from "./exploracao";
+import { aceitarPontoRastro, atualizarDataAbatimento, comprimentoRastro, coordenadaValida, distanciaMetros, mesclarRastros, projetarMapa } from "./exploracao";
 
 describe("mapa exploratório", () => {
   it("valida coordenadas WGS84", () => {
@@ -27,6 +27,13 @@ describe("mapa exploratório", () => {
     const a = { id: "a", capturado_em: "2026-11-09T00:00:00Z" };
     const b = { id: "b", capturado_em: "2026-11-09T00:00:01Z" };
     expect(mesclarRastros([b], [a, b])).toEqual([a, b]);
+  });
+
+  it("atualizar só o GPS não desfaz um abatimento já registrado", () => {
+    const data = "2026-11-09T00:00:00Z";
+    expect(atualizarDataAbatimento(data, null, "2026-11-09T01:00:00Z")).toBe(data);
+    expect(atualizarDataAbatimento(data, true, "2026-11-09T01:00:00Z")).toBe(data);
+    expect(atualizarDataAbatimento(data, false, "2026-11-09T01:00:00Z")).toBeNull();
   });
 
   it("mantém os pontos dentro do mapa mesmo sem variação de coordenadas", () => {

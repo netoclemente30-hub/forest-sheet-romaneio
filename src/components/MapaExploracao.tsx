@@ -107,7 +107,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
 
   const localizadas = useMemo(() => arvores.filter((a) => pontoDaArvore(a)), [arvores]);
   const abatidas = useMemo(() => arvores.filter((a) => a.abatida_em), [arvores]);
-  const todosPontos = useMemo(() => mesclarRastros(rastros.data ?? [], pontosAtivos), [rastros.data, pontosAtivos]);
+  const todosPontos = useMemo(() => mesclarRastros<PontoRastro>((rastros.data ?? []).map((p) => ({ ...p, sessao_id: p.sessao_id ?? "antigo" })), pontosAtivos), [rastros.data, pontosAtivos]);
   const distanciaAtiva = comprimentoRastro(pontosAtivos);
 
   const projecao = useMemo(() => {
@@ -191,7 +191,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
     setBusy(true);
     try {
       const resultado = await salvarArvoreGPS({ arvore: editando, empresa, posicao: posicaoEdicao, abatida });
-      const atualizadas = await persistirArvoreLocal(arvoresQuery ? qc.getQueryData<Arvore[]>(arvoresQuery.queryKey) ?? arvores : arvores, editando.id, resultado.op.dados);
+      const atualizadas = await persistirArvoreLocal(qc.getQueryData<Arvore[]>(arvoresQuery.queryKey) ?? arvores, editando.id, resultado.op.dados);
       qc.setQueryData(arvoresQuery.queryKey, atualizadas);
       const nova = { ...editando, ...resultado.op.dados };
       setEditando(nova);
