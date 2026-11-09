@@ -6,9 +6,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { volumeTora } from "@/lib/volume";
 import { empresaIdGravacao } from "@/lib/empresa";
-import { lerBase } from "@/lib/import-base";
+import { analisarBase, numeroInventario, type ArvoreBase } from "@/lib/import-base";
+import { lerPDFInventario } from "@/lib/import-pdf";
 import modelo from "@/assets/modelo-base.xlsx.asset.json";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { FileSpreadsheet, Download } from "lucide-react";
 
 export const Route = createFileRoute("/importar")({
@@ -17,16 +20,16 @@ export const Route = createFileRoute("/importar")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { title: "Importar planilha — Manejo Florestal" },
-      { name: "description", content: "Importe a BASE e os Cálculos de Inventário do Excel." },
+      { name: "description", content: "Importe fichas de campo PDF e Excel com reconhecimento de colunas, CAP, DAP e picadas." },
       { property: "og:title", content: "Importar planilha — Manejo Florestal" },
-      { property: "og:description", content: "Importe a BASE e os Cálculos de Inventário do Excel." },
+      { property: "og:description", content: "Importe o inventário florestal de fichas de campo PDF ou Excel." },
     ],
   }),
   component: Importar,
 });
 
 type Row = unknown[];
-const n = (v: unknown) => (v === null || v === undefined || v === "" || isNaN(Number(v)) ? null : Number(v));
+const n = numeroInventario;
 
 async function chunks<T>(arr: T[], size: number, fn: (c: T[]) => Promise<void>, onProgress: (done: number) => void) {
   for (let i = 0; i < arr.length; i += size) {
@@ -41,6 +44,8 @@ function Importar() {
   const nav = useNavigate();
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [preparado, setPreparado] = useState<{ arvores: ArvoreBase[]; calc: Row[]; invalidas: number; repetidas: number; arquivo: string } | null>(null);
+  const [autexPadrao, setAutexPadrao] = useState("");
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -52,25 +57,50 @@ function Importar() {
   if (loading || !isAdmin) return null;
 
   async function processar(file: File) {
+    setPreparado(null);
+    setBusy(true);
+    setStatus("Lendo arquivo…");
+    try {
+      let resultado: ReturnType<typeof analisarBase>;
+      let calc: Row[] = [];
+      if (/\.pdf$/i.test(file.name)) resultado = await lerPDFInventario(file, setStatus);
+      else {
+        const XLSX = await import("xlsx");
+        const wb = XLSX.read(await file.arrayBuffer());
+        const nomes = wb.SheetNames.filter((nome) => nome !== "Calculos_Inventario");
+        nomes.sort((a, b) => Number(b.toUpperCase() === "BASE") - Number(a.toUpperCase() === "BASE"));
+        resultado = analisarBase([]);
+        for (const nome of nomes) {
+          const sheet = wb.Sheets[nome];
+          if (!sheet) continue;
+          const candidato = analisarBase(XLSX.utils.sheet_to_json<Row>(sheet, { header: 1, defval: null }));
+          if (candidato.arvores.size) { resultado = candidato; break; }
+        }
+        const calculos = wb.Sheets["Calculos_Inventario"];
+        if (calculos) calc = XLSX.utils.sheet_to_json<Row>(calculos, { header: 1 }).slice(1);
+      }
+      if (!resultado.arvores.size) throw new Error("Nenhuma árvore reconhecida. Confira as colunas número e nome popular/espécie.");
+      setPreparado({ arvores: [...resultado.arvores.values()], calc, invalidas: resultado.invalidas, repetidas: resultado.repetidas, arquivo: file.name });
+      setStatus("");
+    } catch (e) { toast.error((e as Error).message); setStatus(""); }
+    finally { setBusy(false); }
+  }
+
+  async function confirmar() {
+    if (!preparado) return;
     if (!navigator.onLine) {
       toast.error("A importação de planilha precisa de internet");
       return;
     }
     setBusy(true);
     try {
-      const XLSX = await import("xlsx");
-      const wb = XLSX.read(await file.arrayBuffer());
-      const base = wb.Sheets["BASE"];
-      const calc = wb.Sheets["Calculos_Inventario"];
-      if (!base) throw new Error("A planilha precisa da aba BASE");
-      const arvores = lerBase(XLSX.utils.sheet_to_json<Row>(base, { header: 1 }));
-      if (!arvores.size) throw new Error("Nenhuma árvore válida na BASE. Preencha número e espécie.");
+      const arvores = preparado.arvores.map((a) => ({ ...a, autex: a.autex || autexPadrao.trim() }));
 
       const porNumero = new Map<number, ReturnType<typeof arvores.get>>();
-      for (const a of arvores.values()) if (!porNumero.has(a.numero)) porNumero.set(a.numero, a);
+      for (const a of arvores) if (!porNumero.has(a.numero)) porNumero.set(a.numero, a);
       const toras = new Map<number, Record<string, unknown>>();
       let dup = 0;
-      for (const r of (calc ? XLSX.utils.sheet_to_json<Row>(calc, { header: 1 }).slice(1) : [])) {
+      for (const r of preparado.calc) {
         const pl = n(r[0]);
         const arv = n(r[1]);
         if (!pl || arv === null || !porNumero.get(arv)) continue;
@@ -106,6 +136,7 @@ function Importar() {
       await qc.invalidateQueries();
       setStatus(`Pronto! ${av.length} árvores e ${tv.length} toras importadas.${dup ? ` ${dup} plaqueta(s) repetida(s) ignorada(s).` : ""}`);
       toast.success("Planilha importada");
+      setPreparado(null);
     } catch (e) {
       toast.error((e as Error).message);
       setStatus("");
@@ -117,15 +148,23 @@ function Importar() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Importar planilha</h1>
       <p className="text-sm text-muted-foreground">
-        Envie o arquivo Excel (.xlsx ou .xlsm) com a aba <b>BASE</b>. A coluna J (depois do nome científico) é a <b>AUTEX</b> — árvores com o mesmo número em AUTEX diferentes ficam separadas. A aba <b>Calculos_Inventario</b> é opcional. Árvores são atualizadas;
-        toras novas são adicionadas e as que já existem no app não são alteradas.
+        PDF · Excel (.xlsx, .xlsm, .xls). Árvores já cadastradas com o mesmo número e AUTEX serão atualizadas.
       </p>
       <Button asChild variant="outline"><a href={modelo.url} download="modelo-base.xlsx"><Download /> Baixar planilha modelo</a></Button>
       <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary p-8 text-center bg-card ${busy ? "opacity-50" : "cursor-pointer"}`}>
         <FileSpreadsheet className="size-10 text-primary" />
         <span className="font-semibold">Escolher arquivo</span>
-        <input type="file" accept=".xlsx,.xlsm,.xls" className="hidden" disabled={busy} onChange={(e) => e.target.files?.[0] && processar(e.target.files[0])} />
+        <input type="file" aria-label="Importar ficha de campo" accept=".pdf,.xlsx,.xlsm,.xls" className="hidden" disabled={busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) void processar(file); e.target.value = ""; }} />
       </label>
+      {preparado && <section className="space-y-3 border-t pt-4">
+        <div className="text-sm break-all">{preparado.arquivo}</div>
+        <div className="font-semibold">{preparado.arvores.length} árvores reconhecidas</div>
+        {(preparado.invalidas > 0 || preparado.repetidas > 0) && <div className="text-sm text-destructive">{preparado.invalidas} linhas inválidas · {preparado.repetidas} repetições (último valor mantido)</div>}
+        <Label htmlFor="autex-importacao">AUTEX para árvores sem autorização no arquivo</Label>
+        <Input id="autex-importacao" value={autexPadrao} onChange={(e) => setAutexPadrao(e.target.value)} />
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr>{["Nº", "Espécie", "CAP", "DAP", "Altura", "Volume", "Picada"].map((h) => <th key={h} className="p-2 text-left">{h}</th>)}</tr></thead><tbody>{preparado.arvores.slice(0, 5).map((a) => <tr key={`${a.numero}|${a.autex}`} className="border-t"><td className="p-2">{a.numero}</td><td className="p-2">{a.nome_vulgar}</td><td className="p-2">{a.cap ?? "—"}</td><td className="p-2">{a.dap?.toFixed(2) ?? "—"}</td><td className="p-2">{a.altura ?? "—"}</td><td className="p-2">{a.volume ?? "—"}</td><td className="p-2">{a.picada ?? "—"}</td></tr>)}</tbody></table></div>
+        <Button disabled={busy} onClick={confirmar}>Confirmar importação</Button>
+      </section>}
       {status && <div className="rounded-lg bg-secondary p-3 text-sm">{status}</div>}
       {busy && <Button disabled className="w-full">Importando…</Button>}
     </div>

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, FileUp } from "lucide-react";
 
 export const Route = createFileRoute("/base")({
   head: () => ({
@@ -124,6 +124,7 @@ function BasePage() {
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Base · Ficha de campo</h1>
+      {isAdmin && <Button asChild variant="outline"><Link to="/importar"><FileUp /> Importar PDF ou Excel</Link></Button>}
       <Input placeholder="Buscar nº, espécie, picada ou AUTEX" value={q} onChange={(e) => setQ(e.target.value)} className="h-11" />
       <div className="flex flex-wrap gap-2">
         {(["todas", "exploradas", "nao", "encerradas"] as Filtro[]).map((k) => (
