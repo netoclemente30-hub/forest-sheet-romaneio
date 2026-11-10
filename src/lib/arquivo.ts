@@ -1,3 +1,5 @@
+import { linkWhatsapp } from "./nfe-txt";
+
 export type ArquivoGerado = { blob: Blob; nome: string };
 
 export function baixarArquivo({ blob, nome }: ArquivoGerado) {

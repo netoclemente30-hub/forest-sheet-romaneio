@@ -94,6 +94,34 @@ export async function exportarPdf(toras: Tora[], titulo: string, medida: MedidaR
   return { blob: doc.output("blob"), nome: `${nome()}${comercial ? "_comercial" : ""}.pdf` };
 }
 
+const LIMITE_LINHAS = 12;
+const torasPalavra = (n: number) => `${n} ${n === 1 ? "tora" : "toras"}`;
+
+/** Resumo em texto para o WhatsApp, seguindo a medida ativa no relatório. */
+export function resumoWhatsappToras(toras: Tora[], titulo: string, medida: MedidaRelatorio = "fisica"): string {
+  const dados = dadosPdfToras(toras, medida);
+  const comercial = medida === "comercial";
+  const linhas: string[] = [
+    `*RELATÓRIO DE TORAS — ${titulo.toUpperCase()}*`,
+    `Emitido em ${new Date().toLocaleString("pt-BR")} · ${comercial ? "MEDIDA COMERCIAL" : "MEDIDA FÍSICA"}`,
+    `${torasPalavra(toras.length)} · ${fmtM3(dados.total)} m³`,
+  ];
+  const especies = dados.porEspecie.map((e) => `• ${e.especie}${e.cientifico ? ` (${e.cientifico})` : ""}: ${e.qtd} ${torasPalavra(e.qtd)} · ${fmtM3(e.volume)} m³`);
+  if (especies.length) {
+    linhas.push("", "Por espécie:");
+    linhas.push(...especies.slice(0, LIMITE_LINHAS));
+    if (especies.length > LIMITE_LINHAS) linhas.push(`… +${especies.length - LIMITE_LINHAS} outras espécies`);
+  }
+  const autex = dados.porAutex.map((a) => `• ${a.autex}: ${a.qtd} ${torasPalavra(a.qtd)} · ${fmtM3(a.volume)} m³`);
+  if (autex.length > 1) {
+    linhas.push("", "Por AUTEX:");
+    linhas.push(...autex.slice(0, LIMITE_LINHAS));
+    if (autex.length > LIMITE_LINHAS) linhas.push(`… +${autex.length - LIMITE_LINHAS} outras AUTEX`);
+  }
+  if (dados.semMedidas) linhas.push("", `${dados.semMedidas} tora(s) sem medidas completas: volume comercial não incluído nos totais.`);
+  return linhas.join("\n");
+}
+
 export function resumoPorAutex(toras: Tora[]) {
   const m = new Map<string, { autex: string; qtd: number; volume: number }>();
   for (const t of toras) { const k = t.autex || "Sem AUTEX"; const r = m.get(k) ?? { autex: k, qtd: 0, volume: 0 }; r.qtd++; r.volume += Number(t.volume); m.set(k, r); }
