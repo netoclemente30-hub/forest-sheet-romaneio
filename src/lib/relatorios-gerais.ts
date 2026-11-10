@@ -142,7 +142,7 @@ export async function exportarTabelasPdf(nome: string, filtro: string, tabelas: 
   for (const t of tabelas) {
     doc.setFontSize(11);
     doc.text(t.titulo, 14, y + 2);
-    autoTable(doc, { startY: y + 5, head: [t.cabecalho], body: t.linhas.length ? t.linhas.map((l) => l.map(String)) : [[`Sem registros`, ...t.cabecalho.slice(1).map(() => "")]], foot: t.rodape ? [t.rodape.map(String)] : undefined, styles: { fontSize: 8 }, headStyles: { fillColor: [46, 84, 56] }, footStyles: { fillColor: [230, 225, 205], textColor: 20 } });
+    autoTable(doc, { startY: y + 5, head: [t.cabecalho], body: t.linhas.length ? t.linhas.map((l) => l.map(String)) : [[`Sem registros`, ...t.cabecalho.slice(1).map(() => "")]], ...(t.rodape ? { foot: [t.rodape.map(String)] } : {}), styles: { fontSize: 8 }, headStyles: { fillColor: [46, 84, 56] }, footStyles: { fillColor: [230, 225, 205], textColor: 20 } });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     y = (doc as any).lastAutoTable.finalY + 10;
     if (y > 180) { doc.addPage(); y = 14; }
