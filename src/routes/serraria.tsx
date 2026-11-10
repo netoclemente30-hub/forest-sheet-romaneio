@@ -210,6 +210,7 @@ function Serraria() {
                 <div><dt className="text-muted-foreground">Comprimento</dt><dd>{aberta.comprimento ?? "—"} m</dd></div>
                 <div><dt className="text-muted-foreground">Volume</dt><dd className="font-semibold">{fmtM3(Number(aberta.volume))} m³</dd></div>
               </dl>
+              <CartaoMedidaComercial tora={aberta} />
             </div>
             {!aberta.serrada_em && <Button disabled={busy} onClick={() => serrar(false, [aberta])}><Factory /> Serrar esta tora</Button>}
             <Button variant="outline" onClick={() => { setToraLida(null); setEtiqueta(""); setScan(true); }}><ScanLine /> Ler outra etiqueta</Button>

@@ -153,7 +153,8 @@ function Detalhe() {
         <h1 className="text-3xl font-bold uppercase">{r.placa || "Sem placa"}</h1>
         <div className="text-sm opacity-90">Reboque {r.julieta || "–"} · {r.motorista} {r.cpf && `· CPF ${r.cpf}`}</div>
         <div className="mt-2 font-display text-4xl font-bold">{fmtM3(Number(r.total_volume))} m³</div>
-        <div className="text-sm opacity-80">{r.qtd_toras} toras</div>
+        <div className="text-sm opacity-80">{r.qtd_toras} toras · volume físico</div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span><span>Diferença: <b>{totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</b></span></div>
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>

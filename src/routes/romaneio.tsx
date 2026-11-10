@@ -218,7 +218,7 @@ function RomaneioPage() {
               <div className="text-xs">Topo {t.d_topo1 ?? "–"}×{t.d_topo2 ?? "–"} · Pé {t.d_pe1 ?? "–"}×{t.d_pe2 ?? "–"} cm · {t.comprimento ?? "–"} m</div>
               <TextoMedidaComercial tora={t} />
             </div>
-            <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
+            <div className="text-right text-sm font-semibold">{fmtM3(Number(t.volume))}<div className="text-xs font-normal text-muted-foreground">físico</div></div>
             <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItens(itens.filter((x) => x.plaqueta !== t.plaqueta))}><X /></Button>
           </div>
         ))}
