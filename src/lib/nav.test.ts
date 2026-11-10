@@ -10,7 +10,8 @@ describe("seções da navegação", () => {
       "Madeira serrada",
       "Conferir saldo",
     ]);
-    expect(MANEJO.some((m) => m.to === "/saldo" || m.label.toLowerCase().includes("saldo"))).toBe(false);
+    expect(MANEJO.map((m) => m.label)).toEqual(["Base", "Toras de manejo", "Romaneio de toras"]);
+    expect(MANEJO.some((m) => m.label.toLowerCase().includes("saldo"))).toBe(false);
     expect(emManejo("/saldo")).toBe(false);
     expect(emSerraria("/saldo")).toBe(true);
     expect(emSerraria("/serraria")).toBe(true);
