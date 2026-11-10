@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Tora } from "@/lib/data";
 import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
-import { ORDENS, exportarExcel, exportarPdf, exportarSinaflor, type Ordem } from "@/lib/relatorio";
+import { ORDENS, exportarExcel, exportarPdf, exportarSinaflor, type Ordem, type MedidaRelatorio } from "@/lib/relatorio";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle } from "lucide-react";
 
-export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo }: { lista: Tora[]; selecionadas: number[]; ordem: Ordem; setOrdem: (o: Ordem) => void; titulo: string }) {
+export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, medida = "fisica" }: { lista: Tora[]; selecionadas: number[]; ordem: Ordem; setOrdem: (o: Ordem) => void; titulo: string; medida?: MedidaRelatorio }) {
   const [gerando, setGerando] = useState(false);
   const [aberto, setAberto] = useState(false);
   const [arquivo, setArquivo] = useState<(ArquivoGerado & { url: string }) | null>(null);
@@ -20,7 +20,7 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo }:
     if (gerando || !itens.length) return;
     setGerando(true); setArquivo(null); setAberto(true);
     try {
-      const resultado = await (formato === "pdf" ? exportarPdf(itens, titulo) : formato === "excel" ? exportarExcel(itens) : exportarSinaflor(itens));
+      const resultado = await (formato === "pdf" ? exportarPdf(itens, titulo, medida) : formato === "excel" ? exportarExcel(itens) : exportarSinaflor(itens));
       setArquivo({ ...resultado, url: URL.createObjectURL(resultado.blob) });
     } catch (error) {
       setAberto(false);

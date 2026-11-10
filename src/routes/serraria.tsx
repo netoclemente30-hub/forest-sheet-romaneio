@@ -153,7 +153,7 @@ function Serraria() {
         <label className="text-xs space-y-1">AUTEX<Input aria-label="Filtrar AUTEX" placeholder="Todas" value={autex} onChange={(e) => setAutex(e.target.value)} /></label>
       </div>
       <SeletorMedida valor={modo} onChange={setModo} />
-      <RelatorioToras lista={lista} selecionadas={sel} ordem={ordem} setOrdem={setOrdem} titulo={aba === "patio" ? "Pátio de toras da serraria" : "Toras serradas"} />
+      <RelatorioToras lista={lista} selecionadas={sel} ordem={ordem} setOrdem={setOrdem} titulo={aba === "patio" ? "Pátio de toras da serraria" : "Toras serradas"} medida={modo} />
       <div className="rounded-lg bg-forest text-primary-foreground px-4 py-3 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm opacity-80">{lista.length} toras {aba === "patio" ? "no pátio" : "serradas"} · {modo === "comercial" ? "comercial" : "físico"}</span>

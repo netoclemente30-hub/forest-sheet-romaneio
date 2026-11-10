@@ -1,8 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { ordenarToras, resumoPorAutex, resumoPorEspecie, exportarExcel, exportarPdf, exportarSinaflor } from "./relatorio";
+import { ordenarToras, resumoPorAutex, resumoPorEspecie, exportarExcel, exportarPdf, exportarSinaflor, dadosPdfToras } from "./relatorio";
 import type { Tora } from "./data";
 const t = (plaqueta: number, especie: string, volume: number) => ({ plaqueta, especie, volume }) as unknown as Tora;
 const lista = [t(5, "Ipê", 1), t(12, "Angelim", 3), t(8, "Cumaru", 2)];
+const medidaExemplo = { ...t(1, "Ipê", 1.685), arvore: 349, secao: "A", autex: "AUTEX-1", d_topo1: 52, d_topo2: 54, d_pe1: 56, d_pe2: 58, comprimento: 6.6 } as Tora;
+describe("medidas do PDF de toras", () => {
+  it("comercial exporta a ponta menor 52×54, comprimento 6,5 e volume 1,4340", () => {
+    const dados = dadosPdfToras([medidaExemplo], "comercial");
+    expect(dados.body[0]?.slice(4, 8)).toEqual(["52", "54", "6,5", "1,4340"]);
+    expect(medidaExemplo.comprimento).toBe(6.6);
+    expect(medidaExemplo.volume).toBe(1.685);
+  });
+  it.each([[6.9, "6,5"], [6.1, "6,0"]])("comercial arredonda %s para %s no relatório", (comprimento, esperado) => {
+    expect(dadosPdfToras([{ ...medidaExemplo, comprimento }], "comercial").body[0]?.[6]).toBe(esperado);
+  });
+  it("totais comercial, AUTEX e espécie somam somente volumes comerciais", () => {
+    const dados = dadosPdfToras([medidaExemplo, { ...medidaExemplo, plaqueta: 2 }], "comercial");
+    expect(dados.total).toBeCloseTo(2.868, 4);
+    expect(dados.foot[7]).toBe("2,8680");
+    expect(dados.porAutex[0]?.volume).toBeCloseTo(2.868, 4);
+    expect(dados.porEspecie[0]?.volume).toBeCloseTo(2.868, 4);
+  });
+  it("físico mantém quatro diâmetros, comprimento original e totais físicos", () => {
+    const dados = dadosPdfToras([medidaExemplo]);
+    expect(dados.body[0]?.slice(4, 10)).toEqual(["52", "54", "56", "58", "6.6", "1,6850"]);
+    expect(dados.total).toBe(1.685);
+    expect(dados.foot[9]).toBe("1,6850");
+    expect(dados.porAutex[0]?.volume).toBe(1.685);
+    expect(dados.porEspecie[0]?.volume).toBe(1.685);
+  });
+});
 const bytes = (blob: Blob) => new Promise<ArrayBuffer>((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(reader.result) : reject(new Error("Arquivo inválido"));
