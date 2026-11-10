@@ -183,8 +183,8 @@ function Detalhe() {
         {itens.map((t) => (
           <div key={t.plaqueta} className="flex items-center gap-3 p-3 text-sm">
             <div className="font-display text-lg font-bold w-14">{t.plaqueta}</div>
-            <div className="flex-1">{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div>
-            <div className="font-semibold">{fmtM3(Number(t.volume))}</div>
+            <div className="flex-1 min-w-0"><div>{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div><TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" /></div>
+            <div className="text-right font-semibold">{fmtM3(Number(t.volume))}<div className="text-xs font-normal text-muted-foreground">físico</div></div>
           </div>
         ))}
       </div>
