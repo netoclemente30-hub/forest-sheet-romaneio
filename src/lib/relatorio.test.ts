@@ -86,3 +86,27 @@ it2("resumo por espécie: agrupa qtd e volume com nome científico", () => {
     { especie: "Cupiúba", cientifico: "Goupia glabra", qtd: 2, volume: 3.5 },
   ]);
 });
+
+import { resumoWhatsappToras } from "./relatorio";
+describe("resumo de toras para o WhatsApp", () => {
+  it("traz título, contagem, total e espécies na medida física", () => {
+    const texto = resumoWhatsappToras(lista, "Pátio");
+    expect(texto).toContain("*RELATÓRIO DE TORAS — PÁTIO*");
+    expect(texto).toContain("MEDIDA FÍSICA");
+    expect(texto).toContain("3 toras · 6,0000 m³");
+    expect(texto).toContain("• Angelim: 1 tora · 3,0000 m³");
+    expect(texto).toContain("• Cumaru: 1 tora · 2,0000 m³");
+  });
+  it("usa o volume comercial e avisa toras sem medidas", () => {
+    const texto = resumoWhatsappToras([medidaExemplo, { ...medidaExemplo, plaqueta: 2 }, { ...medidaExemplo, plaqueta: 3, comprimento: null }], "Serraria", "comercial");
+    expect(texto).toContain("MEDIDA COMERCIAL");
+    expect(texto).toContain("3 toras · 2,8680 m³");
+    expect(texto).toContain("1 tora(s) sem medidas completas");
+  });
+  it("corta em 12 espécies e aponta as restantes", () => {
+    const muitas = Array.from({ length: 13 }, (_, i) => t(i + 1, `Espécie ${i + 1}`, 1));
+    const texto = resumoWhatsappToras(muitas, "Pátio");
+    expect(texto).toContain("… +1 outras espécies");
+    expect(texto.split("• ").length - 1).toBe(12);
+  });
+});
