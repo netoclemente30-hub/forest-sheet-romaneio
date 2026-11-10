@@ -176,6 +176,13 @@
       "when": 1794221359523,
       "tag": "0024_excluir_manejo",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794272992508,
+      "tag": "0025_registros_aparelho",
+      "breakpoints": true
     }
   ]
 }

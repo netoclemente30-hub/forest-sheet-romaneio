@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      aparelhos: {
+        Row: {
+          atualizado_em: string
+          empresa_id: string
+          modelo: string | null
+          nome: string
+          user_agent: string
+        }
+        Insert: {
+          atualizado_em?: string
+          empresa_id?: string
+          modelo?: string | null
+          nome: string
+          user_agent: string
+        }
+        Update: {
+          atualizado_em?: string
+          empresa_id?: string
+          modelo?: string | null
+          nome?: string
+          user_agent?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aparelhos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       arvores: {
         Row: {
           abatida_em: string | null
@@ -409,6 +441,9 @@ export type Database = {
       registros: {
         Row: {
           acao: string
+          aparelho_modelo: string | null
+          aparelho_nome: string | null
+          aparelho_ua: string | null
           criado_em: string
           detalhe: string | null
           empresa_id: string | null
@@ -426,6 +461,9 @@ export type Database = {
         }
         Insert: {
           acao: string
+          aparelho_modelo?: string | null
+          aparelho_nome?: string | null
+          aparelho_ua?: string | null
           criado_em?: string
           detalhe?: string | null
           empresa_id?: string | null
@@ -443,6 +481,9 @@ export type Database = {
         }
         Update: {
           acao?: string
+          aparelho_modelo?: string | null
+          aparelho_nome?: string | null
+          aparelho_ua?: string | null
           criado_em?: string
           detalhe?: string | null
           empresa_id?: string | null
