@@ -18,6 +18,7 @@ import { conferirSaldo, lerSaldo, novasTorasDoSaldo, type LinhaSaldo } from "@/l
 import { fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
 import { Printer, Upload, Ruler, Pencil, Trash2, ChevronLeft, ChevronRight, ScanSearch } from "lucide-react";
+import { SerrariaAbas } from "@/components/SerrariaAbas";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -150,6 +151,7 @@ function Saldo() {
 
   return (
     <div className="space-y-4">
+      <SerrariaAbas atual="saldo" />
       <h1 className="text-3xl font-bold uppercase">Conferir saldo</h1>
       <Button variant="outline" className="w-full h-12" onClick={() => setEncaixe(true)}><ScanSearch /> Encaixe de toras</Button>
       <Sheet open={encaixe} onOpenChange={setEncaixe}>

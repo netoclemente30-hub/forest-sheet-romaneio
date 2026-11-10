@@ -64,6 +64,7 @@ function Serraria() {
   const empresa = getEmpresaAtiva() ?? empresaId;
   const pendentes = useFilaOffline();
   const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
+  useEffect(() => { setSel([]); }, [aba]);
 
   const romPatio = useMemo(() => new Map((roms.data ?? []).filter((r) => r.recebido_em).map((r) => [r.id, r.patio ?? "Sem pátio"])), [roms.data]);
   const nomePatio = (t: (typeof estoque)[number]) => t.romaneio_id && romPatio.has(t.romaneio_id) ? romPatio.get(t.romaneio_id) : t.origem === "serraria" ? "Conferência de estoque" : null;
