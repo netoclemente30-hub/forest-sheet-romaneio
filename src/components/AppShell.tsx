@@ -1,5 +1,5 @@
-import { Link, Outlet } from "@tanstack/react-router";
-import { Home, Layers, Truck, History, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check } from "lucide-react";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
@@ -14,18 +14,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
-  { to: "/base", label: "Base", icon: TreePine },
-  { to: "/toras", label: "Toras de manejo", icon: Layers },
-  { to: "/romaneio", label: "Romaneio", icon: Truck },
-  { to: "/historico", label: "Histórico", icon: History },
+  { to: "/base", label: "Manejo", icon: TreePine },
   { to: "/serraria", label: "Serraria", icon: Factory },
+  { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ] as const;
+
+const MANEJO = [
+  { to: "/base", label: "Base" },
+  { to: "/toras", label: "Toras de manejo" },
+  { to: "/romaneio", label: "Romaneio de toras" },
+  { to: "/saldo", label: "Conferir saldo" },
+] as const;
+const MANEJO_PATHS = ["/base", "/toras", "/romaneio", "/historico", "/saldo", "/entrada", "/etiquetas", "/importar"];
+const emManejo = (p: string) => MANEJO_PATHS.some((m) => p === m || p.startsWith(`${m}/`));
 
 export function AppShell() {
   const installation = useInstallApp();
   const { session, loading, isAdmin, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const [empresaSel, setEmpresaSel] = useState<string>(() => getEmpresaAtiva() ?? "");
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const manejo = emManejo(pathname);
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
   if (loading) return <div className="min-h-screen bg-forest" />;
   if (!session) return <LoginScreen />;
@@ -83,6 +92,18 @@ export function AppShell() {
       </Dialog>
       <SyncStatus />
       <main className="mx-auto max-w-3xl p-4">
+        {manejo && (
+          <nav aria-label="Manejo" className="no-print mb-4 grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+            {MANEJO.map((m) => {
+              const ativo = pathname === m.to || pathname.startsWith(`${m.to}/`) || (m.to === "/romaneio" && pathname.startsWith("/historico"));
+              return (
+                <Link key={m.to} to={m.to} data-ativo={ativo} className="rounded-md px-1 py-2 text-center text-xs leading-tight text-muted-foreground data-[ativo=true]:bg-background data-[ativo=true]:font-semibold data-[ativo=true]:text-foreground data-[ativo=true]:shadow-sm">
+                  {m.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
         <Outlet />
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">
@@ -92,7 +113,8 @@ export function AppShell() {
               key={to}
               to={to}
               activeOptions={{ exact: to === "/" }}
-              className="flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2.5 text-center text-[11px] leading-tight text-muted-foreground data-[status=active]:text-primary data-[status=active]:font-semibold"
+              data-manejo={to === "/base" && manejo}
+              className="flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2.5 text-center text-[11px] leading-tight text-muted-foreground data-[status=active]:text-primary data-[status=active]:font-semibold data-[manejo=true]:text-primary data-[manejo=true]:font-semibold"
             >
               <Icon className="size-5" />
               {label}
