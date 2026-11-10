@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { linkMaps, capturarLog } from "@/lib/registro";
+import { modeloDoUserAgent } from "@/lib/aparelho";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { MapPin, Undo2, RefreshCw } from "lucide-react";
@@ -98,6 +99,9 @@ function Registros() {
                 </span>
               </div>
               <div className="text-muted-foreground">{r.detalhe}</div>
+              {(r.aparelho_nome || r.aparelho_modelo || r.aparelho_ua) && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground"><Smartphone className="size-3.5 shrink-0" /><span className="break-all">{[r.aparelho_nome, r.aparelho_modelo ?? (r.aparelho_ua ? modeloDoUserAgent(r.aparelho_ua) : null)].filter(Boolean).join(" · ")}</span></div>
+              )}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs break-all">{r.user_email ?? "usuário desconhecido"}</span>
                 {maps ? (
