@@ -152,10 +152,14 @@ function Serraria() {
         <label className="text-xs space-y-1">Data de lançamento<Input type="date" aria-label="Data de lançamento" value={dia} onChange={(e) => setDia(e.target.value)} /></label>
         <label className="text-xs space-y-1">AUTEX<Input aria-label="Filtrar AUTEX" placeholder="Todas" value={autex} onChange={(e) => setAutex(e.target.value)} /></label>
       </div>
+      <SeletorMedida valor={modo} onChange={setModo} />
       <RelatorioToras lista={lista} selecionadas={sel} ordem={ordem} setOrdem={setOrdem} titulo={aba === "patio" ? "Pátio de toras da serraria" : "Toras serradas"} />
-      <div className="flex items-center justify-between rounded-lg bg-forest text-primary-foreground px-4 py-3">
-        <span className="text-sm opacity-80">{lista.length} toras {aba === "patio" ? "no pátio" : "serradas"}</span>
-        <span className="font-display text-3xl font-bold">{fmtM3(vol)} m³</span>
+      <div className="rounded-lg bg-forest text-primary-foreground px-4 py-3 space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm opacity-80">{lista.length} toras {aba === "patio" ? "no pátio" : "serradas"} · {modo === "comercial" ? "comercial" : "físico"}</span>
+          <span className="font-display text-3xl font-bold">{fmtM3(vol)} m³</span>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2 text-xs opacity-90"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</span></div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas" checked={lista.length > 0 && lista.every((t) => sel.includes(t.plaqueta))} onCheckedChange={(v) => setSel((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar todas</label>

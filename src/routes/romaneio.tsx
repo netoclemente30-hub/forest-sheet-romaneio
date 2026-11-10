@@ -216,6 +216,7 @@ function RomaneioPage() {
               <div className="truncate">{t.especie}</div>
               <div className="text-xs text-muted-foreground">Árv. {t.arvore} · Sec. {t.secao ?? "–"}</div>
               <div className="text-xs">Topo {t.d_topo1 ?? "–"}×{t.d_topo2 ?? "–"} · Pé {t.d_pe1 ?? "–"}×{t.d_pe2 ?? "–"} cm · {t.comprimento ?? "–"} m</div>
+              <TextoMedidaComercial tora={t} />
             </div>
             <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
             <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItens(itens.filter((x) => x.plaqueta !== t.plaqueta))}><X /></Button>

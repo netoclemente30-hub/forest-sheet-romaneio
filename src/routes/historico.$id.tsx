@@ -76,8 +76,11 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   const y = (doc as any).lastAutoTable.finalY + 8;
   autoTable(doc, {
     startY: y,
-    head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]],
-    body: resumoPorEspecie(itens).map((e) => [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(e.volume)]),
+    head: [["Espécie", "Nome científico", "Qtd toras", "m³ comercial", "m³ físico"]],
+    body: resumoPorEspecie(itens).map((e) => {
+      const grupo = itens.filter((t) => (t.especie ?? "Não cadastrada") === e.especie);
+      return [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(totaisComerciais(grupo).comercial), fmtM3(e.volume)];
+    }),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [46, 84, 56] },
   });
