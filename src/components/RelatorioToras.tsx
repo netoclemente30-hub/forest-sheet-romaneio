@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Tora } from "@/lib/data";
-import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
-import { ORDENS, exportarExcel, exportarPdf, exportarSinaflor, type Ordem, type MedidaRelatorio } from "@/lib/relatorio";
+import { salvarArquivo, compartilharNoWhatsapp, type ArquivoGerado } from "@/lib/arquivo";
+import { ORDENS, exportarExcel, exportarPdf, exportarSinaflor, resumoWhatsappToras, type Ordem, type MedidaRelatorio } from "@/lib/relatorio";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle } from "lucide-react";
+import { Copy, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, MessageCircle } from "lucide-react";
 
 export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, medida = "fisica" }: { lista: Tora[]; selecionadas: number[]; ordem: Ordem; setOrdem: (o: Ordem) => void; titulo: string; medida?: MedidaRelatorio }) {
   const [gerando, setGerando] = useState(false);
