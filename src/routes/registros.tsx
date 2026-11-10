@@ -7,7 +7,7 @@ import { linkMaps, capturarLog } from "@/lib/registro";
 import { modeloDoUserAgent } from "@/lib/aparelho";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
-import { MapPin, Undo2, RefreshCw } from "lucide-react";
+import { MapPin, Undo2, RefreshCw, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
