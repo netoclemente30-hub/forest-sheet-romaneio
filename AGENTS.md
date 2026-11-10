@@ -51,4 +51,4 @@ use the editor.
 - Fitting availability subscribes to the persistent offline queue, excludes company-scoped pending insert identities including failed operations, and retains the last resolved company per authenticated user for offline remounts. Why: unsynchronized measurements must not be reused on the same device.
 - Fitted-log comparisons use company-scoped audit snapshots and offline inserts, excluding reversals. Why: retain original saldo/measurements, not later imports or reused labels.
 - Inventory mutations use registrar_operacao (stable offline IDs, atomic snapshot logs); triggers capture other stock writes. Reversal is an admin/company-checked RPC comparing current snapshots and appending a compensating event; legacy logs are non-reversible. Why: undo must never invent old data or overwrite newer work.
-- AppShell groups existing routes into nav sections with sub-tabs. Why: keep URLs/QR links.
+- AppShell groups routes into nav sections with sub-tabs. Why: keep URLs/QR links.
