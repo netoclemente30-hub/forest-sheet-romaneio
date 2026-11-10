@@ -58,6 +58,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
+  const [modo, setModo] = useState<ModoMedida>("fisica");
   const [edit, setEdit] = useState<Tora | null>(null);
   const lista = useMemo(() => {
     const t = torasDeManejo(toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));

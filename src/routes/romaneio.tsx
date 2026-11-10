@@ -79,6 +79,7 @@ function RomaneioPage() {
   );
 
   const total = itens.reduce((n, t) => n + Number(t.volume), 0);
+  const totais = totaisComerciais(itens);
   const resumo = resumoPorEspecie(itens);
 
   async function salvar() {

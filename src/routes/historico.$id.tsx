@@ -44,7 +44,8 @@ const dataBR = (d: string) => new Date(d + "T12:00").toLocaleDateString("pt-BR")
 async function montarPdf(r: Romaneio, itens: Tora[]) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: "landscape" });
+  const totais = totaisComerciais(itens);
   doc.setFontSize(16);
   doc.text("ROMANEIO DE CARGA", 14, 16);
   doc.setFontSize(10);

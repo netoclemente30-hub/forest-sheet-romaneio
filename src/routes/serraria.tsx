@@ -67,6 +67,7 @@ function Serraria() {
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
+  const [modo, setModo] = useState<ModoMedida>("fisica");
   const [lim, setLim] = useState(100);
   const { empresaId } = useAuth();
   const empresa = getEmpresaAtiva() ?? empresaId;
