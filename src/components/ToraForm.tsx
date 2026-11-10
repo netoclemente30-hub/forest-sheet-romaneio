@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Arvore, Tora } from "@/lib/data";
 import { volumeTora, fmtM3 } from "@/lib/volume";
+import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";

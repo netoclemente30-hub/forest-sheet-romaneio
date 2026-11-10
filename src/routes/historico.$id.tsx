@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Romaneio, Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
+import { TextoMedidaComercial } from "@/components/MedidaComercial";
+import { fmtComprimentoComercial, medidaComercial, totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { Button } from "@/components/ui/button";
 import { QrImage } from "@/components/QrImage";

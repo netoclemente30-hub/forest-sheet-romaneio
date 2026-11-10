@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
+import { TextoMedidaComercial } from "@/components/MedidaComercial";
+import { totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { empresaIdGravacao } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";

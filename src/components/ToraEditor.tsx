@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
+import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";

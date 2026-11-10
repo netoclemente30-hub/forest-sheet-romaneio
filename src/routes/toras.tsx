@@ -9,6 +9,8 @@ import { torasDeManejo } from "@/lib/tora-origem";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
+import { SeletorMedida, TextoMedidaComercial, type ModoMedida } from "@/components/MedidaComercial";
+import { totaisComerciais, volumeComercial } from "@/lib/medida-comercial";
 import { ToraForm } from "@/components/ToraForm";
 import { QrImage } from "@/components/QrImage";
 import { qrTora, selecionarToras } from "@/lib/tora-qr";

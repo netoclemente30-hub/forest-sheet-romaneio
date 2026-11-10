@@ -7,6 +7,8 @@ import { resolverQrSerragem } from "@/lib/qr-serragem";
 import { QrScanner } from "@/components/QrScanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fmtM3 } from "@/lib/volume";
+import { CartaoMedidaComercial, SeletorMedida, TextoMedidaComercial, type ModoMedida } from "@/components/MedidaComercial";
+import { totaisComerciais, volumeComercial } from "@/lib/medida-comercial";
 import { selecionarToras } from "@/lib/tora-qr";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
