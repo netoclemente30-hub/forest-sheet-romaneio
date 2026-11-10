@@ -19,7 +19,7 @@ describe("TXT NF-e", () => {
   });
   it("toras agrupadas por espécie e resumo com total", () => {
     const it = itensDeToras([{ especie: "Cedro", volume: 1 }, { especie: "Cedro", volume: 2 }]);
-    expect(it[0].pecas).toBe(3 - 1);
+    expect(it[0]?.pecas).toBe(2);
     expect(resumoWhatsapp("ROMANEIO DE TORAS", { numero: "1", data: "2026-11-10", itens: it })).toContain("*Total: 2 toras · 3,0000 m³*");
   });
 });

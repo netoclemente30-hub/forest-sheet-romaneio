@@ -66,7 +66,7 @@ export function resumoWhatsapp(titulo: string, d: DadosNfe): string {
     ...d.itens.map((i) => `• ${i.descricao}: ${i.pecas ? `${i.pecas} ${i.unidade === "M3" && titulo.includes("TORA") ? "toras" : "peças"} · ` : ""}${m3(i.quantidade)} m³`),
     "",
     `*Total: ${pecas ? `${pecas} ${titulo.includes("TORA") ? "toras" : "peças"} · ` : ""}${m3(total)} m³*`,
-  ].filter((x) => x !== undefined && x !== null && x !== false).join("\n");
+  ].filter((x): x is string => typeof x === "string").join("\n");
 }
 
 export function linkWhatsapp(texto: string): string {
