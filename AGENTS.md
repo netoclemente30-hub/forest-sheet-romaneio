@@ -31,7 +31,7 @@ use the editor.
 
 - Data is read client-side with react-query (`src/lib/data.ts`) after sign-in in `AppShell`; reads are scoped to the user's company (empresa_id). Why: field team app, SSR has no session.
 - Sawn timber uses company-scoped atomic RPCs, database-calculated totals and immutable dispatched packages; new packages queue with stable IDs/audit and project into stock offline, while dispatch requires sync/connectivity. Sawing selection suggests identity without copying log dimensions. Why: prevent duplicate replay/dispatch and preserve measured board quantities.
-- Report exporters return prepared blobs; the report dialog calls the shared file delivery helper on a fresh user click. Why: asynchronous generation can lose mobile browser download/share activation.
+- Report dialogs deliver blobs on a fresh click via `src/lib/arquivo.ts` (`salvarArquivo`, `compartilharNoWhatsapp`); WhatsApp text from `resumoWhatsappToras` follows the active measure. Why: keep mobile share activation.
 - Tora volume uses `volumeTora` in `src/lib/volume.ts` (Smalian, same as the original spreadsheet); never duplicate the formula.
 - AUTEX registry and Base management keep field sheets, offline GPS tracks and felling history linked through closure with stable IDs; QR payloads are versioned and resolve current stock before loading. Why: preserve field identity offline and after archival.
 - Inventory import uses shared header/number normalization and a lazy browser PDF.js positional adapter, with a preview before company-scoped writes; legacy BASE positions and optional calculations remain supported. Trees are unique by (numero, autex). Why: PDF page continuations and varied Excel layouts must share validation without changing stock conflict behavior.
@@ -51,4 +51,4 @@ use the editor.
 - Fitting availability subscribes to the persistent offline queue, excludes company-scoped pending insert identities including failed operations, and retains the last resolved company per authenticated user for offline remounts. Why: unsynchronized measurements must not be reused on the same device.
 - Fitted-log comparisons use company-scoped audit snapshots and offline inserts, excluding reversals. Why: retain original saldo/measurements, not later imports or reused labels.
 - Inventory mutations use registrar_operacao (stable offline IDs, atomic snapshot logs); triggers capture other stock writes. Reversal is an admin/company-checked RPC comparing current snapshots and appending a compensating event; legacy logs are non-reversible. Why: undo must never invent old data or overwrite newer work.
-- AppShell groups existing routes into nav sections with sub-tabs. Why: keep URLs/QR links.
+- AppShell groups routes into nav sections with sub-tabs. Why: keep URLs/QR links.

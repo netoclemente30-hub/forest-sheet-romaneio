@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Tora } from "@/lib/data";
-import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
-import { ORDENS, exportarExcel, exportarPdf, exportarSinaflor, type Ordem, type MedidaRelatorio } from "@/lib/relatorio";
+import { salvarArquivo, compartilharNoWhatsapp, type ArquivoGerado } from "@/lib/arquivo";
+import { ORDENS, exportarExcel, exportarPdf, exportarSinaflor, resumoWhatsappToras, type Ordem, type MedidaRelatorio } from "@/lib/relatorio";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle } from "lucide-react";
+import { Copy, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, MessageCircle } from "lucide-react";
 
 export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, medida = "fisica" }: { lista: Tora[]; selecionadas: number[]; ordem: Ordem; setOrdem: (o: Ordem) => void; titulo: string; medida?: MedidaRelatorio }) {
   const [gerando, setGerando] = useState(false);
@@ -27,6 +27,16 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, m
       toast.error(error instanceof Error ? error.message : "Não foi possível gerar o relatório. Tente novamente.");
     } finally { setGerando(false); }
   }
+  const resumo = () => resumoWhatsappToras(itens, titulo, medida);
+  async function compartilhar() {
+    if (!arquivo) return;
+    const modo = await compartilharNoWhatsapp(arquivo, resumo());
+    if (modo === "texto") toast.info("WhatsApp aberto com o resumo. Anexe o arquivo se quiser enviá-lo.");
+  }
+  async function copiarResumo() {
+    try { await navigator.clipboard.writeText(resumo()); toast.success("Resumo copiado"); }
+    catch { toast.error("Não foi possível copiar o resumo."); }
+  }
   return <>
     <div className="border-y py-3 space-y-2">
       <label className="text-xs space-y-1 block">Ordenar por
@@ -47,6 +57,8 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, m
         {gerando && <LoaderCircle className="mx-auto animate-spin" aria-label="Gerando arquivo" />}
         {arquivo && <div className="space-y-2">
           <Button className="w-full" onClick={() => { salvarArquivo(arquivo).catch(() => toast.error("Não foi possível salvar o arquivo. Tente novamente.")); }}><Download /> Salvar arquivo</Button>
+          <Button variant="secondary" className="w-full" onClick={() => void compartilhar()}><MessageCircle /> WhatsApp</Button>
+          <Button variant="outline" className="w-full" onClick={() => void copiarResumo()}><Copy /> Copiar resumo</Button>
           {arquivo.blob.type === "application/pdf" && <Button asChild variant="outline" className="w-full"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir PDF</a></Button>}
         </div>}
       </DialogContent>
