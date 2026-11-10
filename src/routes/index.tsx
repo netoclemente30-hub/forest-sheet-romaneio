@@ -3,7 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { torasQuery, arvoresQuery, romaneiosQuery, autexQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
-import { Truck, Plus, Upload } from "lucide-react";
+import { Truck, Plus, Upload, PackageCheck, Factory, Send } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getEmpresaAtiva } from "@/lib/empresa";
+import { cargasSerradasQuery } from "@/lib/madeira-serrada";
+import { hojeLocal, movimentoDoDia } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,6 +39,9 @@ function Index() {
   const autexLista = useQuery(autexQuery);
   const encerradasPainel = new Set((autexLista.data ?? []).filter((a) => a.encerrado).map((a) => a.numero));
   const roms = useQuery(romaneiosQuery);
+  const { empresaId } = useAuth();
+  const cargasSer = useQuery(cargasSerradasQuery(getEmpresaAtiva() ?? empresaId));
+  const dia = movimentoDoDia(hojeLocal(), roms.data ?? [], toras.data ?? [], cargasSer.data ?? []);
   const s = useMemo(() => {
     const t = toras.data ?? [];
     const carregadas = t.filter((x) => x.carregada);
@@ -53,6 +60,23 @@ function Index() {
           <div className="text-sm text-muted-foreground">Carregue a BASE e os Cálculos de Inventário do Excel</div>
         </Link>
       )}
+      <div>
+        <h2 className="text-sm font-bold uppercase text-muted-foreground mb-2">Hoje</h2>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { icon: PackageCheck, label: "Toras recebidas", v: String(dia.recebidas), sub: `${fmtM3(dia.volRecebido)} m³` },
+            { icon: Factory, label: "Volume serrado", v: fmtM3(dia.volSerrado), sub: `m³ · ${dia.serradas} toras` },
+            { icon: Send, label: "Cargas expedidas", v: String(dia.cargas), sub: `${fmtM3(dia.volCargas)} m³` },
+          ].map(({ icon: Icon, label, v, sub }) => (
+            <div key={label} className="bg-forest text-primary-foreground rounded-xl p-3 min-w-0">
+              <Icon className="size-5 text-accent" />
+              <div className="text-[11px] uppercase leading-tight opacity-80 mt-1">{label}</div>
+              <div className="font-display text-2xl font-bold truncate">{v}</div>
+              <div className="text-[11px] opacity-80 truncate">{sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Stat label="Árvores (BASE)" value={arvores.data ? String(arvores.data.filter((a) => !encerradasPainel.has(a.autex)).length) : "–"} />
         <Stat label="Toras medidas" value={String(s.total)} sub={`${fmtM3(s.vol)} m³`} />
