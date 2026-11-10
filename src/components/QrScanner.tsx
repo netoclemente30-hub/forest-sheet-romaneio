@@ -26,7 +26,7 @@ export function QrScanner({ onScan, onClose }: { onScan: (text: string) => void;
         },
         () => {},
       ).catch(() => { if (!cancel) fechar.current(); });
-    });
+    }).catch(() => { if (!cancel) fechar.current(); });
     return () => {
       cancel = true;
       Promise.resolve(iniciou).then(() => scanner?.stop()).then(() => scanner?.clear()).catch(() => {});

@@ -2,7 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { romaneiosQuery, torasQuery } from "@/lib/data";
+import { romaneiosQuery, torasQuery, type Tora } from "@/lib/data";
+import { resolverQrSerragem } from "@/lib/qr-serragem";
+import { QrScanner } from "@/components/QrScanner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fmtM3 } from "@/lib/volume";
 import { selecionarToras } from "@/lib/tora-qr";
 import { fila } from "@/lib/offline/fila";
@@ -18,7 +21,7 @@ import { estoqueComFila } from "@/lib/tora-origem";
 import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
-import { Warehouse, Factory } from "lucide-react";
+import { Warehouse, Factory, ScanLine, X } from "lucide-react";
 import { MadeiraSerrada } from "@/components/MadeiraSerrada";
 import { SerrariaAbas } from "@/components/SerrariaAbas";
 import { abaSerrariaDoBusca } from "@/lib/nav";
@@ -55,6 +58,9 @@ function Serraria() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [scan, setScan] = useState(false);
+  const [etiqueta, setEtiqueta] = useState("");
+  const [toraLida, setToraLida] = useState<number | null>(null);
   const [gruposPacote,setGruposPacote]=useState<SugestaoPacote[]>([]);
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
@@ -79,18 +85,34 @@ function Serraria() {
       .filter((t) => !s || String(t.plaqueta) === s || String(t.arvore) === s || [t.especie, t.nome_cientifico, t.autex].some((v) => v?.toLowerCase().includes(s))), ordem);
   }, [recebidas, aba, patio, q, romPatio, dia, autex, ordem]);
   const selecionadasVisiveis = lista.filter((t) => sel.includes(t.plaqueta));
+  const aberta = recebidas.find((t) => t.empresa_id === empresa && t.plaqueta === toraLida);
 
-  async function serrar(desfazer = false) {
-    if (!selecionadasVisiveis.length) return;
-    if (selecionadasVisiveis.some((t) => !toras.data?.some((x) => x.empresa_id === t.empresa_id && x.plaqueta === t.plaqueta))) { toast.error("Envie primeiro as medições pendentes antes de serrar estas toras"); return; }
-    if (!desfazer && !confirm(`Dar baixa de ${selecionadasVisiveis.length} toras como serradas?`)) return;
-    const log = await capturarLog(desfazer ? "Toras voltaram ao pátio" : "Toras serradas", `${selecionadasVisiveis.length} toras · plaquetas ${selecionadasVisiveis.map((t) => t.plaqueta).slice(0, 10).join(", ")}${selecionadasVisiveis.length > 10 ? "…" : ""}`);
+  function abrirEtiqueta(raw: string) {
+    try {
+      const t = resolverQrSerragem(raw, estoque, empresa);
+      if (!recebidas.some((r) => r.empresa_id === t.empresa_id && r.plaqueta === t.plaqueta)) {
+        toast.error("Esta tora ainda não está no pátio. Registre a entrada da carga primeiro.");
+        return;
+      }
+      setScan(false);
+      setToraLida(t.plaqueta);
+      setPatio(""); setDia(""); setAutex(""); setQ(String(t.plaqueta));
+      irParaAba(t.serrada_em ? "serradas" : "patio");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível ler a etiqueta"); }
+  }
+
+  async function serrar(desfazer = false, selecionadas: Tora[] = selecionadasVisiveis) {
+    if (!selecionadas.length) return;
+    if (selecionadas.some((t) => !toras.data?.some((x) => x.empresa_id === t.empresa_id && x.plaqueta === t.plaqueta))) { toast.error("Envie primeiro as medições pendentes antes de serrar estas toras"); return; }
+    if (!desfazer && !confirm(`Dar baixa de ${selecionadas.length} toras como serradas?`)) return;
+    const log = await capturarLog(desfazer ? "Toras voltaram ao pátio" : "Toras serradas", `${selecionadas.length} toras · plaquetas ${selecionadas.map((t) => t.plaqueta).slice(0, 10).join(", ")}${selecionadas.length > 10 ? "…" : ""}`);
     const porEmpresa = new Map<string, number[]>();
-    for (const t of lista.filter((t) => sel.includes(t.plaqueta))) porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
+    for (const t of selecionadas) porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
     if (!estaOnline()) {
       setBusy(true);
       for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log });
       setBusy(false);
+      setToraLida(null);
       if(!desfazer)irParaAba('serradas');else setSel([]);
       toast.success("Baixa salva offline — será enviada quando conectar");
       return;
@@ -99,7 +121,8 @@ function Serraria() {
     try { for (const [empresa, plaquetas] of porEmpresa) await registrarOperacao("toras_serradas", empresa, { desfazer }, plaquetas, log, crypto.randomUUID()); }
     catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível serrar"); return; }
     setBusy(false);
-    toast.success(desfazer ? `${selecionadasVisiveis.length} toras voltaram ao pátio` : `${selecionadasVisiveis.length} toras serradas`);
+    setToraLida(null);
+    toast.success(desfazer ? `${selecionadas.length} toras voltaram ao pátio` : `${selecionadas.length} toras serradas`);
     if(!desfazer)irParaAba('serradas');else setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }
@@ -115,6 +138,7 @@ function Serraria() {
       </div>
       <SerrariaAbas atual={aba} />
       {aba === "madeira" ? <MadeiraSerrada empresa={empresa} /> : aba === "encaixadas" ? <TorasEncaixadas empresa={empresa} toras={estoque} itens={pendentes.itens} /> : <>
+      <Button variant="secondary" onClick={() => setScan(true)} disabled={!empresa || toras.isLoading || roms.isLoading}><ScanLine /> Ler etiqueta</Button>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant={!patio ? "default" : "outline"} onClick={() => setPatio("")}>Todos os pátios</Button>
         {patios.map((p) => <Button key={p} size="sm" variant={patio === p ? "default" : "outline"} onClick={() => setPatio(p)}>{p}</Button>)}
@@ -153,6 +177,37 @@ function Serraria() {
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 100)}>Mostrar mais</Button>}
       </>}
+      <Dialog open={scan} onOpenChange={setScan}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Ler etiqueta da tora</DialogTitle><DialogDescription>QR Code da etiqueta</DialogDescription></DialogHeader>
+          {scan && <QrScanner onScan={abrirEtiqueta} onClose={() => toast.error("Câmera indisponível. Permita o acesso à câmera ou informe a plaqueta abaixo.")} />}
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); abrirEtiqueta(etiqueta); }}>
+            <Input aria-label="Plaqueta ou conteúdo da etiqueta" placeholder="Plaqueta ou conteúdo do QR" value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} />
+            <Button type="submit" disabled={!etiqueta.trim()}>Abrir</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!aberta} onOpenChange={(v) => { if (!v) setToraLida(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Tora {aberta?.arvore} · {aberta?.secao ?? "—"}</DialogTitle><DialogDescription>Plaqueta {aberta?.plaqueta} · {aberta?.serrada_em ? "Já serrada" : "No pátio"}</DialogDescription></DialogHeader>
+          {aberta && <>
+            <div className="space-y-2">
+              <p className="text-xl font-semibold break-words">{aberta.especie}</p>
+              <p className="text-sm text-muted-foreground italic">{aberta.nome_cientifico}</p>
+              <p className="text-sm break-words">AUTEX {aberta.autex ?? "—"}</p>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div><dt className="text-muted-foreground">Diâmetros topo</dt><dd>{aberta.d_topo1 ?? "—"} × {aberta.d_topo2 ?? "—"} cm</dd></div>
+                <div><dt className="text-muted-foreground">Diâmetros pé</dt><dd>{aberta.d_pe1 ?? "—"} × {aberta.d_pe2 ?? "—"} cm</dd></div>
+                <div><dt className="text-muted-foreground">Comprimento</dt><dd>{aberta.comprimento ?? "—"} m</dd></div>
+                <div><dt className="text-muted-foreground">Volume</dt><dd className="font-semibold">{fmtM3(Number(aberta.volume))} m³</dd></div>
+              </dl>
+            </div>
+            {!aberta.serrada_em && <Button disabled={busy} onClick={() => serrar(false, [aberta])}><Factory /> Serrar esta tora</Button>}
+            <Button variant="outline" onClick={() => { setToraLida(null); setEtiqueta(""); setScan(true); }}><ScanLine /> Ler outra etiqueta</Button>
+            <Button variant="ghost" onClick={() => setToraLida(null)}><X /> Fechar</Button>
+          </>}
+        </DialogContent>
+      </Dialog>
       {empresa&&gruposPacote.length>0&&<PacoteDeToras key={JSON.stringify(gruposPacote)} empresa={empresa} grupos={gruposPacote} onFechar={()=>setGruposPacote([])} onSalvo={()=>{setGruposPacote([]);setSel([]);irParaAba('madeira');}}/>}
     </div>
   );
