@@ -15,6 +15,7 @@ import { Route as EntradaRouteImport } from './routes/entrada'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
 import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as RegistrosRouteImport } from './routes/registros'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as RomaneioRouteImport } from './routes/romaneio'
 import { Route as SaldoRouteImport } from './routes/saldo'
 import { Route as SerrariaRouteImport } from './routes/serraria'
@@ -53,6 +54,11 @@ const ImportarRoute = ImportarRouteImport.update({
 const RegistrosRoute = RegistrosRouteImport.update({
   id: '/registros',
   path: '/registros',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RomaneioRoute = RomaneioRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
+  '/relatorios': typeof RelatoriosRoute
   '/romaneio': typeof RomaneioRoute
   '/saldo': typeof SaldoRoute
   '/serraria': typeof SerrariaRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
+  '/relatorios': typeof RelatoriosRoute
   '/romaneio': typeof RomaneioRoute
   '/saldo': typeof SaldoRoute
   '/serraria': typeof SerrariaRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
+  '/relatorios': typeof RelatoriosRoute
   '/romaneio': typeof RomaneioRoute
   '/saldo': typeof SaldoRoute
   '/serraria': typeof SerrariaRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/etiquetas'
     | '/importar'
     | '/registros'
+    | '/relatorios'
     | '/romaneio'
     | '/saldo'
     | '/serraria'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/etiquetas'
     | '/importar'
     | '/registros'
+    | '/relatorios'
     | '/romaneio'
     | '/saldo'
     | '/serraria'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/etiquetas'
     | '/importar'
     | '/registros'
+    | '/relatorios'
     | '/romaneio'
     | '/saldo'
     | '/serraria'
@@ -212,6 +224,7 @@ export interface RootRouteChildren {
   EtiquetasRoute: typeof EtiquetasRoute
   ImportarRoute: typeof ImportarRoute
   RegistrosRoute: typeof RegistrosRoute
+  RelatoriosRoute: typeof RelatoriosRoute
   RomaneioRoute: typeof RomaneioRoute
   SaldoRoute: typeof SaldoRoute
   SerrariaRoute: typeof SerrariaRoute
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/registros'
       fullPath: '/registros'
       preLoaderRoute: typeof RegistrosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/romaneio': {
@@ -350,6 +370,7 @@ const rootRouteChildren: RootRouteChildren = {
   EtiquetasRoute: EtiquetasRoute,
   ImportarRoute: ImportarRoute,
   RegistrosRoute: RegistrosRoute,
+  RelatoriosRoute: RelatoriosRoute,
   RomaneioRoute: RomaneioRoute,
   SaldoRoute: SaldoRoute,
   SerrariaRoute: SerrariaRoute,

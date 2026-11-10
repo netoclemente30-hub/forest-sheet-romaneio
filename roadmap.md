@@ -42,3 +42,4 @@
 - [x] Excluir toras já romaneadas (aba Toras)
 - [x] Editar e excluir toras na aba Toras (painel com dados e medidas, volume calculado, confirmação antes de excluir, offline enfileira). Conferência de saldo usa o mesmo painel.
 - [x] Listas de toras mais legíveis no celular: nome popular em destaque no topo, plaqueta/árvore/secção/AUTEX/volume embaixo, botões menores à direita. Verificado em 384 px sem corte.
+- [x] Navegação em Início/Manejo/Serraria/Relatórios e aba Relatórios (rendimento, romaneios, estoque) em PDF/Excel.
