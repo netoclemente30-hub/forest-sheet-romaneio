@@ -59,7 +59,7 @@ export function tabelaRendimento(toras: Tora[], pacotes: PacoteSerrado[], p: Per
   }];
 }
 
-export function tabelaRomaneios(roms: Romaneio[], cargas: CargaSerrada["pacotes"] extends unknown ? Omit<CargaSerrada, "pacotes">[] : never, p: Periodo): Tabela[] {
+export function tabelaRomaneios(roms: Romaneio[], cargas: Omit<CargaSerrada, "pacotes">[], p: Periodo): Tabela[] {
   const rt = roms.filter((r) => noPeriodo(dia(r.data), p));
   const rc = cargas.filter((c) => noPeriodo(dia(c.data), p));
   return [
