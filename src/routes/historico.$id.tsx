@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { QrImage } from "@/components/QrImage";
 import { qrRomaneio } from "@/lib/tora-qr";
 import { FileDown, Trash2, Share2 } from "lucide-react";
+import { NfeWhatsapp } from "@/components/NfeWhatsapp";
+import { itensDeToras } from "@/lib/nfe-txt";
 
 // Ordem alfabética por espécie, depois árvore e secção (A antes de B).
 export function ordenarRomaneio(itens: Tora[]): Tora[] {
@@ -146,9 +148,10 @@ function Detalhe() {
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
-        <Button variant="secondary" className="flex-1 h-12" onClick={() => compartilharPdf(r, itens)}><Share2 /> WhatsApp</Button>
+        <Button variant="secondary" className="flex-1 h-12" onClick={() => compartilharPdf(r, itens)}><Share2 /> Enviar PDF</Button>
         <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>
       </div>
+      <NfeWhatsapp titulo="ROMANEIO DE TORAS" nomeArquivo={`nfe-romaneio-${(r.placa || "sem-placa").replace(/\W/g, "")}-${r.data}`} dados={{ numero: `${r.placa || "SEM-PLACA"}-${r.data.replace(/-/g, "")}`, data: r.data, natureza: "REMESSA DE MADEIRA EM TORA", motorista: r.motorista ? { nome: r.motorista, cpf: r.cpf ?? "" } : null, placa: r.placa, reboque: r.julieta, itens: itensDeToras(itens) }} />
       <div className="bg-card border rounded-xl p-3 flex items-center gap-4">
         <QrImage value={qrRomaneio(r, itens.map((t) => t.plaqueta))} size={140} />
         <div className="text-sm">
