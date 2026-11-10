@@ -11,6 +11,7 @@ import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { MANEJO, emManejo, emSerraria } from "@/lib/nav";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
@@ -19,15 +20,6 @@ const nav = [
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ] as const;
 
-const MANEJO = [
-  { to: "/base", label: "Base" },
-  { to: "/toras", label: "Toras de manejo" },
-  { to: "/romaneio", label: "Romaneio de toras" },
-  { to: "/saldo", label: "Conferir saldo" },
-] as const;
-const MANEJO_PATHS = ["/base", "/toras", "/romaneio", "/historico", "/saldo", "/entrada", "/etiquetas", "/importar"];
-const emManejo = (p: string) => MANEJO_PATHS.some((m) => p === m || p.startsWith(`${m}/`));
-
 export function AppShell() {
   const installation = useInstallApp();
   const { session, loading, isAdmin, isSuperAdmin } = useAuth();
@@ -35,6 +27,7 @@ export function AppShell() {
   const [empresaSel, setEmpresaSel] = useState<string>(() => getEmpresaAtiva() ?? "");
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const manejo = emManejo(pathname);
+  const serraria = emSerraria(pathname);
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
   if (loading) return <div className="min-h-screen bg-forest" />;
   if (!session) return <LoginScreen />;
@@ -93,7 +86,7 @@ export function AppShell() {
       <SyncStatus />
       <main className="mx-auto max-w-3xl p-4">
         {manejo && (
-          <nav aria-label="Manejo" className="no-print mb-4 grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+          <nav aria-label="Manejo" className="no-print mb-4 grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
             {MANEJO.map((m) => {
               const ativo = pathname === m.to || pathname.startsWith(`${m.to}/`) || (m.to === "/romaneio" && pathname.startsWith("/historico"));
               return (
@@ -114,7 +107,8 @@ export function AppShell() {
               to={to}
               activeOptions={{ exact: to === "/" }}
               data-manejo={to === "/base" && manejo}
-              className="flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2.5 text-center text-[11px] leading-tight text-muted-foreground data-[status=active]:text-primary data-[status=active]:font-semibold data-[manejo=true]:text-primary data-[manejo=true]:font-semibold"
+              data-serraria={to === "/serraria" && serraria}
+              className="flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2.5 text-center text-[11px] leading-tight text-muted-foreground data-[status=active]:text-primary data-[status=active]:font-semibold data-[manejo=true]:text-primary data-[manejo=true]:font-semibold data-[serraria=true]:text-primary data-[serraria=true]:font-semibold"
             >
               <Icon className="size-5" />
               {label}
