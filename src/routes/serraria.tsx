@@ -177,8 +177,9 @@ function Serraria() {
             <div className="flex-1 min-w-0">
               <div className="font-semibold leading-snug">{t.especie}</div>
               <div className="text-xs text-muted-foreground">Árv. {t.arvore} · Sec. {t.secao ?? "–"} · AUTEX {t.autex ?? "—"} · {nomePatio(t)}{t.serrada_em && ` · serrada ${new Date(t.serrada_em).toLocaleDateString("pt-BR")}`}</div>
+              {modo === "comercial" && <TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" />}
             </div>
-            <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
+            <div className="text-right text-sm font-semibold">{fmtM3(modo === "comercial" ? volumeComercial(t) : Number(t.volume))}{modo === "comercial" && <div className="text-xs font-normal text-muted-foreground">físico {fmtM3(Number(t.volume))}</div>}</div>
           </label>
         ))}
         {!lista.length && <div className="p-4 text-sm text-muted-foreground">{aba === "patio" ? "Nenhuma tora no pátio." : "Nenhuma tora serrada ainda."}</div>}

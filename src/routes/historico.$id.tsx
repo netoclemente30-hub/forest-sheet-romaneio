@@ -144,6 +144,7 @@ function Detalhe() {
   if (!q.data) return <p>Romaneio não encontrado.</p>;
   const { r, itens: itensBrutos } = q.data;
   const itens = ordenarRomaneio(itensBrutos);
+  const totais = totaisComerciais(itens);
 
   return (
     <div className="space-y-4">

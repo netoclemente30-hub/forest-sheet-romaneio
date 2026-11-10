@@ -131,7 +131,8 @@ export function TorasList({ nova }: { nova?: boolean }) {
             <div className="min-w-0 flex-1">
               <div className="font-semibold leading-snug">{t.especie ?? "Sem espécie"}</div>
               <div className="text-xs text-muted-foreground">Plaqueta {t.plaqueta} · Árv. {t.arvore} · Sec. {t.secao ?? "–"} · {t.comprimento ?? "–"} m</div>
-              <div className="text-xs text-muted-foreground">AUTEX {t.autex ?? "—"} · <span className="font-semibold text-foreground">{fmtM3(Number(t.volume))} m³</span>{t.carregada && <span className="font-semibold text-success"> · carregada</span>}</div>
+              <div className="text-xs text-muted-foreground">AUTEX {t.autex ?? "—"} · <span className="font-semibold text-foreground">{fmtM3(modo === "comercial" ? volumeComercial(t) : Number(t.volume))} m³</span>{modo === "comercial" && <span> · físico {fmtM3(Number(t.volume))} m³</span>}{t.carregada && <span className="font-semibold text-success"> · carregada</span>}</div>
+              {modo === "comercial" && <TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" />}
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode className="h-4 w-4" /></Button>
