@@ -85,7 +85,7 @@ function Registros() {
     <div className="space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-3xl font-bold uppercase">Registros</h1><Button size="icon" variant="outline" aria-label="Atualizar registros" onClick={() => regs.refetch()}><RefreshCw /></Button></div>
       <Select value={usuario} onValueChange={(v) => { setUsuario(v); setLimite(50); }}><SelectTrigger className="w-full h-11" aria-label="Filtrar por usuário"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todos os usuários</SelectItem>{usuarios.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select>
-      <Input aria-label="Buscar registros" placeholder="Buscar nº, e-mail, ação ou detalhe" value={q} onChange={(e) => { setQ(e.target.value); setLimite(50); }} className="h-11" />
+      <Input aria-label="Buscar registros" placeholder="Buscar nº, e-mail, aparelho, ação ou detalhe" value={q} onChange={(e) => { setQ(e.target.value); setLimite(50); }} className="h-11" />
       <p className="text-sm text-muted-foreground">{lista.length} registros</p>
       <div className="bg-card border rounded-xl divide-y">
         {lista.slice(0, limite).map((r) => {
