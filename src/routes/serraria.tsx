@@ -130,7 +130,8 @@ function Serraria() {
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }
 
-  const vol = lista.reduce((n, t) => n + Number(t.volume), 0);
+  const totais = totaisComerciais(lista);
+  const vol = modo === "comercial" ? totais.comercial : totais.fisico;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">

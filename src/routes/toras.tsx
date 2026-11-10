@@ -71,6 +71,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
   const romaneadasSel = (toras.data ?? []).filter((t) => t.carregada && selecionadas.includes(t.plaqueta)).map((t) => t.plaqueta);
+  const totais = totaisComerciais(lista);
 
   async function excluirRomaneadas() {
     if (!romaneadasSel.length || !confirm(`Excluir ${romaneadasSel.length} toras já romaneadas? Isso não pode ser desfeito.`)) return;

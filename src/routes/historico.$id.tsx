@@ -58,14 +58,16 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   doc.text("QR da carga: entrada no pátio", 160, 45);
   autoTable(doc, {
     startY: 48,
-    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "D1 (m)", "D2 (m)", "C (m)", "m³"]],
-    body: itens.map((t) => [
-      t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
-      (((Number(t.d_topo1) + Number(t.d_topo2)) / 2) / 100).toFixed(3),
-      (((Number(t.d_pe1) + Number(t.d_pe2)) / 2) / 100).toFixed(3),
-      t.comprimento, fmtM3(Number(t.volume)),
-    ]),
-    foot: [["", "", "TOTAL", "", "", "", `${itens.length} toras`, fmtM3(Number(r.total_volume))]],
+    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "Ø comercial (cm)", "C com. (m)", "m³ comercial", "m³ físico", "Diferença"]],
+    body: itens.map((t) => {
+      const c = medidaComercial(t);
+      return [
+        t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
+        c ? `${c.d1}×${c.d2}` : "—", c ? fmtComprimentoComercial(c.comprimento) : "—",
+        c ? fmtM3(c.volume) : "—", fmtM3(Number(t.volume)), c ? fmtM3(c.volume - Number(t.volume)) : "—",
+      ];
+    }),
+    foot: [["", "", "TOTAL", "", "", `${itens.length} toras`, fmtM3(totais.comercial), fmtM3(totais.fisico), fmtM3(totais.diferenca)]],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },

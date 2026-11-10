@@ -184,9 +184,15 @@ function RomaneioPage() {
           <Button type="button" variant="secondary" className="h-12" aria-label="Ler QR code" onClick={() => setScan(!scan)}><Camera /></Button>
         </form>
         {scan && <QrScanner onScan={adicionar} onClose={() => { setScan(false); toast.error("Não foi possível abrir a câmera"); }} />}
-        <div className="flex items-center justify-between rounded-lg bg-forest text-primary-foreground px-4 py-3">
-          <span className="text-sm opacity-80">{itens.length} toras</span>
-          <span className="font-display text-3xl font-bold">{fmtM3(total)} m³</span>
+        <div className="rounded-lg bg-forest text-primary-foreground px-4 py-3 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm opacity-80">{itens.length} toras · volume físico</span>
+            <span className="font-display text-3xl font-bold">{fmtM3(total)} m³</span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2 text-sm">
+            <span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span>
+            <span>Diferença: <b>{totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</b></span>
+          </div>
         </div>
       </div>
 
