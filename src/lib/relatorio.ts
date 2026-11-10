@@ -1,6 +1,9 @@
 import type { Tora } from "./data";
 import { fmtM3 } from "./volume";
 import type { ArquivoGerado } from "./arquivo";
+import { medidaComercial, fmtComprimentoComercial } from "./medida-comercial";
+
+export type MedidaRelatorio = "fisica" | "comercial";
 
 export type Ordem = "autex" | "plaqueta_desc" | "plaqueta_asc" | "volume_desc" | "especie_asc" | "especie_desc";
 export const ORDENS: { v: Ordem; label: string }[] = [
@@ -44,29 +47,51 @@ export async function exportarExcel(toras: Tora[]): Promise<ArquivoGerado> {
   return { blob: new Blob([XLSX.write(wb, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nome: `${nome()}.xlsx` };
 }
 
-export async function exportarPdf(toras: Tora[], titulo: string): Promise<ArquivoGerado> {
+export function dadosPdfToras(toras: Tora[], medida: MedidaRelatorio = "fisica") {
+  const comercial = medida === "comercial";
+  const medidas = toras.map((t) => medidaComercial(t));
+  const volumes = toras.map((t, i) => comercial ? medidas[i]?.volume ?? 0 : Number(t.volume));
+  const total = volumes.reduce((soma, volume) => soma + volume, 0);
+  const cols = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12];
+  const head = comercial
+    ? ["Plaqueta", "Árvore", "Seção", "Espécie", "D1 comercial (cm)", "D2 comercial (cm)", "Comprimento comercial (m)", "Volume comercial (m³)", "AUTEX", "Situação"]
+    : cols.map((i) => HEAD[i] ?? "");
+  const body = toras.map((t, i) => {
+    const m = medidas[i];
+    if (comercial) return [t.plaqueta, t.arvore, t.secao ?? "", t.especie ?? "", m?.d1 ?? "—", m?.d2 ?? "—", m ? fmtComprimentoComercial(m.comprimento) : "—", m ? fmtM3(m.volume) : "—", t.autex ?? "", t.carregada ? "Carregada" : "No pátio"].map(String);
+    const l = linha(t); l[10] = fmtM3(Number(t.volume));
+    return cols.map((j) => String(l[j] ?? ""));
+  });
+  const foot = head.map(() => "");
+  foot[0] = "TOTAL"; foot[1] = `${toras.length} toras`; foot[comercial ? 7 : 9] = fmtM3(total);
+  const itens = toras.map((t, i) => ({ ...t, volume: volumes[i] ?? 0 }));
+  return { head, body, foot, total, porAutex: resumoPorAutex(itens), porEspecie: resumoPorEspecie(itens), semMedidas: comercial ? medidas.filter((m) => !m).length : 0 };
+}
+
+export async function exportarPdf(toras: Tora[], titulo: string, medida: MedidaRelatorio = "fisica"): Promise<ArquivoGerado> {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape", compress: true });
-  const total = toras.reduce((n, t) => n + Number(t.volume), 0);
+  const dados = dadosPdfToras(toras, medida);
+  const comercial = medida === "comercial";
   doc.setFontSize(15);
   doc.text(`RELATÓRIO DE TORAS — ${titulo.toUpperCase()}`, 14, 14);
   doc.setFontSize(9);
-  doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")} · ${toras.length} toras · ${fmtM3(total)} m³`, 14, 20);
-  const cols = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12];
+  doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")} · ${toras.length} toras · ${fmtM3(dados.total)} m³${comercial ? " · MEDIDA COMERCIAL" : ""}`, 14, 20);
+  if (dados.semMedidas) doc.text(`${dados.semMedidas} tora(s) sem medidas completas: volume comercial não incluído nos totais.`, 14, 25);
   autoTable(doc, {
-    startY: 25,
-    head: [cols.map((i) => HEAD[i] ?? "")],
-    body: toras.map((t) => { const l = linha(t); l[10] = fmtM3(Number(t.volume)); return cols.map((i) => String(l[i] ?? "")); }),
-    foot: [["TOTAL", `${toras.length} toras`, "", "", "", "", "", "", "", fmtM3(total), "", ""]],
+    startY: dados.semMedidas ? 30 : 25,
+    head: [dados.head],
+    body: dados.body,
+    foot: [dados.foot],
     styles: { fontSize: 7.5 },
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", "Volume m³"]], body: resumoPorAutex(toras).map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
-  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]], body: resumoPorEspecie(toras).map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
-  return { blob: doc.output("blob"), nome: `${nome()}.pdf` };
+  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", comercial ? "Volume comercial m³" : "Volume m³"]], body: dados.porAutex.map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
+  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", comercial ? "Volume comercial m³" : "Volume m³"]], body: dados.porEspecie.map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
+  return { blob: doc.output("blob"), nome: `${nome()}${comercial ? "_comercial" : ""}.pdf` };
 }
 
 export function resumoPorAutex(toras: Tora[]) {

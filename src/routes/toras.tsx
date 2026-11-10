@@ -113,7 +113,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
         ))}
       </div>
       <SeletorMedida valor={modo} onChange={setModo} />
-      <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" />
+      <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" medida={modo} />
       <div className="rounded-lg bg-secondary p-3 space-y-1 text-sm">
         <div className="flex justify-between gap-2"><span>{lista.length} toras · {modo === "comercial" ? "comercial" : "físico"}</span><b>{fmtM3(modo === "comercial" ? totais.comercial : totais.fisico)} m³</b></div>
         <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</span></div>
