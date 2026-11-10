@@ -27,6 +27,16 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, m
       toast.error(error instanceof Error ? error.message : "Não foi possível gerar o relatório. Tente novamente.");
     } finally { setGerando(false); }
   }
+  const resumo = () => resumoWhatsappToras(itens, titulo, medida);
+  async function compartilhar() {
+    if (!arquivo) return;
+    const modo = await compartilharNoWhatsapp(arquivo, resumo());
+    if (modo === "texto") toast.info("WhatsApp aberto com o resumo. Anexe o arquivo se quiser enviá-lo.");
+  }
+  async function copiarResumo() {
+    try { await navigator.clipboard.writeText(resumo()); toast.success("Resumo copiado"); }
+    catch { toast.error("Não foi possível copiar o resumo."); }
+  }
   return <>
     <div className="border-y py-3 space-y-2">
       <label className="text-xs space-y-1 block">Ordenar por
@@ -47,6 +57,8 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, m
         {gerando && <LoaderCircle className="mx-auto animate-spin" aria-label="Gerando arquivo" />}
         {arquivo && <div className="space-y-2">
           <Button className="w-full" onClick={() => { salvarArquivo(arquivo).catch(() => toast.error("Não foi possível salvar o arquivo. Tente novamente.")); }}><Download /> Salvar arquivo</Button>
+          <Button variant="secondary" className="w-full" onClick={() => void compartilhar()}><MessageCircle /> WhatsApp</Button>
+          <Button variant="outline" className="w-full" onClick={() => void copiarResumo()}><Copy /> Copiar resumo</Button>
           {arquivo.blob.type === "application/pdf" && <Button asChild variant="outline" className="w-full"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir PDF</a></Button>}
         </div>}
       </DialogContent>
