@@ -106,13 +106,13 @@ export function resumoWhatsappToras(toras: Tora[], titulo: string, medida: Medid
     `Emitido em ${new Date().toLocaleString("pt-BR")} · ${comercial ? "MEDIDA COMERCIAL" : "MEDIDA FÍSICA"}`,
     `${torasPalavra(toras.length)} · ${fmtM3(dados.total)} m³`,
   ];
-  const especies = dados.porEspecie.map((e) => `• ${e.especie}${e.cientifico ? ` (${e.cientifico})` : ""}: ${e.qtd} ${torasPalavra(e.qtd)} · ${fmtM3(e.volume)} m³`);
+  const especies = dados.porEspecie.map((e) => `• ${e.especie}${e.cientifico ? ` (${e.cientifico})` : ""}: ${torasPalavra(e.qtd)} · ${fmtM3(e.volume)} m³`);
   if (especies.length) {
     linhas.push("", "Por espécie:");
     linhas.push(...especies.slice(0, LIMITE_LINHAS));
     if (especies.length > LIMITE_LINHAS) linhas.push(`… +${especies.length - LIMITE_LINHAS} outras espécies`);
   }
-  const autex = dados.porAutex.map((a) => `• ${a.autex}: ${a.qtd} ${torasPalavra(a.qtd)} · ${fmtM3(a.volume)} m³`);
+  const autex = dados.porAutex.map((a) => `• ${a.autex}: ${torasPalavra(a.qtd)} · ${fmtM3(a.volume)} m³`);
   if (autex.length > 1) {
     linhas.push("", "Por AUTEX:");
     linhas.push(...autex.slice(0, LIMITE_LINHAS));

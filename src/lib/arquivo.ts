@@ -26,3 +26,20 @@ export async function salvarArquivo(arquivo: ArquivoGerado) {
   }
   baixarArquivo(arquivo);
 }
+
+// Compartilha o arquivo no WhatsApp pela lista de apps do aparelho.
+// Sem suporte a anexos, abre o WhatsApp com o resumo em texto.
+// Chamar direto no clique, para não perder a ativação do navegador.
+export async function compartilharNoWhatsapp(arquivo: ArquivoGerado, texto: string): Promise<"arquivo" | "texto" | null> {
+  const file = new File([arquivo.blob], arquivo.nome, { type: arquivo.blob.type });
+  const pode = (dados: ShareData) => typeof navigator !== "undefined" && !!navigator.canShare?.(dados);
+  if (pode({ files: [file], text: texto })) {
+    try { await navigator.share({ files: [file], text: texto, title: arquivo.nome }); return "arquivo"; }
+    catch (error) { if (error instanceof DOMException && error.name === "AbortError") return null; }
+  } else if (pode({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: arquivo.nome }); return "arquivo"; }
+    catch (error) { if (error instanceof DOMException && error.name === "AbortError") return null; }
+  }
+  window.open(linkWhatsapp(texto), "_blank");
+  return "texto";
+}
