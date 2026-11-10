@@ -29,10 +29,12 @@ export function LoginScreen() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error("E-mail ou senha incorretos");
+    else sessionStorage.setItem("login-pendente", "1");
     setBusy(false);
   }
 
   async function google() {
+    sessionStorage.setItem("login-pendente", "1");
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
     if (r.error) setSemAcesso(true);
   }
