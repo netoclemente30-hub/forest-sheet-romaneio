@@ -9,8 +9,8 @@ function definir(prop: "canShare" | "share", valor: unknown) {
 }
 
 afterEach(() => {
-  delete (navigator as unknown as Record<string, unknown>).canShare;
-  delete (navigator as unknown as Record<string, unknown>).share;
+  delete (navigator as unknown as Record<string, unknown>)["canShare"];
+  delete (navigator as unknown as Record<string, unknown>)["share"];
   vi.restoreAllMocks();
 });
 
