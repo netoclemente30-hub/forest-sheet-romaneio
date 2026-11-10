@@ -3,6 +3,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "./empresa";
+import { aparelhoAtual } from "./aparelho";
 
 export interface LogCapturado {
   operacao_id?: string;
@@ -12,6 +13,9 @@ export interface LogCapturado {
   lat: number | null;
   lng: number | null;
   criado_em: string;
+  aparelho_nome?: string | null;
+  aparelho_modelo?: string | null;
+  aparelho_ua?: string | null;
 }
 
 function posicaoGps(): Promise<{ lat: number; lng: number } | null> {
@@ -30,7 +34,7 @@ export async function capturarLog(acao: string, detalhe: string): Promise<LogCap
    const usuario = typeof navigator !== "undefined" && !navigator.onLine
      ? supabase.auth.getSession().then(({ data }) => data.session?.user ?? null)
      : supabase.auth.getUser().then(({ data }) => data.user);
-   const [u, gps] = await Promise.all([usuario, posicaoGps()]);
+   const [u, gps, ap] = await Promise.all([usuario, posicaoGps(), aparelhoAtual()]);
   return {
     operacao_id: crypto.randomUUID(),
     acao,
@@ -39,6 +43,7 @@ export async function capturarLog(acao: string, detalhe: string): Promise<LogCap
     lat: gps?.lat ?? null,
     lng: gps?.lng ?? null,
     criado_em: new Date().toISOString(),
+    ...ap,
   };
 }
 
@@ -47,6 +52,11 @@ export async function gravarRegistro(log: LogCapturado): Promise<void> {
   const { operacao_id: _operacao, ...dados } = log;
   const { error } = await supabase.from("registros").insert({ ...dados, ...empresaIdGravacao() });
   if (error) console.warn("Falha ao gravar registro:", error.message);
+}
+
+// Histórico de login: grava a entrada com o aparelho usado.
+export async function registrarLogin(): Promise<void> {
+  try { await gravarRegistro(await capturarLog("Login", "Entrada no app")); } catch { /* não bloqueia o login */ }
 }
 
 export function linkMaps(lat: number | null, lng: number | null): string | null {

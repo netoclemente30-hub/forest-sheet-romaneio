@@ -1,6 +1,10 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check } from "lucide-react";
-import { useState } from "react";
+import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Input } from "./ui/input";
+import { registrarLogin } from "@/lib/registro";
+import { nomeAparelho, salvarNomeAparelho, detectarModelo } from "@/lib/aparelho";
+import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +32,25 @@ export function AppShell() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const manejo = emManejo(pathname);
   const serraria = emSerraria(pathname);
+  const [aparelhoAberto, setAparelhoAberto] = useState(false);
+  const [nomeAp, setNomeAp] = useState("");
+  const [modeloAp, setModeloAp] = useState("");
+  useEffect(() => {
+    if (session && sessionStorage.getItem("login-pendente")) {
+      sessionStorage.removeItem("login-pendente");
+      void registrarLogin();
+    }
+  }, [session]);
+  async function abrirAparelho() {
+    setNomeAp(nomeAparelho() ?? "");
+    setAparelhoAberto(true);
+    setModeloAp(await detectarModelo());
+  }
+  async function salvarAparelho() {
+    await salvarNomeAparelho(nomeAp);
+    setAparelhoAberto(false);
+    toast.success(navigator.onLine ? "Nome do aparelho salvo." : "Nome salvo neste aparelho.");
+  }
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
   if (loading) return <div className="min-h-screen bg-forest" />;
   if (!session) return <LoginScreen />;
@@ -39,6 +62,20 @@ export function AppShell() {
       <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
         <span className="font-display text-xl font-bold uppercase min-w-0">Manejo Florestal</span>
         <div className="ml-auto flex items-center gap-1 shrink-0">
+          <Button size="icon" variant="ghost" aria-label="Este aparelho" title="Este aparelho" onClick={abrirAparelho} className="opacity-80">
+            <Smartphone className="size-5" />
+          </Button>
+          <Dialog open={aparelhoAberto} onOpenChange={setAparelhoAberto}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Este aparelho</DialogTitle>
+                <DialogDescription>O nome aparece nos registros de login e de operações feitos neste aparelho.</DialogDescription>
+              </DialogHeader>
+              <Input aria-label="Nome do aparelho" placeholder="Ex.: Tablet do pátio" value={nomeAp} maxLength={60} onChange={(e) => setNomeAp(e.target.value)} className="h-11" />
+              <p className="text-sm text-muted-foreground">Modelo detectado: {modeloAp || "…"}</p>
+              <Button onClick={salvarAparelho}>Salvar</Button>
+            </DialogContent>
+          </Dialog>
           <Button size="icon" variant="ghost" aria-label="Sair" title="Sair" onClick={() => supabase.auth.signOut()} className="opacity-80">
             <LogOut className="size-5" />
           </Button>

@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { linkMaps, capturarLog } from "@/lib/registro";
+import { modeloDoUserAgent } from "@/lib/aparelho";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
-import { MapPin, Undo2, RefreshCw } from "lucide-react";
+import { MapPin, Undo2, RefreshCw, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -84,7 +85,7 @@ function Registros() {
     <div className="space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-3xl font-bold uppercase">Registros</h1><Button size="icon" variant="outline" aria-label="Atualizar registros" onClick={() => regs.refetch()}><RefreshCw /></Button></div>
       <Select value={usuario} onValueChange={(v) => { setUsuario(v); setLimite(50); }}><SelectTrigger className="w-full h-11" aria-label="Filtrar por usuário"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todos os usuários</SelectItem>{usuarios.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent></Select>
-      <Input aria-label="Buscar registros" placeholder="Buscar nº, e-mail, ação ou detalhe" value={q} onChange={(e) => { setQ(e.target.value); setLimite(50); }} className="h-11" />
+      <Input aria-label="Buscar registros" placeholder="Buscar nº, e-mail, aparelho, ação ou detalhe" value={q} onChange={(e) => { setQ(e.target.value); setLimite(50); }} className="h-11" />
       <p className="text-sm text-muted-foreground">{lista.length} registros</p>
       <div className="bg-card border rounded-xl divide-y">
         {lista.slice(0, limite).map((r) => {
@@ -98,6 +99,9 @@ function Registros() {
                 </span>
               </div>
               <div className="text-muted-foreground">{r.detalhe}</div>
+              {(r.aparelho_nome || r.aparelho_modelo || r.aparelho_ua) && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground"><Smartphone className="size-3.5 shrink-0" /><span className="break-all">{[r.aparelho_nome, r.aparelho_modelo ?? (r.aparelho_ua ? modeloDoUserAgent(r.aparelho_ua) : null)].filter(Boolean).join(" · ")}</span></div>
+              )}
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs break-all">{r.user_email ?? "usuário desconhecido"}</span>
                 {maps ? (
