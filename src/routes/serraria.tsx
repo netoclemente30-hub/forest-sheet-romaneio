@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { romaneiosQuery, torasQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
@@ -20,7 +20,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { Warehouse, Factory } from "lucide-react";
 import { MadeiraSerrada } from "@/components/MadeiraSerrada";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SerrariaAbas } from "@/components/SerrariaAbas";
+import { abaSerrariaDoBusca } from "@/lib/nav";
 import { PacoteDeToras } from '@/components/PacoteDeToras';
 import { gruposParaPacote, type SugestaoPacote } from '@/lib/pacote-de-toras';
 import { TorasEncaixadas } from '@/components/TorasEncaixadas';
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/serraria")({
       { property: "og:description", content: "Pátio de toras, pacotes multi-bitola e romaneios de carga de madeira serrada da empresa." },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({ aba: abaSerrariaDoBusca(s["aba"]) }),
   component: Serraria,
 });
 
@@ -45,7 +47,10 @@ function Serraria() {
   const qc = useQueryClient();
   const toras = useQuery(torasQuery);
   const roms = useQuery(romaneiosQuery);
-  const [aba, setAba] = useState<Aba>("patio");
+  const navigate = useNavigate();
+  const { aba: abaUrl } = Route.useSearch();
+  const aba: Aba = abaUrl ?? "patio";
+  const irParaAba = (a: Aba) => navigate({ to: "/serraria", search: { aba: a } });
   const [patio, setPatio] = useState("");
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<number[]>([]);
@@ -85,7 +90,7 @@ function Serraria() {
       setBusy(true);
       for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log });
       setBusy(false);
-      if(!desfazer)setAba('serradas');else setSel([]);
+      if(!desfazer)irParaAba('serradas');else setSel([]);
       toast.success("Baixa salva offline — será enviada quando conectar");
       return;
     }
@@ -94,7 +99,7 @@ function Serraria() {
     catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível serrar"); return; }
     setBusy(false);
     toast.success(desfazer ? `${selecionadasVisiveis.length} toras voltaram ao pátio` : `${selecionadasVisiveis.length} toras serradas`);
-    if(!desfazer)setAba('serradas');else setSel([]);
+    if(!desfazer)irParaAba('serradas');else setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }
 
@@ -104,11 +109,10 @@ function Serraria() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-bold uppercase">Serraria</h1>
         <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm"><Link to="/saldo">Conferir saldo</Link></Button>
           <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
         </div>
       </div>
-      <Tabs value={aba} onValueChange={(v) => { setAba(v as Aba); setSel([]); }}><TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-4"><TabsTrigger value="patio" className="whitespace-normal">Estoque / Pátio</TabsTrigger><TabsTrigger value="encaixadas" className="whitespace-normal">Toras Encaixadas</TabsTrigger><TabsTrigger value="serradas" className="whitespace-normal">Toras serradas</TabsTrigger><TabsTrigger value="madeira" className="whitespace-normal">Madeira serrada</TabsTrigger></TabsList></Tabs>
+      <SerrariaAbas atual={aba} />
       {aba === "madeira" ? <MadeiraSerrada empresa={empresa} /> : aba === "encaixadas" ? <TorasEncaixadas empresa={empresa} toras={estoque} itens={pendentes.itens} /> : <>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant={!patio ? "default" : "outline"} onClick={() => setPatio("")}>Todos os pátios</Button>
@@ -148,7 +152,7 @@ function Serraria() {
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 100)}>Mostrar mais</Button>}
       </>}
-      {empresa&&gruposPacote.length>0&&<PacoteDeToras key={JSON.stringify(gruposPacote)} empresa={empresa} grupos={gruposPacote} onFechar={()=>setGruposPacote([])} onSalvo={()=>{setGruposPacote([]);setSel([]);setAba('madeira');}}/>}
+      {empresa&&gruposPacote.length>0&&<PacoteDeToras key={JSON.stringify(gruposPacote)} empresa={empresa} grupos={gruposPacote} onFechar={()=>setGruposPacote([])} onSalvo={()=>{setGruposPacote([]);setSel([]);irParaAba('madeira');}}/>}
     </div>
   );
 }
