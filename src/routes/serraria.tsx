@@ -7,6 +7,8 @@ import { resolverQrSerragem } from "@/lib/qr-serragem";
 import { QrScanner } from "@/components/QrScanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fmtM3 } from "@/lib/volume";
+import { CartaoMedidaComercial, SeletorMedida, TextoMedidaComercial, type ModoMedida } from "@/components/MedidaComercial";
+import { totaisComerciais, volumeComercial } from "@/lib/medida-comercial";
 import { selecionarToras } from "@/lib/tora-qr";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
@@ -65,6 +67,7 @@ function Serraria() {
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
+  const [modo, setModo] = useState<ModoMedida>("fisica");
   const [lim, setLim] = useState(100);
   const { empresaId } = useAuth();
   const empresa = getEmpresaAtiva() ?? empresaId;
@@ -127,7 +130,8 @@ function Serraria() {
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }
 
-  const vol = lista.reduce((n, t) => n + Number(t.volume), 0);
+  const totais = totaisComerciais(lista);
+  const vol = modo === "comercial" ? totais.comercial : totais.fisico;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -148,10 +152,14 @@ function Serraria() {
         <label className="text-xs space-y-1">Data de lançamento<Input type="date" aria-label="Data de lançamento" value={dia} onChange={(e) => setDia(e.target.value)} /></label>
         <label className="text-xs space-y-1">AUTEX<Input aria-label="Filtrar AUTEX" placeholder="Todas" value={autex} onChange={(e) => setAutex(e.target.value)} /></label>
       </div>
+      <SeletorMedida valor={modo} onChange={setModo} />
       <RelatorioToras lista={lista} selecionadas={sel} ordem={ordem} setOrdem={setOrdem} titulo={aba === "patio" ? "Pátio de toras da serraria" : "Toras serradas"} />
-      <div className="flex items-center justify-between rounded-lg bg-forest text-primary-foreground px-4 py-3">
-        <span className="text-sm opacity-80">{lista.length} toras {aba === "patio" ? "no pátio" : "serradas"}</span>
-        <span className="font-display text-3xl font-bold">{fmtM3(vol)} m³</span>
+      <div className="rounded-lg bg-forest text-primary-foreground px-4 py-3 space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm opacity-80">{lista.length} toras {aba === "patio" ? "no pátio" : "serradas"} · {modo === "comercial" ? "comercial" : "físico"}</span>
+          <span className="font-display text-3xl font-bold">{fmtM3(vol)} m³</span>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2 text-xs opacity-90"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</span></div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas" checked={lista.length > 0 && lista.every((t) => sel.includes(t.plaqueta))} onCheckedChange={(v) => setSel((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar todas</label>
@@ -169,8 +177,9 @@ function Serraria() {
             <div className="flex-1 min-w-0">
               <div className="font-semibold leading-snug">{t.especie}</div>
               <div className="text-xs text-muted-foreground">Árv. {t.arvore} · Sec. {t.secao ?? "–"} · AUTEX {t.autex ?? "—"} · {nomePatio(t)}{t.serrada_em && ` · serrada ${new Date(t.serrada_em).toLocaleDateString("pt-BR")}`}</div>
+              {modo === "comercial" && <TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" />}
             </div>
-            <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
+            <div className="text-right text-sm font-semibold">{fmtM3(modo === "comercial" ? volumeComercial(t) : Number(t.volume))}{modo === "comercial" && <div className="text-xs font-normal text-muted-foreground">físico {fmtM3(Number(t.volume))}</div>}</div>
           </label>
         ))}
         {!lista.length && <div className="p-4 text-sm text-muted-foreground">{aba === "patio" ? "Nenhuma tora no pátio." : "Nenhuma tora serrada ainda."}</div>}
@@ -201,6 +210,7 @@ function Serraria() {
                 <div><dt className="text-muted-foreground">Comprimento</dt><dd>{aberta.comprimento ?? "—"} m</dd></div>
                 <div><dt className="text-muted-foreground">Volume</dt><dd className="font-semibold">{fmtM3(Number(aberta.volume))} m³</dd></div>
               </dl>
+              <CartaoMedidaComercial tora={aberta} />
             </div>
             {!aberta.serrada_em && <Button disabled={busy} onClick={() => serrar(false, [aberta])}><Factory /> Serrar esta tora</Button>}
             <Button variant="outline" onClick={() => { setToraLida(null); setEtiqueta(""); setScan(true); }}><ScanLine /> Ler outra etiqueta</Button>

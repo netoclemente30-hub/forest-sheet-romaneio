@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
+import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
@@ -146,6 +147,7 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
         {campo("d_pe2", "D. pé 2 (cm)")}
       </div>
       {campo("comprimento", "Comprimento (m)", "decimal")}
+      <CartaoMedidaComercial tora={{ d_topo1: num(e.d_topo1), d_topo2: num(e.d_topo2), d_pe1: num(e.d_pe1), d_pe2: num(e.d_pe2), comprimento: num(e.comprimento), volume: digitado }} />
       <Button className="w-full h-12" disabled={busy} onClick={salvar}>Salvar alterações</Button>
       <Button variant="destructive" className="w-full" disabled={busy} onClick={excluir}><Trash2 /> Excluir tora</Button>
     </div>

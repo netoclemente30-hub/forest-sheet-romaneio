@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
+import { TextoMedidaComercial } from "@/components/MedidaComercial";
+import { totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { empresaIdGravacao } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
@@ -77,6 +79,7 @@ function RomaneioPage() {
   );
 
   const total = itens.reduce((n, t) => n + Number(t.volume), 0);
+  const totais = totaisComerciais(itens);
   const resumo = resumoPorEspecie(itens);
 
   async function salvar() {
@@ -181,9 +184,15 @@ function RomaneioPage() {
           <Button type="button" variant="secondary" className="h-12" aria-label="Ler QR code" onClick={() => setScan(!scan)}><Camera /></Button>
         </form>
         {scan && <QrScanner onScan={adicionar} onClose={() => { setScan(false); toast.error("Não foi possível abrir a câmera"); }} />}
-        <div className="flex items-center justify-between rounded-lg bg-forest text-primary-foreground px-4 py-3">
-          <span className="text-sm opacity-80">{itens.length} toras</span>
-          <span className="font-display text-3xl font-bold">{fmtM3(total)} m³</span>
+        <div className="rounded-lg bg-forest text-primary-foreground px-4 py-3 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm opacity-80">{itens.length} toras · volume físico</span>
+            <span className="font-display text-3xl font-bold">{fmtM3(total)} m³</span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2 text-sm">
+            <span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span>
+            <span>Diferença: <b>{totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</b></span>
+          </div>
         </div>
       </div>
 
@@ -207,8 +216,9 @@ function RomaneioPage() {
               <div className="truncate">{t.especie}</div>
               <div className="text-xs text-muted-foreground">Árv. {t.arvore} · Sec. {t.secao ?? "–"}</div>
               <div className="text-xs">Topo {t.d_topo1 ?? "–"}×{t.d_topo2 ?? "–"} · Pé {t.d_pe1 ?? "–"}×{t.d_pe2 ?? "–"} cm · {t.comprimento ?? "–"} m</div>
+              <TextoMedidaComercial tora={t} />
             </div>
-            <div className="text-sm font-semibold">{fmtM3(Number(t.volume))}</div>
+            <div className="text-right text-sm font-semibold">{fmtM3(Number(t.volume))}<div className="text-xs font-normal text-muted-foreground">físico</div></div>
             <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItens(itens.filter((x) => x.plaqueta !== t.plaqueta))}><X /></Button>
           </div>
         ))}

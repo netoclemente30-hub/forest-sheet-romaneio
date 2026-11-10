@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Arvore, Tora } from "@/lib/data";
 import { volumeTora, fmtM3 } from "@/lib/volume";
+import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
@@ -188,6 +189,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
         {field("d_pe2", "D. Pé 2 (cm)")}
       </div>
       {field("comprimento", "Comprimento (m)", "decimal")}
+      <CartaoMedidaComercial tora={{ ...medidas, volume: vol }} />
       <div className="flex items-center justify-between rounded-lg bg-forest text-primary-foreground px-4 py-3">
         <span className="text-sm opacity-80">Volume</span>
         <span className="font-display text-2xl font-bold">{fmtM3(vol)} m³</span>

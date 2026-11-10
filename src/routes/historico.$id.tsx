@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Romaneio, Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
+import { TextoMedidaComercial } from "@/components/MedidaComercial";
+import { fmtComprimentoComercial, medidaComercial, totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { Button } from "@/components/ui/button";
 import { QrImage } from "@/components/QrImage";
@@ -42,7 +44,8 @@ const dataBR = (d: string) => new Date(d + "T12:00").toLocaleDateString("pt-BR")
 async function montarPdf(r: Romaneio, itens: Tora[]) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: "landscape" });
+  const totais = totaisComerciais(itens);
   doc.setFontSize(16);
   doc.text("ROMANEIO DE CARGA", 14, 16);
   doc.setFontSize(10);
@@ -55,14 +58,16 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   doc.text("QR da carga: entrada no pátio", 160, 45);
   autoTable(doc, {
     startY: 48,
-    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "D1 (m)", "D2 (m)", "C (m)", "m³"]],
-    body: itens.map((t) => [
-      t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
-      (((Number(t.d_topo1) + Number(t.d_topo2)) / 2) / 100).toFixed(3),
-      (((Number(t.d_pe1) + Number(t.d_pe2)) / 2) / 100).toFixed(3),
-      t.comprimento, fmtM3(Number(t.volume)),
-    ]),
-    foot: [["", "", "TOTAL", "", "", "", `${itens.length} toras`, fmtM3(Number(r.total_volume))]],
+    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "Ø comercial (cm)", "C com. (m)", "m³ comercial", "m³ físico", "Diferença"]],
+    body: itens.map((t) => {
+      const c = medidaComercial(t);
+      return [
+        t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
+        c ? `${c.d1}×${c.d2}` : "—", c ? fmtComprimentoComercial(c.comprimento) : "—",
+        c ? fmtM3(c.volume) : "—", fmtM3(Number(t.volume)), c ? fmtM3(c.volume - Number(t.volume)) : "—",
+      ];
+    }),
+    foot: [["", "", "TOTAL", "", "", `${itens.length} toras`, fmtM3(totais.comercial), fmtM3(totais.fisico), fmtM3(totais.diferenca)]],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },
@@ -71,8 +76,11 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   const y = (doc as any).lastAutoTable.finalY + 8;
   autoTable(doc, {
     startY: y,
-    head: [["Espécie", "Nome científico", "Qtd toras", "Volume m³"]],
-    body: resumoPorEspecie(itens).map((e) => [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(e.volume)]),
+    head: [["Espécie", "Nome científico", "Qtd toras", "m³ comercial", "m³ físico"]],
+    body: resumoPorEspecie(itens).map((e) => {
+      const grupo = itens.filter((t) => (t.especie ?? "Não cadastrada") === e.especie);
+      return [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(totaisComerciais(grupo).comercial), fmtM3(e.volume)];
+    }),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [46, 84, 56] },
   });
@@ -136,6 +144,7 @@ function Detalhe() {
   if (!q.data) return <p>Romaneio não encontrado.</p>;
   const { r, itens: itensBrutos } = q.data;
   const itens = ordenarRomaneio(itensBrutos);
+  const totais = totaisComerciais(itens);
 
   return (
     <div className="space-y-4">
@@ -144,7 +153,8 @@ function Detalhe() {
         <h1 className="text-3xl font-bold uppercase">{r.placa || "Sem placa"}</h1>
         <div className="text-sm opacity-90">Reboque {r.julieta || "–"} · {r.motorista} {r.cpf && `· CPF ${r.cpf}`}</div>
         <div className="mt-2 font-display text-4xl font-bold">{fmtM3(Number(r.total_volume))} m³</div>
-        <div className="text-sm opacity-80">{r.qtd_toras} toras</div>
+        <div className="text-sm opacity-80">{r.qtd_toras} toras · volume físico</div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span><span>Diferença: <b>{totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</b></span></div>
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
@@ -173,8 +183,8 @@ function Detalhe() {
         {itens.map((t) => (
           <div key={t.plaqueta} className="flex items-center gap-3 p-3 text-sm">
             <div className="font-display text-lg font-bold w-14">{t.plaqueta}</div>
-            <div className="flex-1">{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div>
-            <div className="font-semibold">{fmtM3(Number(t.volume))}</div>
+            <div className="flex-1 min-w-0"><div>{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div><TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" /></div>
+            <div className="text-right font-semibold">{fmtM3(Number(t.volume))}<div className="text-xs font-normal text-muted-foreground">físico</div></div>
           </div>
         ))}
       </div>

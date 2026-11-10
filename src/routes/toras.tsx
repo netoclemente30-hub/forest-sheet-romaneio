@@ -9,6 +9,8 @@ import { torasDeManejo } from "@/lib/tora-origem";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
+import { SeletorMedida, TextoMedidaComercial, type ModoMedida } from "@/components/MedidaComercial";
+import { totaisComerciais, volumeComercial } from "@/lib/medida-comercial";
 import { ToraForm } from "@/components/ToraForm";
 import { QrImage } from "@/components/QrImage";
 import { qrTora, selecionarToras } from "@/lib/tora-qr";
@@ -56,6 +58,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [dia, setDia] = useState("");
   const [autex, setAutex] = useState("");
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
+  const [modo, setModo] = useState<ModoMedida>("fisica");
   const [edit, setEdit] = useState<Tora | null>(null);
   const lista = useMemo(() => {
     const t = torasDeManejo(toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
@@ -68,6 +71,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
   const romaneadasSel = (toras.data ?? []).filter((t) => t.carregada && selecionadas.includes(t.plaqueta)).map((t) => t.plaqueta);
+  const totais = totaisComerciais(lista);
 
   async function excluirRomaneadas() {
     if (!romaneadasSel.length || !confirm(`Excluir ${romaneadasSel.length} toras já romaneadas? Isso não pode ser desfeito.`)) return;
@@ -108,10 +112,11 @@ export function TorasList({ nova }: { nova?: boolean }) {
           </Button>
         ))}
       </div>
+      <SeletorMedida valor={modo} onChange={setModo} />
       <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" />
-      <div className="flex justify-between text-sm text-muted-foreground">
-        <span>{lista.length} toras</span>
-        <span>{fmtM3(lista.reduce((n, x) => n + Number(x.volume), 0))} m³</span>
+      <div className="rounded-lg bg-secondary p-3 space-y-1 text-sm">
+        <div className="flex justify-between gap-2"><span>{lista.length} toras · {modo === "comercial" ? "comercial" : "físico"}</span><b>{fmtM3(modo === "comercial" ? totais.comercial : totais.fisico)} m³</b></div>
+        <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</span></div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas as toras filtradas" checked={lista.length > 0 && lista.every((t) => selecionadas.includes(t.plaqueta))} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar filtradas</label>
@@ -126,7 +131,8 @@ export function TorasList({ nova }: { nova?: boolean }) {
             <div className="min-w-0 flex-1">
               <div className="font-semibold leading-snug">{t.especie ?? "Sem espécie"}</div>
               <div className="text-xs text-muted-foreground">Plaqueta {t.plaqueta} · Árv. {t.arvore} · Sec. {t.secao ?? "–"} · {t.comprimento ?? "–"} m</div>
-              <div className="text-xs text-muted-foreground">AUTEX {t.autex ?? "—"} · <span className="font-semibold text-foreground">{fmtM3(Number(t.volume))} m³</span>{t.carregada && <span className="font-semibold text-success"> · carregada</span>}</div>
+              <div className="text-xs text-muted-foreground">AUTEX {t.autex ?? "—"} · <span className="font-semibold text-foreground">{fmtM3(modo === "comercial" ? volumeComercial(t) : Number(t.volume))} m³</span>{modo === "comercial" && <span> · físico {fmtM3(Number(t.volume))} m³</span>}{t.carregada && <span className="font-semibold text-success"> · carregada</span>}</div>
+              {modo === "comercial" && <TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" />}
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode className="h-4 w-4" /></Button>
