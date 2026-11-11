@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Corrigir o bloqueio de empresa ao lançar tora: carregar o vínculo sem esperar permissões, evitar consultas dentro do aviso de login e recuperar após reconexão; validar sem alterar estoque real.
 - [x] Permitir importar e medir saldo AUTESP sem seção, preservando identidade e duplicidade; 23 testes passaram. Árvore 48 do saldo real identificada e salva offline com seção nula; fila relida e teste removido sem alterar estoque. Tela 384 px conferida.
 - [x] PDF de toras segue Medida física/comercial em Manejo e Serraria, com totais gerais/por AUTEX/espécie; 23 testes passaram e ambos PDFs baixados com dados reais da Serraria, sem erros. Manejo sem toras disponíveis para download nesta conferência.
 - [x] Medida comercial pela ponta mais fina e comprimento para baixo em 0,5 m: lançamento/edição, abas no Manejo/Serraria e romaneio/PDF com comparação física. Exemplo 52×54/6,6 conferido (6,5 m e 1,4340 m³); romaneio real temporário/PDF validado e excluído, tora 348 liberada; 169 testes passaram e celular 384 px sem cortes/erros.

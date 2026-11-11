@@ -1,13 +1,13 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "./useAuth";
 
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getSession: vi.fn(), unsubscribe: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getSession: vi.fn(), unsubscribe: vi.fn(), authCallback: undefined as undefined | ((event: string, session: { user: { id: string } } | null) => void) }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: {
       getSession: mocks.getSession,
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: mocks.unsubscribe } } }),
+      onAuthStateChange: (callback: typeof mocks.authCallback) => { mocks.authCallback = callback; return { data: { subscription: { unsubscribe: mocks.unsubscribe } } }; },
     },
     rpc: mocks.rpc,
   },
@@ -38,5 +38,46 @@ describe("empresa do usuário no aparelho", () => {
     await waitFor(() => expect(result.current.empresaId).toBe("empresa-rj"));
     expect(localStorage.getItem("encaixe-empresa:usuario-rj")).toBe("empresa-rj");
     expect(localStorage.getItem("encaixe-empresa:outro-usuario")).toBeNull();
+  });
+
+  it("carrega empresa-rj mesmo quando a consulta de permissões não responde", async () => {
+    mocks.rpc.mockImplementation((nome: string) => nome === "minha_empresa"
+      ? Promise.resolve({ data: "empresa-rj", error: null })
+      : new Promise(() => {}));
+    const { result } = renderHook(useAuth);
+    await waitFor(() => expect(result.current.empresaId).toBe("empresa-rj"));
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("não inicia consultas dentro do aviso de login", async () => {
+    const { result } = renderHook(useAuth);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    mocks.rpc.mockClear();
+    act(() => mocks.authCallback?.("SIGNED_IN", session));
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("minha_empresa"));
+  });
+
+  it("recupera empresa-rj ao reconectar após falha inicial sem vínculo salvo", async () => {
+    const { result } = renderHook(useAuth);
+    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("minha_empresa"));
+    expect(result.current.empresaId).toBeNull();
+    mocks.rpc.mockImplementation((nome: string) => Promise.resolve({ data: nome === "minha_empresa" ? "empresa-rj" : false, error: null }));
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(result.current.empresaId).toBe("empresa-rj"));
+  });
+
+  it("ignora uma resposta antiga da empresa depois de sair", async () => {
+    let resolver: ((value: { data: string; error: null }) => void) | undefined;
+    mocks.rpc.mockImplementation((nome: string) => nome === "minha_empresa"
+      ? new Promise((resolve) => { resolver = resolve; })
+      : Promise.resolve({ data: false, error: null }));
+    const { result } = renderHook(useAuth);
+    await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("minha_empresa"));
+    act(() => mocks.authCallback?.("SIGNED_OUT", null));
+    await act(async () => resolver?.({ data: "empresa-rj", error: null }));
+    expect(result.current.session).toBeNull();
+    expect(result.current.empresaId).toBeNull();
+    expect(localStorage.getItem("encaixe-empresa:usuario-rj")).toBeNull();
   });
 });
