@@ -173,12 +173,12 @@ function Saldo() {
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Medir tora do saldo</SheetTitle></SheetHeader>
           <div className="p-4 pt-0 space-y-2">
-            <p className="text-xs text-muted-foreground">Digite o nº da árvore e a secção: AUTEX, espécie e nome científico vêm do saldo.</p>
+            <p className="text-xs text-muted-foreground">Digite o nº da árvore e a seção, quando houver. Para AUTESP sem seção, deixe esse campo vazio.</p>
             <ToraForm origem="serraria" toras={toras.data ?? []} arvores={arvores.data ?? []} saldo={linhas} onSaved={(p) => setMedidas((m) => m.includes(p) ? m : [...m, p])} />
           </div>
         </SheetContent>
       </Sheet>
-      <p className="text-sm text-muted-foreground">Envie o Excel com AUTEX, nome científico, espécie, árvore, secção e volume. Cada linha é procurada nas toras pelo AUTEX + árvore + secção.</p>
+      <p className="text-sm text-muted-foreground">Saldo com AUTEX ou AUTESP, nome científico, espécie, árvore e volume; seção opcional.</p>
       <label className="block">
         <Button asChild variant="outline" className="w-full"><span><Upload /> Escolher planilha de saldo</span></Button>
         <input type="file" accept=".xlsx,.xlsm,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && abrir(e.target.files[0])} />

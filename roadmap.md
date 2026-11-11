@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Permitir importar e medir saldo AUTESP sem seção, preservando identidade e bloqueio de duplicidade; verificar com saldo real sem alterar estoque.
 - [x] PDF de toras segue Medida física/comercial em Manejo e Serraria, com totais gerais/por AUTEX/espécie; 23 testes passaram e ambos PDFs baixados com dados reais da Serraria, sem erros. Manejo sem toras disponíveis para download nesta conferência.
 - [x] Medida comercial pela ponta mais fina e comprimento para baixo em 0,5 m: lançamento/edição, abas no Manejo/Serraria e romaneio/PDF com comparação física. Exemplo 52×54/6,6 conferido (6,5 m e 1,4340 m³); romaneio real temporário/PDF validado e excluído, tora 348 liberada; 169 testes passaram e celular 384 px sem cortes/erros.
 - [x] Ler etiqueta por câmera na Serraria, abrir a tora atual com medidas e manter confirmação de serragem; QR real da plaqueta 201/árvore 353 lido com câmera simulada em acesso autenticado, sem alterações de estoque; desktop/384 px sem cortes nem erros, QR inválido recusado e 15 testes passaram. Câmera física aguarda aparelho.

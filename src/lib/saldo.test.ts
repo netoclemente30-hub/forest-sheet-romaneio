@@ -1,7 +1,23 @@
 import { expect, it } from "vitest";
-import { conferirSaldo, lerSaldo, novasTorasDoSaldo } from "./saldo";
+import { conferirSaldo, lerSaldo, novasTorasDoSaldo, mesmaArvoreSecao } from "./saldo";
 
 const rows = [["AUTEX", "Nome científico", "Espécie", "Árvore", "Secção", "Volume"], ["A1", "Qualea", "Mandioqueira", 5, "a", "1,2"], ["A1", "Qualea", "Mandioqueira", 9, "B", 2]];
+it("importa AUTESP sem coluna de seção e cadastra sem inventar seção", () => {
+  const linhas = lerSaldo([["AUTESP", "Árvore", "Espécie", "Volume"], ["AUTESP-2011.E.2026.00115", 48, "Abiurana", "1,2"]]);
+  expect(linhas[0]).toMatchObject({ autex: "AUTESP-2011.E.2026.00115", arvore: 48, secao: "", volume: 1.2 });
+  expect(novasTorasDoSaldo(linhas, 100, new Set())[0]).toMatchObject({ autex: "AUTESP-2011.E.2026.00115", arvore: 48, secao: null });
+});
+it("localiza para medição somente a identidade sem seção quando o campo está vazio", () => {
+  expect(mesmaArvoreSecao({ arvore: 48, secao: null }, 48, "")).toBe(true);
+  expect(mesmaArvoreSecao({ arvore: 48, secao: "" }, 48, " ")).toBe(true);
+  expect(mesmaArvoreSecao({ arvore: 48, secao: "A" }, 48, "")).toBe(false);
+  expect(mesmaArvoreSecao({ arvore: 49, secao: null }, 48, "")).toBe(false);
+});
+it("lê rastreio AUTESP sem seção e compara com tora de seção nula", () => {
+  const linhas = lerSaldo([["Código Rastreio", "Volume"], ["AUTESP-2011.E.2026.00115-48", "1,2"]]);
+  expect(linhas[0]).toMatchObject({ autex: "AUTESP-2011.E.2026.00115", arvore: 48, secao: "" });
+  expect(conferirSaldo(linhas, [{ plaqueta: 100, arvore: 48, secao: null, autex: "AUTESP-2011.E.2026.00115" }])[0]?.tora?.plaqueta).toBe(100);
+});
 it("lê colunas pelo cabeçalho", () => expect(lerSaldo(rows)[0]).toEqual({ autex: "A1", nome_cientifico: "Qualea", especie: "Mandioqueira", arvore: 5, secao: "A", volume: 1.2 }));
 it("tora sem cadastro fica fora de estoque", () => {
   const r = conferirSaldo(lerSaldo(rows), [{ plaqueta: 10, arvore: 5, secao: "A", autex: "A1" }]);

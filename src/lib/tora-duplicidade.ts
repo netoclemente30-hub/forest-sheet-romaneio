@@ -20,5 +20,6 @@ export function toraDuplicada<T extends IdentidadeTora>(toras: T[], alvo: Omit<I
 }
 
 export function avisoDuplicidade(t: IdentidadeTora): string {
-  return `Árvore ${t.arvore} já tem a secção ${secaoNormalizada(t.secao)} (plaqueta ${t.plaqueta})`;
+  const secao = secaoNormalizada(t.secao);
+  return secao ? `Árvore ${t.arvore} já tem a secção ${secao} (plaqueta ${t.plaqueta})` : `Árvore ${t.arvore} sem seção já foi lançada nesta autorização (plaqueta ${t.plaqueta})`;
 }
