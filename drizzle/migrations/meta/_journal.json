@@ -183,6 +183,13 @@
       "when": 1794272992508,
       "tag": "0025_registros_aparelho",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794437158774,
+      "tag": "0026_excluir_carga_serrada",
+      "breakpoints": true
     }
   ]
 }
