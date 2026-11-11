@@ -55,4 +55,22 @@ describe("escolha de encaixe", () => {
     expect(d.enfileirar).not.toHaveBeenCalled();
     expect(medidas.comprimento).toBe("7,6");
   });
+  it("salva tora de AUTESP sem seção, guardando a seção vazia e avisando no registro", async () => {
+    const d = deps();
+    const tora = await salvarEncaixe({ ...linha, secao: "" }, medidas, "RJ", [], d);
+    expect(tora).toMatchObject({ arvore: 1861, secao: null, autex: linha.autex, especie: "Abiurana", plaqueta: 1, volume: 2.725 });
+    expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: "tora_insert", dados: tora }));
+    expect(d.capturar).toHaveBeenCalledWith("Encaixe confirmado", expect.stringContaining("secção sem seção"));
+  });
+  it("não repete tora de AUTESP sem seção já lançada nesta autorização", async () => {
+    const d = deps();
+    await expect(salvarEncaixe({ ...linha, secao: " " }, medidas, "RJ", [{ ...linha, secao: null, empresa_id: "RJ", plaqueta: 12 } as Tora], d)).rejects.toThrow("sem seção já foi lançada nesta autorização (plaqueta 12)");
+    expect(d.enfileirar).not.toHaveBeenCalled();
+  });
+  it("continua exigindo AUTEX/AUTESP, árvore e medidas completas", async () => {
+    const d = deps();
+    await expect(salvarEncaixe({ ...linha, autex: "  " }, medidas, "RJ", [], d)).rejects.toThrow("Confira AUTEX/AUTESP, árvore e todas as medidas antes de salvar.");
+    await expect(salvarEncaixe({ ...linha, arvore: null, secao: "" }, medidas, "RJ", [], d)).rejects.toThrow("Confira AUTEX/AUTESP, árvore e todas as medidas antes de salvar.");
+    expect(d.enfileirar).not.toHaveBeenCalled();
+  });
 });

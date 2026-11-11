@@ -78,6 +78,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
       <Button disabled={busy} className="w-full h-12" onClick={confirmar}><Check />{busy ? "Salvando…" : "Confirmar identificação e salvar"}</Button>
       <Button disabled={busy} variant="outline" className="w-full" onClick={() => setEscolhida(null)}><RotateCcw /> Escolher outra tora</Button>
     </section> : <>
+    <p className="text-xs text-muted-foreground">AUTESP sem seção: escolha a árvore normalmente, a seção fica vazia.</p>
     <div className="space-y-2">
       <Label htmlFor="encaixe-busca">Nome científico</Label>
       <Input id="encaixe-busca" placeholder="Buscar nome científico" value={busca} onChange={(e) => setBusca(e.target.value)} />
