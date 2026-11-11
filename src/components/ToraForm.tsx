@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AutexPicker } from "./AutexPicker";
-import type { LinhaSaldo } from "@/lib/saldo";
+import { mesmaArvoreSecao, type LinhaSaldo } from "@/lib/saldo";
 import { useAuth } from "@/hooks/useAuth";
 import { avisoDuplicidade, toraDuplicada, type IdentidadeTora } from "@/lib/tora-duplicidade";
 import { registrarOperacao } from "@/lib/registro-operacao";
@@ -27,7 +27,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
   const empresa = getEmpresaAtiva() ?? empresaId;
   const torasEmpresa = useMemo(() => toras.filter((t) => t.empresa_id === empresa), [toras, empresa]);
   const proxima = useMemo(() => toras.reduce((m, t) => Math.max(m, t.plaqueta), 0) + 1, [toras]);
-  const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: "A", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+  const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: origem === "manejo" ? "A" : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   const [busy, setBusy] = useState(false);
   const [autex, setAutex] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
@@ -42,10 +42,10 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
   };
   // Tora vinda do saldo (só volume, sem medidas) com a mesma árvore e secção: medir completa ela.
   const secAtual = f.secao.trim().toUpperCase();
-  const doSaldoTodas = useMemo(() => origem === "serraria" && f.arvore && secAtual ? torasEmpresa.filter((t) => t.origem !== "manejo" && t.arvore === Number(f.arvore) && (t.secao ?? "").trim().toUpperCase() === secAtual && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [torasEmpresa, f.arvore, secAtual, origem]);
+  const doSaldoTodas = useMemo(() => origem === "serraria" && f.arvore ? torasEmpresa.filter((t) => t.origem !== "manejo" && mesmaArvoreSecao(t, Number(f.arvore), secAtual) && !t.carregada && t.d_topo1 === null && t.comprimento === null) : [], [torasEmpresa, f.arvore, secAtual, origem]);
   const doSaldo = doSaldoTodas.length === 1 ? doSaldoTodas[0] : doSaldoTodas.find((t) => (t.autex ?? "") === autex);
   // Linha do arquivo de saldo (ainda não cadastrada) com a mesma árvore e secção.
-  const linhasSaldo = useMemo(() => !doSaldoTodas.length && f.arvore && secAtual ? saldo.filter((l) => l.arvore === Number(f.arvore) && l.secao === secAtual) : [], [saldo, doSaldoTodas.length, f.arvore, secAtual]);
+  const linhasSaldo = useMemo(() => !doSaldoTodas.length && f.arvore ? saldo.filter((l) => mesmaArvoreSecao(l, Number(f.arvore), secAtual)) : [], [saldo, doSaldoTodas.length, f.arvore, secAtual]);
   const linhaSaldo = linhasSaldo.length === 1 ? linhasSaldo[0] : linhasSaldo.find((l) => l.autex === autex);
   const autexEfetiva = doSaldo?.autex ?? linhaSaldo?.autex ?? (autex || arv?.autex || null);
   const identidade = { arvore: Number(f.arvore), secao: secAtual, autex: autexEfetiva, empresa_id: empresa };
@@ -58,7 +58,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
     if (busy) return;
     if (!empresa) { toast.error("Aguarde carregar a empresa antes de salvar"); return; }
     if (origem === "manejo" && !validarBaseManejo(arv, empresa)) { toast.error("Selecione uma árvore e AUTEX cadastradas na Base para lançar no manejo"); return; }
-    if (origem === "serraria" && !doSaldo && !linhaSaldo) { toast.error("Selecione uma árvore e secção do saldo da serraria"); return; }
+    if (origem === "serraria" && !doSaldo && !linhaSaldo) { toast.error("Selecione uma árvore do saldo e sua seção, quando houver"); return; }
     if (duplicada) { toast.error(avisoDuplicidade(duplicada)); return; }
     if (doSaldo) { await medirSaldo(doSaldo); return; }
     if (doSaldoTodas.length > 1) { toast.error(`Árvore ${f.arvore} secção ${secAtual} está no saldo em mais de uma AUTEX — escolha qual`); return; }
@@ -103,7 +103,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
       await qc.invalidateQueries({ queryKey: ["toras"] });
     }
     onSaved(plaqueta);
-    setF({ ...f, plaqueta: String(plaqueta + 1), secao: String.fromCharCode(f.secao.charCodeAt(0) + 1), d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+    setF({ ...f, plaqueta: String(plaqueta + 1), secao: secAtual ? String.fromCharCode(secAtual.charCodeAt(0) + 1) : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   }
 
   async function medirSaldo(t: Tora) {
@@ -117,7 +117,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
     toast.success(`Tora ${t.plaqueta} medida — saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³`);
     await qc.invalidateQueries({ queryKey: ["toras"] });
     onSaved(t.plaqueta);
-    setF({ ...f, arvore: "", secao: "A", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+    setF({ ...f, arvore: "", secao: origem === "manejo" ? "A" : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   }
 
   const field = (k: keyof typeof f, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (
@@ -133,7 +133,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
       <div className="grid grid-cols-3 gap-2">
         {field("plaqueta", "Plaqueta azul")}
         {field("arvore", "Nº árvore")}
-        {field("secao", "Secção", "text")}
+        {field("secao", origem === "serraria" ? "Seção (opcional)" : "Secção", "text")}
       </div>
       {duplicada && <div role="alert" className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">{avisoDuplicidade(duplicada)}. Esta tora já foi lançada.</div>}
       {candidatas.length > 1 && (
@@ -169,7 +169,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
           {vol > 0 && <div className={vol - (linhaSaldo.volume ?? 0) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {vol - (linhaSaldo.volume ?? 0) >= 0 ? "+" : ""}{fmtM3(vol - (linhaSaldo.volume ?? 0))} m³</div>}
         </div>
       )}
-      {f.arvore && secAtual && saldo.length > 0 && !doSaldoTodas.length && !linhasSaldo.length && <div className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">Árvore {f.arvore}-{secAtual} não está no saldo</div>}
+      {f.arvore && saldo.length > 0 && !doSaldoTodas.length && !linhasSaldo.length && <div className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">Árvore {f.arvore}{secAtual ? `-${secAtual}` : " sem seção"} não está no saldo</div>}
       {doSaldo && (
         <div className="rounded-md border-2 border-primary bg-secondary p-3 text-sm space-y-1">
           <div className="font-semibold">Tora do saldo · plaqueta {doSaldo.plaqueta}</div>
