@@ -50,5 +50,5 @@
 - [x] Navegação em Início/Manejo/Serraria/Relatórios e aba Relatórios (rendimento, romaneios, estoque) em PDF/Excel.
 - [x] Botão WhatsApp no relatório de toras: envia o arquivo com o resumo (ou abre o WhatsApp com o resumo da lista quando o aparelho não aceita anexo) e botão Copiar resumo; resumo segue a medida ativa (física/comercial).
 - [x] Encaixe de toras aceita AUTESP sem seção: a árvore pode ser escolhida com a seção vazia, a tora é guardada sem seção e o registro avisa "sem seção".
-- [ ] Excluir carga de madeira serrada (pacotes voltam ao pátio; registro no histórico).
-- [ ] TXT de NF-e também no romaneio de toras (verificar se já existe nos detalhes do romaneio; se não, adicionar).
+- [x] Excluir carga de madeira serrada (pacotes voltam ao pátio; registro no histórico). Conferido na tela: botão na carga, confirmação antes de apagar.
+- [x] TXT de NF-e no romaneio de toras: já existe na tela de detalhes do romaneio (botões TXT NF-e e Copiar), aberta logo após salvar ou por "Ver romaneios emitidos".
