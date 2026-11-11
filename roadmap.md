@@ -49,3 +49,4 @@
 - [x] Listas de toras mais legíveis no celular: nome popular em destaque no topo, plaqueta/árvore/secção/AUTEX/volume embaixo, botões menores à direita. Verificado em 384 px sem corte.
 - [x] Navegação em Início/Manejo/Serraria/Relatórios e aba Relatórios (rendimento, romaneios, estoque) em PDF/Excel.
 - [x] Botão WhatsApp no relatório de toras: envia o arquivo com o resumo (ou abre o WhatsApp com o resumo da lista quando o aparelho não aceita anexo) e botão Copiar resumo; resumo segue a medida ativa (física/comercial).
+- [x] Encaixe de toras aceita AUTESP sem seção: a árvore pode ser escolhida com a seção vazia, a tora é guardada sem seção e o registro avisa "sem seção".

@@ -48,4 +48,16 @@ describe("encaixe de toras", () => {
   it("agrupa nomes científicos repetidos sem perder espécies diferentes", () => {
     expect(nomesCientificosEncaixe([linha(1, 2), linha(2, 2, " POUTERIA MACROPHYLLA "), linha(3, 2, "Qualea albiflora"), linha(4, 2, "")])).toEqual(["Pouteria macrophylla", "Qualea albiflora"]);
   });
+  it("sugere e deixa escolher tora de AUTESP sem seção pelo volume", () => {
+    const autesp: LinhaSaldo = { arvore: 349, volume: 2.0125, nome_cientifico: "Pouteria macrophylla", autex: "AUTESP-2011.2.2026.10587", secao: "", especie: "Abiurana" };
+    const opcoes = encaixarToras([autesp], "Pouteria macrophylla", 2);
+    expect(opcoes.map((o) => [o.linha.arvore, o.linha.secao, o.linha.autex])).toEqual([[349, "", "AUTESP-2011.2.2026.10587"]]);
+    expect(linhasDisponiveisOffline([autesp], [], "RJ").map((l) => l.arvore)).toEqual([349]);
+  });
+  it("reserva AUTESP sem seção depois do lançamento offline e libera ao remover", async () => {
+    const itens: ItemFila[] = [{ id: "1", criadoEm: 1, op: { tipo: "tora_insert", dados: { empresa_id: "RJ", arvore: 349, secao: null, autex: "AUTESP-2011.2.2026.10587", plaqueta: 60 } } }];
+    const autesp: LinhaSaldo = { arvore: 349, volume: 2.0125, nome_cientifico: "Pouteria macrophylla", autex: "AUTESP-2011.2.2026.10587", secao: "", especie: "Abiurana" };
+    expect(linhasDisponiveisOffline([autesp], itens, "RJ")).toEqual([]);
+    expect(linhasDisponiveisOffline([autesp], itens.filter(() => false), "RJ").map((l) => l.arvore)).toEqual([349]);
+  });
 });

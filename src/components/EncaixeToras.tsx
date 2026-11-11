@@ -63,14 +63,14 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
   const opcoes = useMemo(() => encaixarToras(linhas, nome, volume), [linhas, nome, volume]);
   return <div className="space-y-4">
     {salva && <div className="space-y-2 border-b pb-4" aria-live="polite">
-      <p className="font-semibold">Plaqueta azul {salva.plaqueta} · Árvore {salva.arvore} · Secção {salva.secao}</p>
+      <p className="font-semibold">Plaqueta azul {salva.plaqueta} · Árvore {salva.arvore} · Secção {salva.secao || "sem seção"}</p>
       <p className="text-sm break-words">AUTEX: {salva.autex}</p>
       <Button asChild className="w-full"><Link to="/etiquetas" search={{ p: String(salva.plaqueta) }}><Printer /> Imprimir plaqueta {salva.plaqueta}</Link></Button>
     </div>}
     {escolhida ? <section className="space-y-3" aria-label="Confirmar encaixe">
       <h3 className="text-xl font-bold">{escolhida.especie}</h3>
       <p className="italic text-sm">{escolhida.nome_cientifico}</p>
-      <p className="font-semibold">Árvore {escolhida.arvore} · Secção {escolhida.secao}</p>
+      <p className="font-semibold">Árvore {escolhida.arvore} · Secção {escolhida.secao || "sem seção"}</p>
       <p className="break-words text-sm">AUTEX: {escolhida.autex}</p>
       <p className="font-semibold">Plaqueta azul {plaqueta}</p>
       <p>Volume medido: {fmtM3(volume ?? 0)} m³ · Saldo: {fmtM3(escolhida.volume ?? 0)} m³</p>
@@ -78,6 +78,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
       <Button disabled={busy} className="w-full h-12" onClick={confirmar}><Check />{busy ? "Salvando…" : "Confirmar identificação e salvar"}</Button>
       <Button disabled={busy} variant="outline" className="w-full" onClick={() => setEscolhida(null)}><RotateCcw /> Escolher outra tora</Button>
     </section> : <>
+    <p className="text-xs text-muted-foreground">AUTESP sem seção: escolha a árvore normalmente, a seção fica vazia.</p>
     <div className="space-y-2">
       <Label htmlFor="encaixe-busca">Nome científico</Label>
       <Input id="encaixe-busca" placeholder="Buscar nome científico" value={busca} onChange={(e) => setBusca(e.target.value)} />
@@ -106,7 +107,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
           <div className="text-sm break-words">AUTEX: {linha.autex || "Não informada"}</div>
           <div className="text-sm italic text-muted-foreground break-words">{linha.nome_cientifico}</div>
           <div className="text-sm text-muted-foreground">Diferença (saldo − medido): {diferenca > 0 ? "+" : ""}{fmtM3(diferenca)} m³</div>
-          <Button variant="outline" className="w-full h-11" disabled={!linha.autex.trim() || !linha.secao.trim()} onClick={() => { setEscolhida(linha); setSalva(null); }}><Check /> Escolher árvore {linha.arvore} · {linha.secao || "Sem secção"}</Button>
+          <Button variant="outline" className="w-full h-11" disabled={!linha.autex.trim()} onClick={() => { setEscolhida(linha); setSalva(null); }}><Check /> Escolher árvore {linha.arvore} · {linha.secao || "Sem secção"}</Button>
         </li>)}
       </ol>
       {opcoes.length > limite && <Button variant="outline" className="w-full" onClick={() => setLimite((n) => n + 10)}>Mostrar mais opções</Button>}
