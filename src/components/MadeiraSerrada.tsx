@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Package, Truck, Pencil, Trash2, FileText, Download, Share2, ExternalLink, LoaderCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 import { cargasSerradasQuery, excluirCarga, excluirPacote, madeiraQuery, pacotesComFila, resumoPacotes, type CargaSerrada, type PacoteSerrado } from '@/lib/madeira-serrada';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { fila } from '@/lib/offline/fila';
@@ -40,7 +39,7 @@ export function MadeiraSerrada({empresa}:{empresa:string|null}) {
   const r=resumoPacotes(todos.filter(p=>!p.carga_id));
   async function atualizado(){setForm(null);setEdit(undefined);await Promise.all([qc.invalidateQueries({queryKey:['madeira-serrada']}),qc.invalidateQueries({queryKey:['cargas-serradas']}),qc.invalidateQueries({queryKey:['registros']})]);}
   async function excluir(p:PacoteSerrado){if(!empresa||busy||!confirm(`Excluir o pacote ${p.numero} e todas as suas bitolas?`))return;setBusy(true);try{if(p.fila_id)await fila().remover(p.fila_id);else await excluirPacote(empresa,p.id);toast.success('Pacote excluído');await atualizado();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível excluir');}finally{setBusy(false);}}
-  async function excluirCargaSelecionada(c:Tables['romaneios_madeira_serrada']['Row']){if(!empresa||busy||!confirm(`Excluir a carga ${c.numero_carga}? Os pacotes voltam para o pátio como disponíveis.`))return;setBusy(true);try{await excluirCarga(empresa,c.id);toast.success('Carga excluída · pacotes de volta ao pátio');await atualizado();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível excluir a carga');}finally{setBusy(false);}}
+  async function excluirCargaSelecionada(c:{id:string;numero_carga:string}){if(!empresa||busy||!confirm(`Excluir a carga ${c.numero_carga}? Os pacotes voltam para o pátio como disponíveis.`))return;setBusy(true);try{await excluirCarga(empresa,c.id);toast.success('Carga excluída · pacotes de volta ao pátio');await atualizado();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível excluir a carga');}finally{setBusy(false);}}
   async function gerar(c:CargaSerrada){setPdfOpen(true);setGerando(true);setPdf(null);try{const a=await gerarPdfRomaneioSerrado(c,empresaQuery.data??'Empresa');setPdf({...a,url:URL.createObjectURL(a.blob)});}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível gerar PDF');setPdfOpen(false);}finally{setGerando(false);}}
   async function compartilhar(){if(!pdf)return;const file=new File([pdf.blob],pdf.nome,{type:'application/pdf'});if(!navigator.canShare?.({files:[file]})){baixarArquivo(pdf);toast.info('PDF salvo para anexar no WhatsApp');return;}try{await navigator.share({files:[file],title:'Romaneio de madeira serrada'});}catch(e){if(e instanceof DOMException&&e.name==='AbortError')return;toast.error('Não foi possível compartilhar. Use Baixar PDF.');}}
   if(!empresa)return <p className="py-6 text-muted-foreground">Selecione uma empresa para acessar a madeira serrada.</p>;
