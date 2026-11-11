@@ -63,7 +63,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
   const opcoes = useMemo(() => encaixarToras(linhas, nome, volume), [linhas, nome, volume]);
   return <div className="space-y-4">
     {salva && <div className="space-y-2 border-b pb-4" aria-live="polite">
-      <p className="font-semibold">Plaqueta azul {salva.plaqueta} · Árvore {salva.arvore} · Secção {salva.secao}</p>
+      <p className="font-semibold">Plaqueta azul {salva.plaqueta} · Árvore {salva.arvore} · Secção {salva.secao || "sem seção"}</p>
       <p className="text-sm break-words">AUTEX: {salva.autex}</p>
       <Button asChild className="w-full"><Link to="/etiquetas" search={{ p: String(salva.plaqueta) }}><Printer /> Imprimir plaqueta {salva.plaqueta}</Link></Button>
     </div>}

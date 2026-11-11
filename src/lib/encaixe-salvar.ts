@@ -25,7 +25,7 @@ export async function salvarEncaixe(linha: LinhaSaldo, medidas: MedidasEncaixe, 
   const repetida = toraDuplicada([...inventario, ...pendentes], identidade);
   if (repetida) throw new Error(avisoDuplicidade(repetida));
   const plaqueta = menorPlaquetaLivre(inventario, itens, empresa);
-  const log = await deps.capturar("Encaixe confirmado", `Plaqueta ${plaqueta} · ${linha.especie} · árvore ${linha.arvore} · secção ${identidade.secao} · AUTEX ${identidade.autex} · identidade escolhida pelo usuário · saldo ${linha.volume} m³ · medido ${volume} m³`);
+  const log = await deps.capturar("Encaixe confirmado", `Plaqueta ${plaqueta} · ${linha.especie} · árvore ${linha.arvore} · secção ${identidade.secao ?? "sem seção"} · AUTEX ${identidade.autex} · identidade escolhida pelo usuário · saldo ${linha.volume} m³ · medido ${volume} m³`);
   const valores = Object.fromEntries(CAMPOS_ENCAIXE.map((k) => [k, Number(medidas[k].trim().replace(",", "."))])) as Record<(typeof CAMPOS_ENCAIXE)[number], number>;
   const tora: Tora = { ...identidade, ...valores, origem: "serraria", plaqueta, volume, especie: linha.especie || null, nome_cientifico: linha.nome_cientifico || null, carregada: false, created_at: log.criado_em, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null };
   if (deps.online()) { await deps.inserir(tora, log); }
