@@ -19,17 +19,6 @@ async function checarEmpresa(): Promise<string | null> {
   return (data as string | null) ?? null;
 }
 
-async function carregarEmpresa(userId: string): Promise<string | null> {
-  const salva = lerEmpresaSalva(userId);
-  try {
-    const empresa = await checarEmpresa();
-    if (empresa) salvarEmpresaDoUsuario(userId, empresa);
-    return empresa ?? salva;
-  } catch {
-    return salva;
-  }
-}
-
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -38,36 +27,72 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [permissoesCarregando, setPermissoesCarregando] = useState(true);
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
+    let ativo = true;
+    let versao = 0;
+    let usuario: string | null = null;
+    let recebeuEvento = false;
+    let agendada: ReturnType<typeof setTimeout> | undefined;
+    let tentativa: ReturnType<typeof setTimeout> | undefined;
+
+    function atualizar(id: string, atual: number) {
+      const vigente = () => ativo && usuario === id && versao === atual;
+      // Empresa e permissões são independentes: uma consulta lenta de cargo
+      // não pode impedir lançamentos de campo.
+      void checarEmpresa().catch(() => null).then((empresa) => {
+        if (!vigente()) return;
+        const salva = empresa ?? lerEmpresaSalva(id);
+        if (empresa) salvarEmpresaDoUsuario(id, empresa);
+        setEmpresaId(salva);
+        if (!salva) tentativa = setTimeout(() => {
+          if (vigente()) atualizar(id, atual);
+        }, 10000);
+      });
+      void Promise.all([checarAdmin(id), checarSuperAdmin(id)])
+        .then(([a, sa]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); } })
+        .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); } })
+        .finally(() => { if (vigente()) setPermissoesCarregando(false); });
+    }
+
+    function receberSessao(s: Session | null) {
+      if (!ativo) return;
+      clearTimeout(agendada);
+      clearTimeout(tentativa);
+      const atual = ++versao;
+      const id = s?.user.id ?? null;
+      if (id !== usuario) { setIsAdmin(false); setIsSuperAdmin(false); }
+      usuario = id;
       setSession(s);
-      if (s?.user) {
-        setEmpresaId(lerEmpresaSalva(s.user.id));
-        Promise.all([checarAdmin(s.user.id), checarSuperAdmin(s.user.id)])
-          .then(([a, sa]) => { setIsAdmin(a); setIsSuperAdmin(sa); })
-          .catch(() => { setIsAdmin(false); setIsSuperAdmin(false); })
-          .finally(() => setPermissoesCarregando(false));
-        void carregarEmpresa(s.user.id).then(setEmpresaId);
-      } else {
-        setIsAdmin(false);
-        setIsSuperAdmin(false);
-        setEmpresaId(null);
-        setPermissoesCarregando(false);
-      }
-    });
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      // A sessão persistida libera as telas de campo sem aguardar consultas
-      // de permissões na rede. Permissões administrativas continuam verificadas.
       setLoading(false);
-      if (data.session?.user) {
-        setEmpresaId(lerEmpresaSalva(data.session.user.id));
-        setIsAdmin(await checarAdmin(data.session.user.id));
-        setIsSuperAdmin(await checarSuperAdmin(data.session.user.id));
-        setPermissoesCarregando(false);
-        setEmpresaId(await carregarEmpresa(data.session.user.id));
-      } else setPermissoesCarregando(false);
-     }).catch(() => { setLoading(false); setPermissoesCarregando(false); });
-    return () => data.subscription.unsubscribe();
+      setEmpresaId(lerEmpresaSalva(id));
+      setPermissoesCarregando(Boolean(id));
+      if (id) {
+        // O aviso de autenticação mantém o lock da sessão até retornar.
+        // Adiar as consultas evita que esperem pelo próprio aviso de login.
+        agendada = setTimeout(() => atualizar(id, atual), 0);
+      }
+    }
+
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
+      recebeuEvento = true;
+      receberSessao(s);
+    });
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!recebeuEvento) receberSessao(data.session);
+    }).catch(() => { if (ativo && !recebeuEvento) receberSessao(null); });
+    const reconectar = () => {
+      if (!usuario) return;
+      clearTimeout(agendada);
+      clearTimeout(tentativa);
+      atualizar(usuario, ++versao);
+    };
+    window.addEventListener("online", reconectar);
+    return () => {
+      ativo = false;
+      clearTimeout(agendada);
+      clearTimeout(tentativa);
+      window.removeEventListener("online", reconectar);
+      data.subscription.unsubscribe();
+    };
   }, []);
   return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId };
 }
