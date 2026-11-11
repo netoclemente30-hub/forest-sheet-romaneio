@@ -108,6 +108,12 @@ export async function excluirPacote(empresa: string, id: string) {
   const { error } = await supabase.rpc('excluir_pacote_serrado', { _empresa: empresa, _id: id, _log: log as unknown as Json });
   if (error) throw new Error(error.message);
 }
+export async function excluirCarga(empresa: string, id: string) {
+  exigirConexao();
+  const log = await capturarLog('Carga de madeira serrada excluída', id);
+  const { error } = await supabase.rpc('excluir_carga_serrada', { _empresa: empresa, _id: id, _log: log as unknown as Json });
+  if (error) throw new Error(error.message);
+}
 export async function salvarCargaSerrada(empresa: string, id: string, cab: CabCarga, pacotes: string[]) {
   exigirConexao();
   const log = await capturarLog('Carga de madeira serrada expedida', cab.numero_carga);
