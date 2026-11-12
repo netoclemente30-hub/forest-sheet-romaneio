@@ -2,6 +2,7 @@ import type { Romaneio, Tora } from "./data";
 import type { PacoteSerrado, CargaSerrada } from "./madeira-serrada";
 import type { ArquivoGerado } from "./arquivo";
 import { fmtM3 } from "./volume";
+import { volumeComercial } from "./medida-comercial";
 
 export type Periodo = { inicio: string; fim: string; especie: string };
 export type Tabela = { titulo: string; cabecalho: string[]; linhas: (string | number)[][]; rodape?: (string | number)[] };
@@ -86,8 +87,8 @@ export function estoqueConsolidado(toras: Tora[], roms: Romaneio[], pacotes: Pac
   const manejo = toras.filter((t) => t.origem === "manejo" && !t.carregada && ok(t.especie));
   const patio = toras.filter((t) => !t.serrada_em && (t.origem === "serraria" || (!!t.romaneio_id && recebidos.has(t.romaneio_id))) && ok(t.especie));
   const agrupa = (ls: Tora[]) => {
-    const m = new Map<string, { especie: string; qtd: number; volume: number }>();
-    for (const t of ls) { const k = t.especie?.trim() || "Sem espécie"; const r = m.get(k) ?? { especie: k, qtd: 0, volume: 0 }; r.qtd++; r.volume += Number(t.volume); m.set(k, r); }
+    const m = new Map<string, { especie: string; qtd: number; volume: number; comercial: number }>();
+    for (const t of ls) { const k = t.especie?.trim() || "Sem espécie"; const r = m.get(k) ?? { especie: k, qtd: 0, volume: 0, comercial: 0 }; r.qtd++; r.volume += Number(t.volume); r.comercial += volumeComercial(t); m.set(k, r); }
     return [...m.values()].sort((a, b) => a.especie.localeCompare(b.especie, "pt-BR"));
   };
   const mad = new Map<string, { especie: string; bitola: string; pecas: number; volume: number }>();
@@ -106,9 +107,9 @@ export function estoqueConsolidado(toras: Tora[], roms: Romaneio[], pacotes: Pac
 
 export function tabelaEstoque(toras: Tora[], roms: Romaneio[], pacotes: PacoteSerrado[], especie: string): Tabela[] {
   const e = estoqueConsolidado(toras, roms, pacotes, especie);
-  const tab = (titulo: string, ls: { especie: string; qtd: number; volume: number }[]): Tabela => ({
-    titulo, cabecalho: ["Espécie", "Toras", "Volume (m³)"], linhas: ls.map((r) => [r.especie, r.qtd, fmtM3(r.volume)]),
-    rodape: ["TOTAL", ls.reduce((n, r) => n + r.qtd, 0), fmtM3(ls.reduce((n, r) => n + r.volume, 0))],
+  const tab = (titulo: string, ls: { especie: string; qtd: number; volume: number; comercial: number }[]): Tabela => ({
+    titulo, cabecalho: ["Espécie", "Toras", "Volume físico (m³)", "Volume comercial (m³)"], linhas: ls.map((r) => [r.especie, r.qtd, fmtM3(r.volume), fmtM3(r.comercial)]),
+    rodape: ["TOTAL", ls.reduce((n, r) => n + r.qtd, 0), fmtM3(ls.reduce((n, r) => n + r.volume, 0)), fmtM3(ls.reduce((n, r) => n + r.comercial, 0))],
   });
   return [
     tab("Toras de manejo (na floresta, não carregadas)", e.manejo),
