@@ -40,7 +40,7 @@ function texto(doc: jsPDF, s: string, x: number, y: number, maxW: number, tamanh
 }
 
 /** Desenha o QR como vetor (quadrados pretos): nítido em qualquer impressora e arquivo bem leve. */
-function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado: number) {
+export function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado: number) {
   const qr = QRCode.create(valor, { errorCorrectionLevel: "M" });
   const n = qr.modules.size;
   const c = lado / n;
