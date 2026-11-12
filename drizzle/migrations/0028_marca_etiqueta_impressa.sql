@@ -1,0 +1,1 @@
+ALTER TABLE public.toras_aguardando ADD COLUMN IF NOT EXISTS etiqueta_impressa boolean NOT NULL DEFAULT false, ADD COLUMN IF NOT EXISTS etiqueta_impressa_em timestamptz;

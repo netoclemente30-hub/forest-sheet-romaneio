@@ -4,6 +4,7 @@ import { medidaComercial } from "@/lib/medida-comercial";
 export type ToraAguardando = {
   id: string; empresa_id: string; numero: number; especie: string; nome_cientifico: string | null;
   d_topo1: number; d_topo2: number; d_pe1: number; d_pe2: number; comprimento: number; volume: number; created_at: string;
+  etiqueta_impressa: boolean; etiqueta_impressa_em: string | null;
 };
 
 export type MedidasAguardando = { d_topo1: number; d_topo2: number; d_pe1: number; d_pe2: number; comprimento: number };

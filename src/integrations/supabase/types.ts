@@ -778,6 +778,8 @@ export type Database = {
           d_topo2: number
           empresa_id: string
           especie: string
+          etiqueta_impressa: boolean
+          etiqueta_impressa_em: string | null
           id: string
           nome_cientifico: string | null
           numero: number
@@ -792,6 +794,8 @@ export type Database = {
           d_topo2: number
           empresa_id?: string
           especie: string
+          etiqueta_impressa?: boolean
+          etiqueta_impressa_em?: string | null
           id?: string
           nome_cientifico?: string | null
           numero: number
@@ -806,6 +810,8 @@ export type Database = {
           d_topo2?: number
           empresa_id?: string
           especie?: string
+          etiqueta_impressa?: boolean
+          etiqueta_impressa_em?: string | null
           id?: string
           nome_cientifico?: string | null
           numero?: number

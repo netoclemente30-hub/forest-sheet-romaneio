@@ -24,7 +24,7 @@ describe("toras aguardando identificação", () => {
 
 import { relatorioAguardando } from "./toras-aguardando";
 describe("relatório de toras aguardando", () => {
-  const base = { empresa_id: "e", nome_cientifico: null, created_at: "2026-11-12T10:00:00Z", d_pe1: 56, d_pe2: 58, d_topo1: 52, d_topo2: 54, comprimento: 6.6, volume: 1.5701 };
+  const base = { empresa_id: "e", nome_cientifico: null, created_at: "2026-11-12T10:00:00Z", d_pe1: 56, d_pe2: 58, d_topo1: 52, d_topo2: 54, comprimento: 6.6, volume: 1.5701, etiqueta_impressa: false, etiqueta_impressa_em: null };
   it("soma físico e comercial e agrupa por espécie", () => {
     const r = relatorioAguardando([{ ...base, id: "b", numero: 2, especie: "Ipê" }, { ...base, id: "a", numero: 1, especie: "Ipê" }]);
     expect(r.linhas.map((l) => l.codigo)).toEqual(["NI-1", "NI-2"]);

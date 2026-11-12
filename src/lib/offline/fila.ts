@@ -32,6 +32,7 @@ export type Op =
   | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; empresa_id?: string; log?: LogCapturado }
   | { tipo: "arvore_gps"; id: string; empresa_id: string; autex: string; dados: DadosArvoreGPS; log: LogCapturado }
   | { tipo: "aguardando_insert"; dados: Record<string, unknown>; log: LogCapturado }
+  | { tipo: "aguardando_impressa"; id: string; empresa_id: string; imprimiu: boolean; log: LogCapturado }
   | { tipo: "rastro_salvar"; empresa_id: string; autex: string; pontos: PontoRastro[]; log: LogCapturado };
 
 export interface ItemFila {
@@ -72,6 +73,14 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
       if (!item?.erro) throw new Error("Este lançamento não está mais disponível para edição");
       if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
       // Keep the error until an explicit retry: saving must not send unexpectedly.
+      await store.put({ ...item, op });
+      onMudou();
+    },
+    /** Reescreve um lançamento pendente mantendo id, hora e auditoria capturados. */
+    async substituir(id: string, op: Op) {
+      const item = (await store.all()).find((i) => i.id === id);
+      if (!item) throw new Error("Este lançamento não está mais na lista de pendentes");
+      if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
       await store.put({ ...item, op });
       onMudou();
     },
