@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { aproveitamento, rendimentoDesdobro, tabelaEstoque } from "./relatorios-gerais";
 import type { Tora } from "./data";
 import type { PacoteSerrado } from "./madeira-serrada";
+import { volumeTora, fmtM3 } from "./volume";
 
 const tora = (especie: string, volume: number, serrada_em: string | null) => ({ especie, volume, serrada_em, origem: "serraria" }) as unknown as Tora;
 const pacote = (data: string, especie: string, volume_m3: number) => ({ data, carga_id: null, itens: [{ especie, volume_m3, total_pecas: 10 }] }) as unknown as PacoteSerrado;
@@ -20,5 +21,18 @@ describe("rendimento do desdobro", () => {
     expect(r.total.volToras).toBe(2);
     expect(r.total.volSerrado).toBe(1);
     expect(r.total.rendimento).toBe(50);
+  });
+});
+
+describe("estoque consolidado", () => {
+  it("mostra volume físico e comercial por espécie", () => {
+    const t = { especie: "Abiurana", volume: volumeTora({ d_topo1: 52, d_topo2: 54, d_pe1: 56, d_pe2: 58, comprimento: 6.6 }), d_topo1: 52, d_topo2: 54, d_pe1: 56, d_pe2: 58, comprimento: 6.6, origem: "serraria", serrada_em: null } as unknown as Tora;
+    const [manejo, patio] = tabelaEstoque([t], [], [], "");
+    expect(manejo.linhas).toEqual([]);
+    expect(patio.cabecalho).toContain("Volume comercial (m³)");
+    expect(patio.linhas[0][1]).toBe(1);
+    expect(patio.linhas[0][2]).toBe(fmtM3(1.585));
+    expect(patio.linhas[0][3]).toBe(fmtM3(1.434));
+    expect(patio.rodape?.[3]).toBe(fmtM3(1.434));
   });
 });
