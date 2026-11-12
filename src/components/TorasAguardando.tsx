@@ -7,7 +7,7 @@ import { empresaIdGravacao } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { fmtM3 } from "@/lib/volume";
 import { fmtComprimentoComercial } from "@/lib/medida-comercial";
-import { codigoAguardando, proximoNumeroAguardando, qrAguardando, volumesAguardando, type ToraAguardando } from "@/lib/toras-aguardando";
+import { codigoAguardando, proximoNumeroAguardando, qrAguardando, volumesAguardando, type ToraAguardando, type MedidasAguardando } from "@/lib/toras-aguardando";
 import { TAMANHOS_PADRAO } from "@/lib/etiqueta-pdf";
 import { salvarArquivo } from "@/lib/arquivo";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
       for (let tent = 0; tent < 3 && !salvo; tent++) {
         const atuais = (await qc.fetchQuery({ ...query, staleTime: 0 }));
         const numero = proximoNumeroAguardando(atuais);
-        const { data, error } = await supabase.from("toras_aguardando").insert({ ...empresaIdGravacao(), numero, especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...medidas as Required<typeof medidas>, volume: Number(vol.fisico.toFixed(4)) }).select().single();
+        const { data, error } = await supabase.from("toras_aguardando").insert({ ...empresaIdGravacao(), numero, especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)) }).select().single();
         if (error && error.code !== "23505") throw error;
         if (data) salvo = { ...data, d_topo1: +data.d_topo1, d_topo2: +data.d_topo2, d_pe1: +data.d_pe1, d_pe2: +data.d_pe2, comprimento: +data.comprimento, volume: +data.volume };
       }

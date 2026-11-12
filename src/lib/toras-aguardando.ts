@@ -16,7 +16,7 @@ export function proximoNumeroAguardando(lista: Pick<ToraAguardando, "numero">[])
 export function codigoAguardando(numero: number) { return `NI-${numero}`; }
 
 /** Físico pelo Smalian do app e comercial pela ponta mais fina; null quando faltam medidas. */
-export function volumesAguardando(m: Partial<MedidasAguardando>) {
+export function volumesAguardando(m: { [K in keyof MedidasAguardando]?: number | undefined }) {
   const ok = [m.d_topo1, m.d_topo2, m.d_pe1, m.d_pe2, m.comprimento].every((n) => typeof n === "number" && Number.isFinite(n) && n > 0);
   if (!ok) return null;
   const fisico = volumeTora(m);
