@@ -27,7 +27,9 @@ describe("rendimento do desdobro", () => {
 describe("estoque consolidado", () => {
   it("mostra volume físico e comercial por espécie", () => {
     const t = { especie: "Abiurana", volume: volumeTora({ d_topo1: 52, d_topo2: 54, d_pe1: 56, d_pe2: 58, comprimento: 6.6 }), d_topo1: 52, d_topo2: 54, d_pe1: 56, d_pe2: 58, comprimento: 6.6, origem: "serraria", serrada_em: null } as unknown as Tora;
-    const [manejo, patio] = tabelaEstoque([t], [], [], "");
+    const tabelas = tabelaEstoque([t], [], [], "");
+    const manejo = tabelas[0]!;
+    const patio = tabelas[1]!;
     expect(manejo.linhas).toEqual([]);
     expect(patio.cabecalho).toContain("Volume comercial (m³)");
     expect(patio.linhas[0][1]).toBe(1);
