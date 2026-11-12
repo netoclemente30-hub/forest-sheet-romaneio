@@ -19,8 +19,9 @@ export function codigoAguardando(numero: number) { return `NI-${numero}`; }
 export function volumesAguardando(m: { [K in keyof MedidasAguardando]?: number | undefined }) {
   const ok = [m.d_topo1, m.d_topo2, m.d_pe1, m.d_pe2, m.comprimento].every((n) => typeof n === "number" && Number.isFinite(n) && n > 0);
   if (!ok) return null;
-  const fisico = volumeTora(m);
-  return { fisico, comercial: medidaComercial({ ...m, volume: fisico }) };
+  const v = m as MedidasAguardando;
+  const fisico = volumeTora(v);
+  return { fisico, comercial: medidaComercial({ ...v, volume: fisico }) };
 }
 
 export function qrAguardando(t: Pick<ToraAguardando, "id" | "empresa_id" | "numero" | "especie">) {
