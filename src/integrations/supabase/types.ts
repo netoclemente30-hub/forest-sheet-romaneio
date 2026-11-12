@@ -768,6 +768,51 @@ export type Database = {
           },
         ]
       }
+      toras_aguardando: {
+        Row: {
+          comprimento: number
+          created_at: string
+          d_pe1: number
+          d_pe2: number
+          d_topo1: number
+          d_topo2: number
+          empresa_id: string
+          especie: string
+          id: string
+          nome_cientifico: string | null
+          numero: number
+          volume: number
+        }
+        Insert: {
+          comprimento: number
+          created_at?: string
+          d_pe1: number
+          d_pe2: number
+          d_topo1: number
+          d_topo2: number
+          empresa_id?: string
+          especie: string
+          id?: string
+          nome_cientifico?: string | null
+          numero: number
+          volume: number
+        }
+        Update: {
+          comprimento?: number
+          created_at?: string
+          d_pe1?: number
+          d_pe2?: number
+          d_topo1?: number
+          d_topo2?: number
+          empresa_id?: string
+          especie?: string
+          id?: string
+          nome_cientifico?: string | null
+          numero?: number
+          volume?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

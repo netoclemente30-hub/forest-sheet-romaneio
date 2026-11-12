@@ -190,6 +190,13 @@
       "when": 1794437158774,
       "tag": "0026_excluir_carga_serrada",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794498923435,
+      "tag": "0027_toras_aguardando_identificacao",
+      "breakpoints": true
     }
   ]
 }
