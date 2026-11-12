@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { QrCode, Trash2, Printer } from "lucide-react";
+import { QrCode, Trash2, Printer, FileSpreadsheet, FileText, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
@@ -9,7 +9,8 @@ import { fmtM3 } from "@/lib/volume";
 import { fmtComprimentoComercial } from "@/lib/medida-comercial";
 import { codigoAguardando, proximoNumeroAguardando, qrAguardando, volumesAguardando, type ToraAguardando, type MedidasAguardando } from "@/lib/toras-aguardando";
 import { TAMANHOS_PADRAO } from "@/lib/etiqueta-pdf";
-import { salvarArquivo } from "@/lib/arquivo";
+import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
+import { excelAguardando, pdfAguardando } from "@/lib/toras-aguardando";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -34,6 +35,15 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
   const [busy, setBusy] = useState(false);
   const [qr, setQr] = useState<ToraAguardando | null>(null);
   const [tamanho, setTamanho] = useState(0);
+  const [relatorio, setRelatorio] = useState<ArquivoGerado | null>(null);
+  async function gerarRelatorio(tipo: "pdf" | "xlsx") {
+    try {
+      let empresa = "";
+      const ids = [...new Set((lista.data ?? []).map((t) => t.empresa_id))];
+      if (ids.length) { const { data } = await supabase.from("empresas").select("nome").in("id", ids); empresa = (data ?? []).map((e) => e.nome).join(", "); }
+      setRelatorio(await (tipo === "pdf" ? pdfAguardando : excelAguardando)(lista.data ?? [], empresa));
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao gerar relatório"); }
+  }
   const medidas = { d_topo1: num(f.d_topo1), d_topo2: num(f.d_topo2), d_pe1: num(f.d_pe1), d_pe2: num(f.d_pe2), comprimento: num(f.comprimento) };
   const vol = volumesAguardando(medidas);
   const nomes = useMemo(() => [...new Map(especies.filter((e) => e.especie).map((e) => [e.especie, e])).values()], [especies]);
@@ -121,6 +131,17 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
         </select>
         <Button variant="outline" className="flex-1" disabled={!itens.length} onClick={() => etiquetas(itens)}><Printer /> Etiquetas de todas</Button>
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="secondary" disabled={!itens.length} onClick={() => gerarRelatorio("pdf")}><FileText /> Relatório PDF</Button>
+        <Button variant="secondary" disabled={!itens.length} onClick={() => gerarRelatorio("xlsx")}><FileSpreadsheet /> Relatório Excel</Button>
+      </div>
+      <Dialog open={!!relatorio} onOpenChange={(o) => !o && setRelatorio(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Relatório pronto</DialogTitle></DialogHeader>
+          <p className="text-sm break-all">{relatorio?.nome}</p>
+          <Button className="w-full h-12" onClick={() => relatorio && salvarArquivo(relatorio)}><Download /> Salvar arquivo</Button>
+        </DialogContent>
+      </Dialog>
       {lista.isError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar a lista. Confira a internet.</p>}
       <div className="bg-card border rounded-xl divide-y">
         {!itens.length && !lista.isPending && <p className="p-3 text-sm text-muted-foreground">Nenhuma tora aguardando identificação.</p>}
