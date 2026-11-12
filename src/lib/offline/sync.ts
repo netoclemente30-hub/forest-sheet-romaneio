@@ -139,6 +139,15 @@ async function executarOpSemLog(op: Op): Promise<void> {
       if (error) throw new Error(error.code === "23505" ? `Código NI-${op.dados["numero"]} já usado em outro aparelho` : error.message);
       return;
     }
+    case "aguardando_impressa": {
+      const { error } = await supabase
+        .from("toras_aguardando")
+        .update({ etiqueta_impressa: op.imprimiu, etiqueta_impressa_em: op.imprimiu ? new Date().toISOString() : null } as never)
+        .eq("id", op.id)
+        .eq("empresa_id", op.empresa_id);
+      if (error) throw new Error(error.message);
+      return;
+    }
     case "rastro_salvar": {
       const { error } = await supabase
         .from("rastros_gps")
