@@ -16,8 +16,8 @@ export type MarcaImpressaDeps = {
   capturar: (acao: string, detalhe: string) => Promise<LogCapturado>;
   gravarLog: (log: LogCapturado) => Promise<void>;
   gravar: (t: AlvoImpressa, imprimiu: boolean, em: string | null) => Promise<void>;
-  reescrever: (idFila: string, op: Op) => Promise<void>;
-  enfileirar: (op: Op) => Promise<void>;
+  reescrever: (idFila: string, op: Op) => Promise<unknown>;
+  enfileirar: (op: Op) => Promise<unknown>;
 };
 
 const acao = (imprimiu: boolean) => (imprimiu ? "Etiqueta de tora não identificada impressa" : "Impressão de tora não identificada desmarcada");
