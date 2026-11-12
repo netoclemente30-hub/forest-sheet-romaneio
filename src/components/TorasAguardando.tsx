@@ -27,7 +27,7 @@ const query = {
       return (data ?? []).map((t) => ({ ...t, d_topo1: +t.d_topo1, d_topo2: +t.d_topo2, d_pe1: +t.d_pe1, d_pe2: +t.d_pe2, comprimento: +t.comprimento, volume: +t.volume }));
     });
     const ids = new Set(salvas.map((t) => t.id));
-    const pendentes = (await fila().listar().catch(() => [])).flatMap(({ op }) => op.tipo === "aguardando_insert" && !ids.has(String(op.dados.id)) ? [op.dados as unknown as ToraAguardando] : []);
+    const pendentes = (await fila().listar().catch(() => [])).flatMap(({ op }) => op.tipo === "aguardando_insert" && !ids.has(String(op.dados["id"])) ? [op.dados as unknown as ToraAguardando] : []);
     return [...pendentes, ...salvas].sort((a, b) => b.numero - a.numero);
   },
 };

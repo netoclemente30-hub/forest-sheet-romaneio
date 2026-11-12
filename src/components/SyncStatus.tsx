@@ -19,6 +19,7 @@ function descrever(op: Op): string {
     case "romaneio_recebido": return `Entrada no pátio ${op.patio}`;
     case "toras_serradas": return `${op.desfazer ? "Voltar ao pátio" : "Serrar"} · ${op.plaquetas.length} toras`;
     case "arvore_gps": return `Árvore localizada · AUTEX ${op.autex}`;
+    case "aguardando_insert": return `Tora não identificada NI-${String(op.dados["numero"] ?? "?")}`;
     case "rastro_salvar": return `Rastreio GPS · AUTEX ${op.autex} · ${op.pontos.length} pontos`;
   }
 }

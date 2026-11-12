@@ -45,7 +45,7 @@ export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
   if (op.tipo === "romaneio_salvar") return { ...op.cab };
   if (op.tipo === "romaneio_recebido") return { patio: op.patio };
   if (op.tipo === "arvore_gps") return { latitude: String(op.dados.latitude), longitude: String(op.dados.longitude), gps_precisao: String(op.dados.gps_precisao ?? "") };
-  if (op.tipo === "rastro_salvar") return {};
+  if (op.tipo === "rastro_salvar" || op.tipo === "aguardando_insert") return {};
   if (op.tipo === "tora_delete") return { plaqueta: String(op.plaqueta) };
   return { plaquetas: op.plaquetas.join(", ") };
 }
