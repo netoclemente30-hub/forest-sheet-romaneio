@@ -31,8 +31,8 @@ describe("estoque consolidado", () => {
     expect(manejo.linhas).toEqual([]);
     expect(patio.cabecalho).toContain("Volume comercial (m³)");
     expect(patio.linhas[0][1]).toBe(1);
-    expect(patio.linhas[0][2]).toBe(fmtM3(1.585));
-    expect(patio.linhas[0][3]).toBe(fmtM3(1.434));
-    expect(patio.rodape?.[3]).toBe(fmtM3(1.434));
+    expect(patio.linhas[0][2]).toBe(fmtM3(1.570639));
+    expect(patio.linhas[0][3]).toBe(fmtM3(1.43453));
+    expect(patio.rodape?.[3]).toBe(fmtM3(1.43453));
   });
 });
