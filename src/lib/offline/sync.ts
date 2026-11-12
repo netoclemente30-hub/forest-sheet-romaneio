@@ -133,6 +133,12 @@ async function executarOpSemLog(op: Op): Promise<void> {
       if (error) throw new Error(error.message);
       return;
     }
+    case "aguardando_insert": {
+      // Stable id makes replay idempotent; a numero clash is a marked conflict.
+      const { error } = await supabase.from("toras_aguardando").upsert(op.dados as never, { onConflict: "id", ignoreDuplicates: true });
+      if (error) throw new Error(error.code === "23505" ? `Código NI-${op.dados["numero"]} já usado em outro aparelho` : error.message);
+      return;
+    }
     case "rastro_salvar": {
       const { error } = await supabase
         .from("rastros_gps")

@@ -27,7 +27,7 @@ export function camposDaFila(op: Op): CampoFila[] {
     case "romaneio_recebido": return [{ chave: "patio", rotulo: "Pátio" }];
     case "toras_serradas": return [{ chave: "plaquetas", rotulo: "Plaquetas (separadas por vírgula)" }];
     case "arvore_gps": return [{ chave: "latitude", rotulo: "Latitude", mode: "decimal" }, { chave: "longitude", rotulo: "Longitude", mode: "decimal" }, { chave: "gps_precisao", rotulo: "Precisão GPS (m)", mode: "decimal" }];
-    case "rastro_salvar": return [];
+    case "rastro_salvar": case "aguardando_insert": return [];
     case "romaneio_salvar": return [
       { chave: "placa", rotulo: "Placa do caminhão" }, { chave: "julieta", rotulo: "Placa do reboque" },
       { chave: "motorista", rotulo: "Motorista" }, { chave: "cpf", rotulo: "CPF" }, { chave: "data", rotulo: "Data" },
