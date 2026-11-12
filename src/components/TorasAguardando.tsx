@@ -169,7 +169,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg bg-card border p-2"><b className="text-xl">{itens.length}</b><div className="text-xs">toras</div><div className="text-xs text-warning font-semibold">{naoImpressas} não impressas</div></div>
+        <div className="rounded-lg bg-card border p-2"><b className="text-xl">{itens.length}</b><div className="text-xs">toras</div><div className="text-xs text-warning font-semibold">{naoImpressas} não impressa{naoImpressas === 1 ? "" : "s"}</div></div>
         <div className="rounded-lg bg-card border p-2"><b>{fmtM3(totFis)}</b><div className="text-xs">m³ físico</div></div>
         <div className="rounded-lg bg-card border p-2"><b>{fmtM3(totCom)}</b><div className="text-xs">m³ comercial</div></div>
       </div>
