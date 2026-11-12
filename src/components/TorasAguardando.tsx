@@ -11,6 +11,8 @@ import { codigoAguardando, proximoNumeroAguardando, qrAguardando, volumesAguarda
 import { TAMANHOS_PADRAO } from "@/lib/etiqueta-pdf";
 import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
 import { excelAguardando, pdfAguardando } from "@/lib/toras-aguardando";
+import { comCache } from "@/lib/offline/cache";
+import { fila } from "@/lib/offline/fila";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,9 +21,14 @@ import { QrImage } from "@/components/QrImage";
 const query = {
   queryKey: ["toras_aguardando"],
   queryFn: async (): Promise<ToraAguardando[]> => {
-    const { data, error } = await supabase.from("toras_aguardando").select("*").order("numero", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((t) => ({ ...t, d_topo1: +t.d_topo1, d_topo2: +t.d_topo2, d_pe1: +t.d_pe1, d_pe2: +t.d_pe2, comprimento: +t.comprimento, volume: +t.volume }));
+    const salvas = await comCache<ToraAguardando>("toras_aguardando", async () => {
+      const { data, error } = await supabase.from("toras_aguardando").select("*").order("numero", { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((t) => ({ ...t, d_topo1: +t.d_topo1, d_topo2: +t.d_topo2, d_pe1: +t.d_pe1, d_pe2: +t.d_pe2, comprimento: +t.comprimento, volume: +t.volume }));
+    });
+    const ids = new Set(salvas.map((t) => t.id));
+    const pendentes = (await fila().listar().catch(() => [])).flatMap(({ op }) => op.tipo === "aguardando_insert" && !ids.has(String(op.dados["id"])) ? [op.dados as unknown as ToraAguardando] : []);
+    return [...pendentes, ...salvas].sort((a, b) => b.numero - a.numero);
   },
 };
 
@@ -54,14 +61,24 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
   async function salvar() {
     if (!f.especie.trim()) { toast.error("Informe o nome da madeira"); return; }
     if (!vol) { toast.error("Preencha os 4 diâmetros e o comprimento"); return; }
-    if (!navigator.onLine) { toast.error("Precisa de internet para salvar"); return; }
     setBusy(true);
     try {
+      if (!navigator.onLine) {
+        const atuais = await qc.fetchQuery({ ...query, staleTime: 0 });
+        const t = { id: crypto.randomUUID(), ...empresaIdGravacao(), numero: proximoNumeroAguardando(atuais), especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)), created_at: new Date().toISOString() };
+        const log = await capturarLog("Tora não identificada medida", `${codigoAguardando(t.numero)} · ${t.especie} · físico ${fmtM3(t.volume)} m³ · comercial ${fmtM3(vol.comercial?.volume ?? 0)} m³`);
+        await fila().enfileirar({ tipo: "aguardando_insert", dados: t, log });
+        toast.success(`${codigoAguardando(t.numero)} salva sem internet — será enviada quando conectar`);
+        setF((x) => ({ ...vazio, especie: x.especie, nome_cientifico: x.nome_cientifico }));
+        await qc.invalidateQueries({ queryKey: query.queryKey });
+        setQr(t as unknown as ToraAguardando);
+        return;
+      }
       let salvo: ToraAguardando | null = null;
       for (let tent = 0; tent < 3 && !salvo; tent++) {
         const atuais = (await qc.fetchQuery({ ...query, staleTime: 0 }));
         const numero = proximoNumeroAguardando(atuais);
-        const { data, error } = await supabase.from("toras_aguardando").insert({ ...empresaIdGravacao(), numero, especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)) }).select().single();
+        const { data, error } = await supabase.from("toras_aguardando").insert({ id: crypto.randomUUID(), ...empresaIdGravacao(), numero, especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)) }).select().single();
         if (error && error.code !== "23505") throw error;
         if (data) salvo = { ...data, d_topo1: +data.d_topo1, d_topo2: +data.d_topo2, d_pe1: +data.d_pe1, d_pe2: +data.d_pe2, comprimento: +data.comprimento, volume: +data.volume };
       }
