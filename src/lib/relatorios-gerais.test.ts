@@ -32,9 +32,10 @@ describe("estoque consolidado", () => {
     const patio = tabelas[1]!;
     expect(manejo.linhas).toEqual([]);
     expect(patio.cabecalho).toContain("Volume comercial (m³)");
-    expect(patio.linhas[0][1]).toBe(1);
-    expect(patio.linhas[0][2]).toBe(fmtM3(1.5701));
-    expect(patio.linhas[0][3]).toBe(fmtM3(1.434));
+    const linha = patio.linhas[0]!;
+    expect(linha[1]).toBe(1);
+    expect(linha[2]).toBe(fmtM3(1.5701));
+    expect(linha[3]).toBe(fmtM3(1.434));
     expect(patio.rodape?.[3]).toBe(fmtM3(1.434));
   });
 });
