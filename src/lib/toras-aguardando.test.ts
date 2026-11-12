@@ -21,3 +21,14 @@ describe("toras aguardando identificação", () => {
     expect(q).toMatchObject({ tipo: "nao_identificada", codigo: "NI-4", empresa: "e" });
   });
 });
+
+import { relatorioAguardando } from "./toras-aguardando";
+describe("relatório de toras aguardando", () => {
+  const base = { empresa_id: "e", nome_cientifico: null, created_at: "2026-11-12T10:00:00Z", d_pe1: 56, d_pe2: 58, d_topo1: 52, d_topo2: 54, comprimento: 6.6, volume: 1.5701 };
+  it("soma físico e comercial e agrupa por espécie", () => {
+    const r = relatorioAguardando([{ ...base, id: "b", numero: 2, especie: "Ipê" }, { ...base, id: "a", numero: 1, especie: "Ipê" }]);
+    expect(r.linhas.map((l) => l.codigo)).toEqual(["NI-1", "NI-2"]);
+    expect(r.total).toEqual({ qtd: 2, fisico: 3.1402, comercial: 2.868 });
+    expect(r.porEspecie).toHaveLength(1);
+  });
+});
