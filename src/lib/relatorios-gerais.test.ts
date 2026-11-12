@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aproveitamento, rendimentoDesdobro } from "./relatorios-gerais";
+import { aproveitamento, rendimentoDesdobro, tabelaEstoque } from "./relatorios-gerais";
 import type { Tora } from "./data";
 import type { PacoteSerrado } from "./madeira-serrada";
 
