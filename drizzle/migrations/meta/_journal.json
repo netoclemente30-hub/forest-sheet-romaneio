@@ -197,6 +197,13 @@
       "when": 1794498923435,
       "tag": "0027_toras_aguardando_identificacao",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794508329906,
+      "tag": "0028_marca_etiqueta_impressa",
+      "breakpoints": true
     }
   ]
 }
