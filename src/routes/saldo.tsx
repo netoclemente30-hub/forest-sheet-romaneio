@@ -19,6 +19,7 @@ import { fmtM3 } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
 import { Printer, Upload, Ruler, Pencil, Trash2, ChevronLeft, ChevronRight, ScanSearch } from "lucide-react";
 import { SerrariaAbas } from "@/components/SerrariaAbas";
+import { TorasAguardando } from "@/components/TorasAguardando";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -95,6 +96,7 @@ function Saldo() {
   const [sel, setSel] = useState<number[]>([]);
   const [impressao, setImpressao] = useState<"todas" | "impressas" | "nao">("todas");
   const [pagina, setPagina] = useState(0);
+  const [vista, setVista] = useState<"saldo" | "aguardando">("saldo");
   const buscaAdiada = useDeferredValue(busca);
   const textos = useMemo(() => res.map((r) => [r.linha.especie, r.linha.nome_cientifico, r.linha.autex, r.linha.secao, r.linha.arvore, r.tora?.plaqueta].join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()), [res]);
   const visiveis = useMemo(() => {
@@ -153,6 +155,11 @@ function Saldo() {
     <div className="space-y-4">
       <SerrariaAbas atual="saldo" />
       <h1 className="text-3xl font-bold uppercase">Conferir saldo</h1>
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="tablist">
+        <Button role="tab" aria-selected={vista === "saldo"} size="sm" variant={vista === "saldo" ? "default" : "ghost"} className="h-auto py-2 whitespace-normal" onClick={() => setVista("saldo")}>Saldo</Button>
+        <Button role="tab" aria-selected={vista === "aguardando"} size="sm" variant={vista === "aguardando" ? "default" : "ghost"} className="h-auto py-2 whitespace-normal" onClick={() => setVista("aguardando")}>Toras medidas no pátio · aguardando identificação</Button>
+      </div>
+      {vista === "aguardando" ? <TorasAguardando especies={[...linhas.map((l) => ({ especie: l.especie, nome_cientifico: l.nome_cientifico ?? null })), ...(toras.data ?? []).map((t) => ({ especie: t.especie ?? "", nome_cientifico: t.nome_cientifico }))]} /> : <>
       <Button variant="outline" className="w-full h-12" onClick={() => setEncaixe(true)}><ScanSearch /> Encaixe de toras</Button>
       <Sheet open={encaixe} onOpenChange={setEncaixe}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto">
@@ -239,6 +246,7 @@ function Saldo() {
             </div>
           ))}
         </div>
+      </>}
       </>}
     </div>
   );
