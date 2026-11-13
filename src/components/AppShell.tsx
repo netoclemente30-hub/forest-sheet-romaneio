@@ -90,6 +90,11 @@ export function AppShell() {
             {installation.installed ? "App instalado" : installation.busy ? "Instalando…" : "Instalar app"}
           </Button>
         </div>
+        {isSuperAdmin && (empresas.data ?? []).some((e) => e.status === "pendente") && (
+          <Link to="/usuarios" className="basis-full rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground">
+            🔔 {(empresas.data ?? []).filter((e) => e.status === "pendente").length} novo(s) cadastro(s) aguardando liberação
+          </Link>
+        )}
         {isSuperAdmin && (
           <div className="flex items-center gap-1 min-w-0 basis-full">
             <Building2 className="size-4 shrink-0 opacity-80" />
