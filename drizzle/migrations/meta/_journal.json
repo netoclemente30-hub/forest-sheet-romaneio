@@ -211,6 +211,13 @@
       "when": 1794528661140,
       "tag": "0029_arvore_nao_abatida_motivo",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794529062536,
+      "tag": "0030_mapas_acesso_superadmin_limite_100mb",
+      "breakpoints": true
     }
   ]
 }
