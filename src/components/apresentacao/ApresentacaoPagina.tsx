@@ -107,7 +107,7 @@ export function ApresentacaoPagina() {
           <TreePine className="size-6 shrink-0 text-accent" />
           <div className="min-w-0">
             <p className="font-display text-xl font-bold uppercase leading-none">Gestor Florestal</p>
-            <p className="text-[11px] uppercase tracking-widest opacity-75">Do manejo à serraria</p>
+            <p className="text-[11px] uppercase tracking-widest opacity-75 hidden sm:block">Do manejo à serraria</p>
           </div>
           <Button
             size="lg"
@@ -152,8 +152,8 @@ export function ApresentacaoPagina() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-4">
-        <h2 className="-mt-8 font-display text-3xl font-bold uppercase text-primary">Como funciona</h2>
+      <section className="mx-auto max-w-5xl px-4 pt-12">
+        <h2 className="font-display text-3xl font-bold uppercase text-primary">Como funciona</h2>
         <ol className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {passos.map((p) => (
             <li key={p.n} className="rounded-xl border bg-card p-4 shadow-sm">

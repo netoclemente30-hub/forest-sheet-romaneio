@@ -27,7 +27,7 @@ export function IlusManejo({ className = base }: Props) {
         <path d="M96 104v8M134 104v8M171 104v8" strokeWidth="1.5" opacity="0.6" />
         <path d="M208 108l-9-5v10z" fill="currentColor" stroke="none" />
       </g>
-      <text x="58" y="126" fill="currentColor" fontSize="11" className="text-muted-foreground">comprimento para baixo, de meio em meio metro</text>
+      <text x="120" y="126" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">comprimento arredondado para baixo</text>
     </svg>
   );
 }
@@ -83,7 +83,7 @@ export function IlusSerraria({ className = base }: Props) {
         <path d="M110 47l6 5-6 5" strokeWidth="2" />
         <path d="M160 47l6 5-6 5" strokeWidth="2" />
       </g>
-      <text x="20" y="112" fill="currentColor" fontSize="11" className="text-muted-foreground">saldo conferido · encaixe por volume · pacotes 5×15, 5×10, 5×7</text>
+      <text x="120" y="118" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">saldo conferido · encaixe por volume</text>
     </svg>
   );
 }
@@ -110,7 +110,7 @@ export function IlusRomaneio({ className = base }: Props) {
         <rect x="180" y="54" width="2" height="12" opacity="0.9" />
         <rect x="196" y="66" width="2" height="12" opacity="0.9" />
       </g>
-      <text x="158" y="128" fill="currentColor" fontSize="11" className="text-muted-foreground">TXT NF-e pronto para baixar ou enviar</text>
+      <text x="192" y="128" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">TXT NF-e pronto para baixar</text>
     </svg>
   );
 }
@@ -137,7 +137,7 @@ export function IlusOffline({ className = base }: Props) {
         <path d="M166 94l6 8 6-8" strokeWidth="2" />
         <path d="M112 40l-14 4 8 6" strokeWidth="2" opacity="0.7" />
       </g>
-      <text x="126" y="122" fill="currentColor" fontSize="11" className="text-muted-foreground">fila no aparelho · envia sozinha ao voltar o sinal</text>
+      <text x="166" y="122" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">fila no aparelho · envia ao voltar o sinal</text>
     </svg>
   );
 }
