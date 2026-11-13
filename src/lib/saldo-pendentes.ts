@@ -9,7 +9,8 @@ import type { ArquivoGerado } from "./arquivo";
 export type SaldoPendente = LinhaSaldo & { plaqueta: number | null };
 
 export function saldoNaoMedido(linhas: LinhaSaldo[], toras: Tora[], itens: ItemFila[], empresa: string | null): SaldoPendente[] {
-  const atuais = toras.map((t) => {
+  if (!empresa) return [];
+  const atuais = toras.filter((t) => t.empresa_id === empresa).map((t) => {
     const alteracao = itens.filter(({ op }) => op.tipo === "tora_update" && op.empresa_id === t.empresa_id && op.plaqueta === t.plaqueta).at(-1)?.op;
     return alteracao?.tipo === "tora_update" ? { ...t, ...alteracao.dados } as Tora : t;
   });

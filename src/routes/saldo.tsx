@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { empresaIdGravacao, getEmpresaAtiva } from "@/lib/empresa";
+import { empresaIdGravacao, getEmpresaAtiva, EVENTO_EMPRESA } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { Input } from "@/components/ui/input";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -55,30 +55,43 @@ function Saldo() {
       }
     } catch { /* a empresa online continua disponível */ }
   }, [usuario, empresaId]);
-  const empresa = getEmpresaAtiva() ?? empresaId ?? (empresaOffline?.usuario === usuario ? empresaOffline?.empresa ?? null : null);
-  const filaOffline = useFilaOffline();
-  const [linhas, setLinhasState] = useState<LinhaSaldo[]>([]);
-  // Saldo compartilhado por empresa na nuvem; cópia local para uso offline.
+  const [empresaSelecionada, setEmpresaSelecionada] = useState<string | null>(null);
   useEffect(() => {
-    try { setLinhasState(JSON.parse(localStorage.getItem("saldo-linhas") ?? "[]")); } catch { /* sem saldo salvo */ }
-    if (!navigator.onLine) return;
-    (async () => {
-      const emp = getEmpresaAtiva() ?? ((await supabase.rpc("minha_empresa")).data as string | null);
-      if (!emp) return;
-      const { data } = await supabase.from("saldos").select("linhas").eq("empresa_id", emp).maybeSingle();
-      if (data?.linhas) { const l = data.linhas as unknown as LinhaSaldo[]; setLinhasState(l); try { localStorage.setItem("saldo-linhas", JSON.stringify(l)); } catch { /* cheio */ } }
-    })();
+    const atualizar = () => setEmpresaSelecionada(getEmpresaAtiva());
+    atualizar();
+    window.addEventListener(EVENTO_EMPRESA, atualizar);
+    return () => window.removeEventListener(EVENTO_EMPRESA, atualizar);
   }, []);
+  const empresa = empresaSelecionada ?? empresaId ?? (empresaOffline?.usuario === usuario ? empresaOffline?.empresa ?? null : null);
+  const filaOffline = useFilaOffline();
+  const saldo = useQuery({
+    queryKey: ["saldo-linhas", empresa],
+    enabled: !!empresa,
+    networkMode: "always",
+    queryFn: async (): Promise<LinhaSaldo[]> => {
+      if (!empresa) return [];
+      const chave = `saldo-linhas:${empresa}`;
+      if (!navigator.onLine) {
+        try { return JSON.parse(localStorage.getItem(chave) ?? "[]") as LinhaSaldo[]; } catch { return []; }
+      }
+      const { data, error } = await supabase.from("saldos").select("linhas").eq("empresa_id", empresa).maybeSingle();
+      if (error) throw error;
+      const l = (data?.linhas ?? []) as unknown as LinhaSaldo[];
+      try { localStorage.setItem(chave, JSON.stringify(l)); } catch { /* cheio */ }
+      return l;
+    },
+  });
+  const linhas = saldo.data ?? [];
+  const torasEmpresa = useMemo(() => (toras.data ?? []).filter((t) => t.empresa_id === empresa), [toras.data, empresa]);
   const setLinhas = async (l: LinhaSaldo[]) => {
-    setLinhasState(l);
-    try { localStorage.setItem("saldo-linhas", JSON.stringify(l)); } catch { /* cheio */ }
+    if (!empresa) throw new Error("Aguarde carregar a empresa");
+    qc.setQueryData(["saldo-linhas", empresa], l);
+    try { localStorage.setItem(`saldo-linhas:${empresa}`, JSON.stringify(l)); } catch { /* cheio */ }
     if (!navigator.onLine) return;
-    const emp = getEmpresaAtiva() ?? ((await supabase.rpc("minha_empresa")).data as string | null);
-    if (!emp) return;
-    const { error } = await supabase.from("saldos").upsert({ empresa_id: emp, linhas: l as unknown as never, atualizado_em: new Date().toISOString() });
+    const { error } = await supabase.from("saldos").upsert({ empresa_id: empresa, linhas: l as unknown as never, atualizado_em: new Date().toISOString() });
     if (error) toast.error("Saldo não foi compartilhado: " + error.message);
   };
-  const res = useMemo(() => conferirSaldo(linhas, toras.data ?? []), [linhas, toras.data]);
+  const res = useMemo(() => conferirSaldo(linhas, torasEmpresa), [linhas, torasEmpresa]);
   const ok = useMemo(() => res.filter((r) => r.tora), [res]);
   const linhasFora = useMemo(() => res.filter((r) => !r.tora).map((r) => r.linha), [res]);
   const linhasEncaixe = useMemo(() => linhasDisponiveisOffline(linhasFora, filaOffline.itens, empresa), [linhasFora, filaOffline.itens, empresa]);
@@ -89,8 +102,8 @@ function Saldo() {
   const [encaixe, setEncaixe] = useState(false);
   const [medidas, setMedidas] = useState<number[]>([]);
   // Toras do saldo = cadastradas só com volume; quando medidas ganham diâmetros.
-  const pendentes = useMemo(() => (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null), [toras.data]);
-  const paraExportar = useMemo(() => saldoNaoMedido(linhas, toras.data ?? [], filaOffline.itens, empresa), [linhas, toras.data, filaOffline.itens, empresa]);
+  const pendentes = useMemo(() => torasEmpresa.filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null), [torasEmpresa]);
+  const paraExportar = useMemo(() => saldoNaoMedido(linhas, torasEmpresa, filaOffline.itens, empresa), [linhas, torasEmpresa, filaOffline.itens, empresa]);
   const [inicio, setInicio] = useState("");
   const [busy, setBusy] = useState(false);
   const [busca, setBusca] = useState("");
@@ -179,7 +192,8 @@ function Saldo() {
         <Button className="w-full h-12" disabled={!pendentes.length && !linhas.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>
         {medidas.length > 0 && <Button asChild variant="secondary" className="w-full"><Link to="/etiquetas" search={{ p: medidas.join(",") }}><Printer /> Imprimir as {medidas.length} medidas agora</Link></Button>}
       </div>
-      <ExportarSaldoPendente lista={paraExportar} carregando={toras.isPending || toras.isError || filaOffline.carregando || !!filaOffline.erro || !empresa} />
+      {saldo.isError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar o saldo desta empresa. Suas medidas não foram alteradas.</p>}
+      <ExportarSaldoPendente lista={paraExportar} carregando={saldo.isPending || saldo.isError || toras.isFetching || toras.isPending || toras.isError || filaOffline.carregando || !!filaOffline.erro || !empresa} />
       <Sheet open={medir} onOpenChange={setMedir}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Medir tora do saldo</SheetTitle></SheetHeader>

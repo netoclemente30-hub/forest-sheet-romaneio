@@ -6,6 +6,13 @@ import { saldoNaoMedido } from "./saldo-pendentes";
 const linha = (arvore: number): LinhaSaldo => ({ autex: "AUTESP-1", arvore, secao: "", especie: "Abiurana", nome_cientifico: "Pouteria", volume: 1.25 });
 const tora = (arvore: number) => ({ ...linha(arvore), empresa_id: "rj", plaqueta: arvore, carregada: false, serrada_em: null, d_topo1: 50, comprimento: 6 }) as unknown as Tora;
 
+it("não usa medidas nem toras sem medidas de outra empresa para conferir saldo", () => {
+  const outras = [tora(48), { ...tora(49), d_topo1: null, comprimento: null }];
+  expect(saldoNaoMedido([linha(48)], outras, [], "ricardo")).toEqual([{ ...linha(48), plaqueta: null }]);
+  expect(saldoNaoMedido([], outras, [], "ricardo")).toEqual([]);
+  expect(saldoNaoMedido([linha(48)], outras, [], null)).toEqual([]);
+});
+
 it("exporta as 439 restantes de 1981 linhas sem incluir as 1542 já medidas", () => {
   const linhas = Array.from({ length: 1981 }, (_, i) => linha(i + 1));
   const medidas = Array.from({ length: 1542 }, (_, i) => tora(i + 1));
