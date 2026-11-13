@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useSituacaoEmpresa, EmpresaInativa, AvisoDemonstracao } from "@/components/SituacaoEmpresa";
 import { ApresentacaoPagina } from "@/components/apresentacao/ApresentacaoPagina";
 import { supabase } from "@/integrations/supabase/client";
 import { listarEmpresas } from "@/lib/usuarios.functions";
@@ -52,11 +53,13 @@ export function AppShell() {
     toast.success(navigator.onLine ? "Nome do aparelho salvo." : "Nome salvo neste aparelho.");
   }
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
+  const situacao = useSituacaoEmpresa(Boolean(session) && !isSuperAdmin);
   // Páginas públicas (QR da tora e apresentação) abrem sem login.
   if (ehRotaPublica(pathname)) return <Outlet />;
   if (loading) return <div className="min-h-screen bg-forest" />;
   // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
   if (!session) return <ApresentacaoPagina />;
+  if (!isSuperAdmin && (situacao.data?.status === "inativa" || situacao.data?.status === "pendente")) return <EmpresaInativa pendente={situacao.data.status === "pendente"} sair={() => supabase.auth.signOut()} />;
   const items = isAdmin || isSuperAdmin
     ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
     : nav;
@@ -87,6 +90,11 @@ export function AppShell() {
             {installation.installed ? "App instalado" : installation.busy ? "Instalando…" : "Instalar app"}
           </Button>
         </div>
+        {isSuperAdmin && (empresas.data ?? []).some((e) => e.status === "pendente") && (
+          <Link to="/usuarios" className="basis-full rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground">
+            🔔 {(empresas.data ?? []).filter((e) => e.status === "pendente").length} novo(s) cadastro(s) aguardando liberação
+          </Link>
+        )}
         {isSuperAdmin && (
           <div className="flex items-center gap-1 min-w-0 basis-full">
             <Building2 className="size-4 shrink-0 opacity-80" />
@@ -140,6 +148,7 @@ export function AppShell() {
             })}
           </nav>
         )}
+        {!isSuperAdmin && situacao.data?.status === "demonstracao" && <AvisoDemonstracao s={situacao.data} />}
         <div key={empresaSel}><Outlet /></div>
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">

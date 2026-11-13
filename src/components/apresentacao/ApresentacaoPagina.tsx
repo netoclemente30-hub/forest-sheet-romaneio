@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FormularioLogin, WHATS_ACESSO } from "@/components/FormularioLogin";
+import { FormularioCadastro } from "@/components/FormularioCadastro";
 import {
   IlusAuditoria,
   IlusEmpresas,
@@ -99,6 +100,8 @@ const extras = [
 
 export function ApresentacaoPagina() {
   const [aberto, setAberto] = useState(false);
+  const [cadastro, setCadastro] = useState(false);
+  const abrirCadastro = () => { setCadastro(true); setAberto(true); };
 
   return (
     <main className="min-h-screen bg-background">
@@ -112,7 +115,7 @@ export function ApresentacaoPagina() {
           <Button
             size="lg"
             className="ml-auto h-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90"
-            onClick={() => setAberto(true)}
+            onClick={() => { setCadastro(false); setAberto(true); }}
           >
             Acessar sistema
             <ArrowRight className="size-4" />
@@ -130,9 +133,12 @@ export function ApresentacaoPagina() {
             aplicativo que funciona no mato, mesmo sem sinal.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" className="h-12 bg-accent px-6 text-base text-accent-foreground hover:bg-accent/90" onClick={() => setAberto(true)}>
+            <Button size="lg" className="h-12 bg-accent px-6 text-base text-accent-foreground hover:bg-accent/90" onClick={() => { setCadastro(false); setAberto(true); }}>
               Acessar sistema
               <ArrowRight className="size-4" />
+            </Button>
+            <Button size="lg" variant="outline" className="h-12 border-primary-foreground/50 bg-transparent px-5 text-base text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground" onClick={abrirCadastro}>
+              Cadastrar empresa grátis
             </Button>
             <a
               href={WHATS_FALA}
@@ -211,9 +217,12 @@ export function ApresentacaoPagina() {
           Funciona no Android e no iPhone, direto do navegador. Cada empresa recebe seu próprio acesso.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button size="lg" className="h-12 px-6" onClick={() => setAberto(true)}>
+          <Button size="lg" className="h-12 px-6" onClick={() => { setCadastro(false); setAberto(true); }}>
             Acessar sistema
             <ArrowRight className="size-4" />
+          </Button>
+          <Button size="lg" variant="secondary" className="h-12 px-6" onClick={abrirCadastro}>
+            Cadastrar empresa grátis
           </Button>
           <Button asChild size="lg" variant="outline" className="h-12 px-6">
             <a href={WHATS_FALA} target="_blank" rel="noreferrer">Falar no WhatsApp</a>
@@ -231,10 +240,20 @@ export function ApresentacaoPagina() {
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="max-h-[92vh] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl uppercase">Acessar sistema</DialogTitle>
-            <DialogDescription>Entre com o e-mail e a senha liberados pelo administrador.</DialogDescription>
+            <DialogTitle className="font-display text-2xl uppercase">{cadastro ? "Cadastrar empresa" : "Acessar sistema"}</DialogTitle>
+            <DialogDescription>
+              {cadastro ? "Comece em demonstração com até 50 toras. A ficha de campo pode ser importada completa." : "Entre com o e-mail e a senha liberados pelo administrador."}
+            </DialogDescription>
           </DialogHeader>
-          <FormularioLogin />
+          {cadastro ? <FormularioCadastro onEntrar={() => setCadastro(false)} /> : (
+            <>
+              <FormularioLogin />
+              <p className="text-center text-sm text-muted-foreground">
+                Empresa nova?{" "}
+                <button type="button" className="font-semibold text-primary underline" onClick={() => setCadastro(true)}>Cadastre grátis</button>
+              </p>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </main>

@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa } from "@/lib/usuarios.functions";
+import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa } from "@/lib/usuarios.functions";
+import { formatarCnpj, LIMITE_DEMONSTRACAO, type StatusEmpresa } from "@/lib/cnpj";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,7 +104,7 @@ function UsuariosPage() {
     try {
       await definirAdmin({ data: { userId, admin: !admin } });
       await qc.invalidateQueries({ queryKey: ["usuarios"] });
-      toast.success(admin ? "Deixou de ser administrador" : "Agora é administrador");
+      toast.success(admin ? "Agora é operador" : "Agora é admin da empresa");
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -118,6 +119,18 @@ function UsuariosPage() {
       toast.error((err as Error).message);
     }
   }
+
+  async function mudarStatus(id: string, status: StatusEmpresa) {
+    try {
+      await definirStatusEmpresa({ data: { empresaId: id, status } });
+      await qc.invalidateQueries({ queryKey: ["empresas"] });
+      toast.success("Situação da empresa atualizada");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
+  const pendentes = (empresas.data ?? []).filter((e) => e.status === "pendente");
 
   async function remover(userId: string, userEmail: string) {
     if (!confirm(`Remover o acesso de ${userEmail}?`)) return;
@@ -136,6 +149,40 @@ function UsuariosPage() {
       <p className="text-sm text-muted-foreground">
         Cada empresa tem um acesso próprio, compartilhado pelos funcionários. Os dados de cada empresa ficam separados.
       </p>
+
+      {souSuperAdmin && pendentes.length > 0 && (
+        <div role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm">
+          <p className="font-semibold">{pendentes.length === 1 ? "1 novo cadastro aguardando liberação" : `${pendentes.length} novos cadastros aguardando liberação`}</p>
+          <p className="text-muted-foreground">Escolha "Demonstração" para liberar {LIMITE_DEMONSTRACAO} toras ou "Ativa" para o acesso completo.</p>
+        </div>
+      )}
+
+      {souSuperAdmin && (
+        <div className="bg-card border rounded-xl divide-y">
+          <div className="p-3 font-semibold text-sm flex items-center gap-2"><Building2 className="size-4" /> Empresas</div>
+          {(empresas.data ?? []).map((e) => (
+            <div key={e.id} className={`p-3 flex flex-wrap items-center gap-2 ${e.status === "pendente" ? "bg-destructive/5" : ""}`}>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate">{e.nome}</div>
+                <div className="text-xs text-muted-foreground">
+                  {e.cnpj ? `CNPJ ${formatarCnpj(e.cnpj)} · ` : ""}{e.toras} toras{e.status === "demonstracao" ? ` de ${LIMITE_DEMONSTRACAO}` : ""}
+                </div>
+              </div>
+              <select
+                aria-label={`Situação de ${e.nome}`}
+                value={e.status}
+                onChange={(ev) => mudarStatus(e.id, ev.target.value as StatusEmpresa)}
+                className="h-10 rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="pendente">Aguardando liberação</option>
+                <option value="demonstracao">Demonstração</option>
+                <option value="ativa">Ativa</option>
+                <option value="inativa">Inativa</option>
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
 
       {souSuperAdmin && (
         <form onSubmit={cadastrarEmpresa} className="bg-card border rounded-xl p-3 space-y-2">
@@ -199,9 +246,9 @@ function UsuariosPage() {
                       <ShieldCheck className="size-3" /> Administrador geral
                     </span>
                   )}
-                  {u.admin && !u.super && (
-                    <span className="inline-flex items-center gap-1 text-primary font-semibold">
-                      <ShieldCheck className="size-3" /> Admin da empresa
+                  {!u.super && (
+                    <span className={`inline-flex items-center gap-1 ${u.admin ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                      {u.admin && <ShieldCheck className="size-3" />} {u.admin ? "Admin da empresa" : "Operador"}
                     </span>
                   )}
                 </div>
@@ -209,9 +256,17 @@ function UsuariosPage() {
               <div className="flex gap-1 shrink-0">
                 {u.id !== session?.user.id && (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => toggleAdmin(u.id, u.admin)}>
-                      {u.admin ? "Tirar admin" : "Tornar admin"}
-                    </Button>
+                    {souSuperAdmin && !u.super && (
+                      <select
+                        aria-label={`Função de ${u.email}`}
+                        value={u.admin ? "admin" : "operador"}
+                        onChange={(ev) => (ev.target.value === "admin") !== u.admin && toggleAdmin(u.id, u.admin)}
+                        className="h-9 rounded-md border bg-background px-2 text-sm"
+                      >
+                        <option value="operador">Operador</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    )}
                     <Button size="icon" variant="ghost" aria-label="Remover usuário" onClick={() => remover(u.id, u.email)}>
                       <Trash2 className="size-4" />
                     </Button>
