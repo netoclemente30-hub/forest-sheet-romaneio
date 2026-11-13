@@ -18,9 +18,9 @@ describe("PDF do mapa exploratório", () => {
     await expect(validarMapaPdf(new File([], "mapa.pdf", { type: "application/pdf" }))).rejects.toThrow("está vazio");
   });
 
-  it("recusa arquivo acima de 25 MB sem carregar seu conteúdo", async () => {
+  it("recusa arquivo acima de 100 MB sem carregar seu conteúdo", async () => {
     const file = { name: "mapa.pdf", type: "application/pdf", size: MAPA_PDF_MAX_BYTES + 1, slice: () => { throw new Error("não deveria ler"); } };
-    await expect(validarMapaPdf(file as never)).rejects.toThrow("no máximo 25 MB");
+    await expect(validarMapaPdf(file as never)).rejects.toThrow("no máximo 100 MB");
   });
 
   it("recusa extensão PDF sem assinatura PDF", async () => {

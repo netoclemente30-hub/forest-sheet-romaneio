@@ -90,7 +90,7 @@ export function MapaPdf({ autex, encerrado }: { autex: string; encerrado: boolea
           </Button>
         </>}
       </div>
-      {!encerrado && <p className="text-xs text-muted-foreground">Somente PDF, até 25 MB. O envio precisa de internet; o arquivo é compartilhado somente com esta empresa.</p>}
+      {!encerrado && <p className="text-xs text-muted-foreground">Somente PDF, até 100 MB. O envio precisa de internet; o arquivo é compartilhado somente com esta empresa.</p>}
       {encerrado && mapa && <p className="text-xs text-muted-foreground">Manejo encerrado: o PDF permanece disponível para consulta.</p>}
 
       <Dialog open={aberto} onOpenChange={setAberto}>
