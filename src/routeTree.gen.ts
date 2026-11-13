@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BaseRouteImport } from './routes/base'
+import { Route as CortadorRouteImport } from './routes/cortador'
 import { Route as EntradaRouteImport } from './routes/entrada'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
 import { Route as ImportarRouteImport } from './routes/importar'
@@ -34,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 const BaseRoute = BaseRouteImport.update({
   id: '/base',
   path: '/base',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CortadorRoute = CortadorRouteImport.update({
+  id: '/cortador',
+  path: '/cortador',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntradaRoute = EntradaRouteImport.update({
@@ -110,6 +116,7 @@ const HistoricoIdRoute = HistoricoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/base': typeof BaseRouteWithChildren
+  '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/base': typeof BaseRouteWithChildren
+  '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/importar': typeof ImportarRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/base'
+    | '/cortador'
     | '/entrada'
     | '/etiquetas'
     | '/importar'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cortador'
     | '/entrada'
     | '/etiquetas'
     | '/importar'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/base'
+    | '/cortador'
     | '/entrada'
     | '/etiquetas'
     | '/importar'
@@ -220,6 +232,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BaseRoute: typeof BaseRouteWithChildren
+  CortadorRoute: typeof CortadorRoute
   EntradaRoute: typeof EntradaRoute
   EtiquetasRoute: typeof EtiquetasRoute
   ImportarRoute: typeof ImportarRoute
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/base'
       fullPath: '/base'
       preLoaderRoute: typeof BaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cortador': {
+      id: '/cortador'
+      path: '/cortador'
+      fullPath: '/cortador'
+      preLoaderRoute: typeof CortadorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrada': {
@@ -366,6 +386,7 @@ const BaseRouteWithChildren = BaseRoute._addFileChildren(BaseRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BaseRoute: BaseRouteWithChildren,
+  CortadorRoute: CortadorRoute,
   EntradaRoute: EntradaRoute,
   EtiquetasRoute: EtiquetasRoute,
   ImportarRoute: ImportarRoute,

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Crosshair, MapPin, Navigation, Play, Square, TreePine } from "lucide-react";
+import { Crosshair, MapPin, Play, Square, TreePine } from "lucide-react";
 import { arvoresQuery, rastrosQuery, type Arvore } from "@/lib/data";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
@@ -22,6 +22,8 @@ import {
   persistirRastroLocal,
   salvarArvoreGPS,
   salvarRastro,
+  MOTIVOS_NAO_ABATIDA,
+  textoMotivo,
 } from "@/lib/exploracao-salvar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -106,6 +108,16 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }, [rastreando, empresa, autex, encerrado, sessaoId, session?.user.id]);
 
   useEffect(() => {
+    if (rastreando || encerrado || typeof navigator === "undefined" || !navigator.geolocation) return;
+    const watch = navigator.geolocation.watchPosition(
+      (p) => { setAtual({ lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy, capturado_em: new Date(p.timestamp).toISOString() }); setStatusGps(`GPS ativo · precisão de ${Math.round(p.coords.accuracy)} m`); },
+      (erro) => setStatusGps(textoErroGps(erro.code)),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+    );
+    return () => navigator.geolocation.clearWatch(watch);
+  }, [rastreando, encerrado]);
+
+  useEffect(() => {
     if (rastreando && empresa && pontosAtivos.length) void guardarRastroAtivo(empresa, autex, pontosAtivos);
   }, [rastreando, empresa, autex, pontosAtivos]);
 
@@ -188,20 +200,21 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
     );
   }
 
-  async function registrarArvore(abatida: boolean | null) {
+  async function registrarArvore(abatida: boolean | null, motivo?: string | null) {
     if (!editando || !empresa || !posicaoEdicao || busy) return;
+    if (motivo && !window.confirm(`Confirmar que a árvore ${editando.numero} NÃO foi abatida? Motivo: ${textoMotivo(motivo)}`)) return;
     if (!coordenadaValida(posicaoEdicao.lat, posicaoEdicao.lng)) { toast.error("Posição GPS inválida"); return; }
     if (abatida === true && !window.confirm(`Confirmar que a árvore ${editando.numero} foi abatida nesta posição?`)) return;
     if (abatida === false && !window.confirm(`Desfazer o abatimento da árvore ${editando.numero}? A localização será mantida.`)) return;
     setBusy(true);
     try {
-      const resultado = await salvarArvoreGPS({ arvore: editando, empresa, posicao: posicaoEdicao, abatida });
+      const resultado = await salvarArvoreGPS({ arvore: editando, empresa, posicao: posicaoEdicao, abatida, ...(motivo !== undefined ? { motivoNaoAbatida: motivo } : {}) });
       const atualizadas = await persistirArvoreLocal(qc.getQueryData<Arvore[]>(arvoresQuery.queryKey) ?? arvores, editando.id, resultado.op.dados);
       qc.setQueryData(arvoresQuery.queryKey, atualizadas);
       const nova = { ...editando, ...resultado.op.dados };
       setEditando(nova);
       setSelecionada(nova.id);
-      toast.success(resultado.offline ? "Registro salvo offline" : abatida === true ? "Árvore abatida registrada" : abatida === false ? "Abatimento desfeito" : "Localização salva");
+      toast.success(resultado.offline ? "Registro salvo offline" : motivo ? "Não abatida registrada" : motivo === null ? "Motivo removido" : abatida === true ? "Árvore abatida registrada" : abatida === false ? "Abatimento desfeito" : "Localização salva");
       if (!resultado.offline) await qc.invalidateQueries({ queryKey: arvoresQuery.queryKey });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar a árvore");
@@ -229,7 +242,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center justify-between gap-2 border-b p-3 text-xs text-muted-foreground">
           <span>Mapa GPS offline · norte para cima</span>
-          <span className="flex items-center gap-1"><span className="inline-block size-2 rounded-full bg-primary" /> em pé <span className="ml-2 inline-block size-2 rounded-full bg-destructive" /> abatida</span>
+          <span className="flex items-center gap-1"><span className="inline-block size-2 rounded-full bg-primary" /> em pé <span className="ml-2 inline-block size-2 rounded-full bg-destructive" /> abatida <span className="ml-2 inline-block size-2 rounded-full bg-gps" /> você</span>
         </div>
         <svg viewBox="0 0 640 420" className="h-[360px] w-full touch-manipulation sm:h-[420px]" role="img" aria-label={`Mapa exploratório da AUTEX ${autex}`}>
           <rect width="640" height="420" fill="var(--color-muted)" />
@@ -241,12 +254,12 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             if (!p) return null;
             return (
               <g key={a.id} role="button" tabIndex={0} aria-label={`Árvore ${a.numero}, ${a.nome_vulgar}${a.abatida_em ? ", abatida" : ""}`} className="cursor-pointer" onClick={() => abrirArvore(a)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") abrirArvore(a); }}>
-                <circle cx={p.x} cy={p.y} r="12" fill={a.abatida_em ? "var(--color-destructive)" : "var(--color-primary)"} stroke="var(--color-card)" strokeWidth="3" />
+                <circle cx={p.x} cy={p.y} r="12" fill={a.abatida_em ? "var(--color-destructive)" : a.nao_abatida_motivo ? "var(--color-muted-foreground)" : "var(--color-primary)"} stroke="var(--color-card)" strokeWidth="3" />
                 <text x={p.x + 15} y={p.y + 4} fontSize="12" fontWeight="700" fill="var(--color-foreground)">{a.numero}</text>
               </g>
             );
           })}
-          {(() => { const p = atual ? projecao.get("posicao-atual") : null; return p ? <g aria-label="Sua posição atual"><circle cx={p.x} cy={p.y} r="14" fill="var(--color-accent)" stroke="var(--color-card)" strokeWidth="4" /><Navigation x={p.x - 7} y={p.y - 7} width="14" height="14" color="var(--color-accent-foreground)" /></g> : null; })()}
+          {(() => { const p = atual ? projecao.get("posicao-atual") : null; return p ? <g aria-label="Sua posição atual"><circle cx={p.x} cy={p.y} r="10" fill="var(--color-gps)" stroke="var(--color-card)" strokeWidth="4" /></g> : null; })()}
           {!localizadas.length && !todosPontos.length && !atual && <text x="320" y="205" textAnchor="middle" fontSize="16" fill="var(--color-muted-foreground)">Inicie o rastreio ou localize uma árvore pelo GPS</text>}
           <text x="608" y="36" textAnchor="middle" fontSize="24" fontWeight="700" fill="var(--color-foreground)">N</text>
           <path d="M608 44 L598 68 L608 62 L618 68 Z" fill="var(--color-foreground)" />
@@ -287,6 +300,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             <DialogDescription>AUTEX {autex} · Picada {editando?.picada ?? "—"}</DialogDescription>
           </DialogHeader>
           {editando && <div className="space-y-4">
+            {editando.nao_abatida_motivo && <div className="rounded-lg border border-destructive px-3 py-2 text-sm font-semibold text-destructive">Não abatida · {textoMotivo(editando.nao_abatida_motivo)}</div>}
             {editando.abatida_em && <div className="rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground">Abatida em {new Date(editando.abatida_em).toLocaleString("pt-BR")}</div>}
             <div className="rounded-lg bg-secondary p-3 text-sm">
               {posicaoEdicao ? <><div className="font-semibold">Posição para salvar</div><div>{posicaoEdicao.lat.toFixed(7)}, {posicaoEdicao.lng.toFixed(7)}</div><div className="text-xs text-muted-foreground">Precisão: {posicaoEdicao.precisao == null ? "não informada" : `${Math.round(posicaoEdicao.precisao)} m`}</div></> : "Esta árvore ainda não tem posição. Fique junto dela e capture o GPS."}
@@ -294,7 +308,12 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             {!encerrado && <>
               <Button variant="outline" className="w-full" disabled={capturando || busy} onClick={capturarPosicao}><Crosshair /> {capturando ? "Capturando GPS…" : posicaoEdicao ? "Atualizar com minha posição" : "Capturar minha posição"}</Button>
               <Button className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null)}><MapPin /> {busy ? "Salvando…" : "Salvar localização"}</Button>
-              {editando.abatida_em ? <Button variant="outline" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(false)}>Desfazer abatimento</Button> : <Button variant="destructive" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(true)}><TreePine /> Registrar árvore abatida aqui</Button>}
+              {editando.abatida_em ? <Button variant="outline" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(false)}>Desfazer abatimento</Button> : <Button variant="destructive" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(true)}><TreePine /> Abater árvore</Button>}
+              {!editando.abatida_em && <div className="space-y-2 rounded-lg border p-3">
+                <div className="text-sm font-semibold">Não abatida · declare o motivo</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{MOTIVOS_NAO_ABATIDA.map((m) => <Button key={m.valor} variant={editando.nao_abatida_motivo === m.valor ? "default" : "outline"} disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, m.valor)}>{m.label}</Button>)}</div>
+                {editando.nao_abatida_motivo && <Button variant="ghost" size="sm" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, null)}>Remover motivo</Button>}
+              </div>}
             </>}
             {encerrado && <p className="text-sm text-muted-foreground">Manejo encerrado: o mapa e os registros ficam disponíveis para consulta.</p>}
           </div>}

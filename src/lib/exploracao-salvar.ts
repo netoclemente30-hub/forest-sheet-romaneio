@@ -13,7 +13,16 @@ export type DadosArvoreGPS = {
   gps_precisao: number | null;
   localizado_em: string;
   abatida_em: string | null;
+  nao_abatida_motivo?: string | null;
+  nao_abatida_em?: string | null;
 };
+
+export const MOTIVOS_NAO_ABATIDA = [
+  { valor: "seca", label: "Árvore seca" },
+  { valor: "oca", label: "Árvore oca" },
+  { valor: "essencia_errada", label: "Essência errada" },
+] as const;
+export const textoMotivo = (v: string | null | undefined) => MOTIVOS_NAO_ABATIDA.find((m) => m.valor === v)?.label ?? v ?? "";
 
 function erroDeRede(error: unknown): boolean {
   return !estaOnline() || /fetch|network|failed to fetch/i.test(error instanceof Error ? error.message : String(error));
@@ -32,11 +41,12 @@ async function executarOuEnfileirar(op: Op): Promise<boolean> {
   return true;
 }
 
-export async function salvarArvoreGPS({ arvore, empresa, posicao, abatida }: {
+export async function salvarArvoreGPS({ arvore, empresa, posicao, abatida, motivoNaoAbatida }: {
   arvore: Arvore;
   empresa: string;
   posicao: Coordenada;
   abatida: boolean | null;
+  motivoNaoAbatida?: string | null;
 }): Promise<{ op: Extract<Op, { tipo: "arvore_gps" }>; offline: boolean }> {
   const agora = new Date().toISOString();
   const dados: DadosArvoreGPS = {
@@ -44,9 +54,16 @@ export async function salvarArvoreGPS({ arvore, empresa, posicao, abatida }: {
     longitude: posicao.lng,
     gps_precisao: posicao.precisao ?? null,
     localizado_em: posicao.capturado_em ?? agora,
-    abatida_em: atualizarDataAbatimento(arvore.abatida_em, abatida, agora),
+    abatida_em: motivoNaoAbatida ? null : atualizarDataAbatimento(arvore.abatida_em, abatida, agora),
   };
-  const acao = abatida === true ? "Árvore abatida registrada" : abatida === false ? "Abatimento desfeito" : "Localização de árvore registrada";
+  if (motivoNaoAbatida !== undefined) {
+    dados.nao_abatida_motivo = motivoNaoAbatida;
+    dados.nao_abatida_em = motivoNaoAbatida ? agora : null;
+  } else if (abatida === true) {
+    dados.nao_abatida_motivo = null;
+    dados.nao_abatida_em = null;
+  }
+  const acao = motivoNaoAbatida ? `Árvore não abatida: ${textoMotivo(motivoNaoAbatida)}` : abatida === true ? "Árvore abatida registrada" : abatida === false ? "Abatimento desfeito" : "Localização de árvore registrada";
   const log = await capturarLog(acao, `Árvore ${arvore.numero} · ${arvore.nome_vulgar} · AUTEX ${arvore.autex} · ${posicao.lat.toFixed(6)}, ${posicao.lng.toFixed(6)}`);
   const op = { tipo: "arvore_gps" as const, id: arvore.id, empresa_id: empresa, autex: arvore.autex, dados, log };
   const offline = await executarOuEnfileirar(op);
