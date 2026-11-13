@@ -52,6 +52,8 @@ export function AppShell() {
     toast.success(navigator.onLine ? "Nome do aparelho salvo." : "Nome salvo neste aparelho.");
   }
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
+  // Páginas públicas (QR da tora e apresentação) abrem sem login.
+  if (pathname.startsWith("/t/") || pathname === "/apresentacao") return <Outlet />;
   if (loading) return <div className="min-h-screen bg-forest" />;
   if (!session) return <LoginScreen />;
   const items = isAdmin || isSuperAdmin
