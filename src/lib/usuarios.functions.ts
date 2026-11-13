@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { cnpjValido, limparCnpj, type StatusEmpresa } from "@/lib/cnpj";
 
 type Ctx = { supabase: any; userId: string };
 
@@ -30,9 +31,12 @@ export const listarEmpresas = createServerFn({ method: "GET" })
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("empresas").select("id, nome").order("nome");
+    const { data, error } = await supabaseAdmin.from("empresas").select("id, nome, cnpj, status").order("nome");
     if (error) throw new Error(error.message);
-    return data;
+    const { data: toras } = await supabaseAdmin.from("toras").select("empresa_id");
+    const qtd = new Map<string, number>();
+    for (const t of toras ?? []) qtd.set(t.empresa_id, (qtd.get(t.empresa_id) ?? 0) + 1);
+    return data.map((e) => ({ ...e, status: e.status as StatusEmpresa, toras: qtd.get(e.id) ?? 0 }));
   });
 
 export const criarEmpresa = createServerFn({ method: "POST" })
@@ -135,9 +139,9 @@ export const definirAdmin = createServerFn({ method: "POST" })
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
     if (data.userId === ctx.userId && !data.admin) throw new Error("Você não pode remover o seu próprio acesso de administrador");
-    const minha = await empresaDoAdmin(ctx.supabase);
+    const { data: souSuper } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "superadmin" });
+    if (!souSuper) throw new Error("Apenas o administrador geral define quem é admin ou operador");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await exigirMesmaEmpresa(supabaseAdmin, minha, data.userId);
     if (data.admin) {
       const { error } = await supabaseAdmin.from("user_roles").upsert({ user_id: data.userId, role: "admin" }, { ignoreDuplicates: true });
       if (error) throw new Error(error.message);
@@ -160,5 +164,53 @@ export const removerUsuario = createServerFn({ method: "POST" })
     await exigirMesmaEmpresa(supabaseAdmin, minha, data.userId);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const definirStatusEmpresa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { empresaId: string; status: StatusEmpresa }) => {
+    if (!["demonstracao", "ativa", "inativa"].includes(input.status)) throw new Error("Situação inválida");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as Ctx;
+    const { data: souSuper } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "superadmin" });
+    if (!souSuper) throw new Error("Apenas o administrador geral muda a situação da empresa");
+    const { error } = await ctx.supabase.from("empresas").update({ status: data.status }).eq("id", data.empresaId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Cadastro público: cria a empresa em demonstração e o acesso de operador. */
+export const cadastrarEmpresaPublica = createServerFn({ method: "POST" })
+  .inputValidator((input: { nome: string; cnpj: string; email: string; password: string }) => ({
+    nome: String(input?.nome ?? "").trim().slice(0, 120),
+    cnpj: limparCnpj(String(input?.cnpj ?? "")),
+    email: String(input?.email ?? "").trim().toLowerCase().slice(0, 200),
+    password: String(input?.password ?? ""),
+  }))
+  .handler(async ({ data }) => {
+    if (data.nome.length < 2) throw new Error("Informe o nome da empresa");
+    if (!cnpjValido(data.cnpj)) throw new Error("CNPJ inválido");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) throw new Error("E-mail inválido");
+    if (data.password.length < 6 || data.password.length > 72) throw new Error("A senha precisa de pelo menos 6 caracteres");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existe } = await supabaseAdmin.from("empresas").select("id").eq("cnpj", data.cnpj).maybeSingle();
+    if (existe) throw new Error("Este CNPJ já está cadastrado. Peça acesso pelo WhatsApp (69) 99900-4121.");
+    const { data: emp, error: eErr } = await supabaseAdmin.from("empresas")
+      .insert({ nome: data.nome, cnpj: data.cnpj, status: "demonstracao" }).select("id").single();
+    if (eErr) throw new Error(eErr.message);
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({ email: data.email, password: data.password, email_confirm: true });
+    if (error) {
+      await supabaseAdmin.from("empresas").delete().eq("id", emp.id);
+      throw new Error(/already|registered|exists/i.test(error.message) ? "Este e-mail já tem cadastro. Use Acessar sistema." : error.message);
+    }
+    const { error: vErr } = await supabaseAdmin.from("empresa_usuarios").insert({ user_id: created.user.id, empresa_id: emp.id });
+    if (vErr) {
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      await supabaseAdmin.from("empresas").delete().eq("id", emp.id);
+      throw new Error(vErr.message);
+    }
     return { ok: true };
   });
