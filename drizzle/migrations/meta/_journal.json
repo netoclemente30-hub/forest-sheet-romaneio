@@ -225,6 +225,13 @@
       "when": 1794591226583,
       "tag": "0031_tora_publica",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794599622420,
+      "tag": "0032_empresa_status_demonstracao",
+      "breakpoints": true
     }
   ]
 }

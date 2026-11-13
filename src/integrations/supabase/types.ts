@@ -183,19 +183,25 @@ export type Database = {
       }
       empresas: {
         Row: {
+          cnpj: string | null
           created_at: string
           id: string
           nome: string
+          status: string
         }
         Insert: {
+          cnpj?: string | null
           created_at?: string
           id?: string
           nome: string
+          status?: string
         }
         Update: {
+          cnpj?: string | null
           created_at?: string
           id?: string
           nome?: string
+          status?: string
         }
         Relationships: []
       }
@@ -898,6 +904,14 @@ export type Database = {
         Returns: boolean
       }
       minha_empresa: { Args: never; Returns: string }
+      minha_empresa_situacao: {
+        Args: never
+        Returns: {
+          limite: number
+          status: string
+          toras: number
+        }[]
+      }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
       registrar_operacao: {
         Args: {
