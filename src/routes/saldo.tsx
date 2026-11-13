@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Printer, Upload, Ruler, Pencil, Trash2, ChevronLeft, ChevronRight, ScanSearch } from "lucide-react";
 import { SerrariaAbas } from "@/components/SerrariaAbas";
 import { TorasAguardando } from "@/components/TorasAguardando";
+import { ExportarSaldoPendente } from "@/components/ExportarSaldoPendente";
+import { saldoNaoMedido } from "@/lib/saldo-pendentes";
 
 export const Route = createFileRoute("/saldo")({
   head: () => ({
@@ -88,6 +90,7 @@ function Saldo() {
   const [medidas, setMedidas] = useState<number[]>([]);
   // Toras do saldo = cadastradas só com volume; quando medidas ganham diâmetros.
   const pendentes = useMemo(() => (toras.data ?? []).filter((t) => !t.carregada && t.d_topo1 === null && t.comprimento === null), [toras.data]);
+  const paraExportar = useMemo(() => saldoNaoMedido(linhas, toras.data ?? [], filaOffline.itens, empresa), [linhas, toras.data, filaOffline.itens, empresa]);
   const [inicio, setInicio] = useState("");
   const [busy, setBusy] = useState(false);
   const [busca, setBusca] = useState("");
@@ -176,6 +179,7 @@ function Saldo() {
         <Button className="w-full h-12" disabled={!pendentes.length && !linhas.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>
         {medidas.length > 0 && <Button asChild variant="secondary" className="w-full"><Link to="/etiquetas" search={{ p: medidas.join(",") }}><Printer /> Imprimir as {medidas.length} medidas agora</Link></Button>}
       </div>
+      <ExportarSaldoPendente lista={paraExportar} carregando={toras.isPending || toras.isError || filaOffline.carregando || !!filaOffline.erro || !empresa} />
       <Sheet open={medir} onOpenChange={setMedir}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Medir tora do saldo</SheetTitle></SheetHeader>
