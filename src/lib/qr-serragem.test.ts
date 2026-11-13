@@ -24,7 +24,7 @@ describe("etiqueta na serragem", () => {
   it("etiqueta com link público abre a tora no leitor interno e confere a identidade", () => {
     const pub = { ...tora, publico_id: "11111111-2222-3333-4444-555555555555" } as Tora;
     const raw = qrTora(pub);
-    expect(raw).toBe("https://forest-sheet-romaneio.lovable.app/t/11111111-2222-3333-4444-555555555555?p=50&a=349&s=A&x=AUTEX-1");
+    expect(raw).toBe("https://gestorflorestal.com.br/t/11111111-2222-3333-4444-555555555555?p=50&a=349&s=A&x=AUTEX-1");
     expect(resolverQrSerragem(raw, [pub], "RJ")).toBe(pub);
     expect(() => resolverQrSerragem(raw, [{ ...pub, arvore: 350 }], "RJ")).toThrow("identidade atual");
   });
