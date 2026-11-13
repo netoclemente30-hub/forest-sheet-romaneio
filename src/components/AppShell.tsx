@@ -66,7 +66,7 @@ export function AppShell() {
   return (
     <div className="min-h-screen pb-20">
       <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
-        <span className="font-display text-xl font-bold uppercase min-w-0">ZÉ MADEIREIRO{"\n"}</span>
+        <span className="font-display text-xl font-bold uppercase min-w-0">GESTOR FLORESTAL{"\n"}</span>
         <div className="ml-auto flex items-center gap-1 shrink-0">
           <Button size="icon" variant="ghost" aria-label="Este aparelho" title="Este aparelho" onClick={abrirAparelho} className="opacity-80">
             <Smartphone className="size-5" />
