@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Factory, Ruler, ShieldCheck, TreePine, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { medidaComercial, fmtComprimentoComercial } from "@/lib/medida-comercial";
 
 export const Route = createFileRoute("/t/$id")({
@@ -54,8 +55,7 @@ function ToraPublica() {
   );
 }
 
-type Publica = NonNullable<Awaited<ReturnType<typeof buscar>>>;
-async function buscar() { return (await supabase.rpc("tora_publica", { _id: "" })).data?.[0]; }
+type Publica = Database["public"]["Functions"]["tora_publica"]["Returns"][number];
 
 function Detalhes({ t }: { t: Publica }) {
   const c = medidaComercial(t);
