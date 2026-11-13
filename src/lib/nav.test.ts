@@ -19,6 +19,6 @@ describe("ehRotaPublica", () => {
   it("não libera caminho que só parece público", () => {
     expect(ehRotaPublica("/apresentacao-x")).toBe(false);
     expect(ehRotaPublica("/toras")).toBe(false);
-    expect(ehRotaPublica("/t"></code>)).toBe(false);
+    expect(ehRotaPublica("/t")).toBe(false);
   });
 });

@@ -41,5 +41,5 @@ export const emSerraria = (p: string) => contem(SERRARIA_PATHS, p);
  * são as únicas; qualquer outro caminho exige sessão.
  */
 export function ehRotaPublica(p: string): boolean {
-  return p === "/t" || p.startsWith("/t/") || contem(PUBLICAS, p);
+  return p.startsWith("/t/") || contem(PUBLICAS, p);
 }
