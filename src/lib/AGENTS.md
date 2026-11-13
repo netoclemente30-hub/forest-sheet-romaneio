@@ -2,3 +2,4 @@
 - Field-sheet templates keep the importable first worksheet empty and isolate instructions and fictional examples in separate worksheets. Why: engineers can fill compatible coordinates without accidentally importing sample trees.
 - Coordinate-only import matches company/AUTEX/tree number, previews validated decimal GPS and writes only location fields before refreshing query/cache. Why: updating positions must not replace inventory measurements or felling history.
 - Unmeasured saldo exports reconcile uploaded identities against current inventory and queued measurements; export original saldo volumes, not invented physical/commercial measurements. Why: remaining logs must exclude measurements already captured on the device.
+- Saldo reads and local copies use company-keyed queries/storage and clear missing balances; never reuse the legacy unscoped copy. Why: switching companies must not turn another company's measured logs into apparent missing stock.

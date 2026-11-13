@@ -1,4 +1,6 @@
 # Tarefas
+- [x] Reforçar troca de empresa: cancelar/remover consultas anteriores, reiniciar telas e manter cache na empresa de origem mesmo em resposta atrasada; 18 testes passaram, troca RICARDO RMS/RJ e downloads reais conferidos sem erros.
+- [x] Corrigir saldo antigo exibido ao trocar de empresa com saldo/cache separado; RJ Madeiras mantém 1.542 medidas e 439 restantes após recarregar. Nenhum estoque foi alterado; empresa sem saldo não mostra saldo de outra.
 - [x] Exportar em Excel/PDF as toras do saldo que ainda não foram medidas, com identidade e volume original, excluindo medições offline; 13 testes passaram. Ambos arquivos das 439 toras reais baixados com acesso autenticado; Excel recalculado sem erros e tela 384 px sem corte.
 - [x] Importar planilha só de coordenadas em Cortador / Mapa, com prévia por árvore/AUTEX, preservando ficha e abatimentos e atualizando o localizador; 11 testes passaram. Coordenadas da árvore real 353 importadas online e relidas após recarregar, localizador abriu registro de abate sem alterar medidas/histórico; posição original restaurada após teste, botão conferido em 384 px.
 - [x] Adicionar ao final de Cortador / Mapa modelo Excel da ficha de campo com coordenadas para solicitar ao engenheiro; download autenticado e botão em 384 px conferidos, arquivo com ficha vazia/orientações/exemplo fictício, nove testes passaram.

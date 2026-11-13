@@ -2,7 +2,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { comCache } from "./cache";
 import { idb } from "./db";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem("empresa_ativa"); });
+
+it("resposta atrasada da RJ não grava toras no cache da empresa selecionada depois", async () => {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  const put = vi.spyOn(idb, "put").mockResolvedValue(undefined);
+  localStorage.setItem("empresa_ativa", "rj");
+  let resolver: ((dados: { plaqueta: number }[]) => void) | undefined;
+  const pendente = comCache("toras", () => new Promise<{ plaqueta: number }[]>((resolve) => { resolver = resolve; }));
+  localStorage.setItem("empresa_ativa", "ricardo");
+  resolver?.([{ plaqueta: 273 }]);
+  await pendente;
+  expect(put).toHaveBeenCalledWith("cache", expect.objectContaining({ dados: [{ plaqueta: 273 }] }), "rj:toras");
+  expect(put).not.toHaveBeenCalledWith("cache", expect.anything(), "ricardo:toras");
+});
 
 describe("consulta sem internet", () => {
   it("lê a base já salva sem aguardar uma tentativa de rede", async () => {
