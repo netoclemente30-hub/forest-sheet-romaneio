@@ -90,8 +90,8 @@ function Detalhes({ t }: { t: Publica }) {
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border bg-card p-4">
           <h2 className="mb-2 flex items-center gap-2 font-semibold"><Ruler className="h-4 w-4" />Medida física</h2>
-          <Linha k="Ponta fina (D1 × D2)" v={`${n2(t.d_topo1)} × ${n2(t.d_topo2)} cm`} />
-          <Linha k="Ponta grossa (D3 × D4)" v={`${n2(t.d_pe1)} × ${n2(t.d_pe2)} cm`} />
+          <Linha k="Topo (D1 × D2)" v={`${n2(t.d_topo1)} × ${n2(t.d_topo2)} cm`} />
+          <Linha k="Pé (D3 × D4)" v={`${n2(t.d_pe1)} × ${n2(t.d_pe2)} cm`} />
           <Linha k="Comprimento" v={`${n2(t.comprimento)} m`} />
           <Linha k="Volume" v={m3(Number(t.volume))} forte />
         </div>
