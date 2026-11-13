@@ -951,6 +951,7 @@ export type Database = {
       tora_publica: {
         Args: { _id: string }
         Returns: {
+          abatida_em: string
           arvore: number
           autex: string
           carregada: boolean
@@ -960,10 +961,15 @@ export type Database = {
           d_pe2: number
           d_topo1: number
           d_topo2: number
+          destino: string
           empresa_nome: string
           especie: string
+          fazenda: string
+          latitude: number
+          longitude: number
           nome_cientifico: string
           origem: string
+          placa: string
           plaqueta: number
           romaneio_data: string
           secao: string

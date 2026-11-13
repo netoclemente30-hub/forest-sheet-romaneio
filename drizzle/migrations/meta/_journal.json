@@ -239,6 +239,13 @@
       "when": 1794599706514,
       "tag": "0033_empresa_status_pendente",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794602683884,
+      "tag": "0034_tora_publica_detalhada",
+      "breakpoints": true
     }
   ]
 }
