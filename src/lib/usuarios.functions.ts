@@ -204,7 +204,7 @@ export const cadastrarEmpresaPublica = createServerFn({ method: "POST" })
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({ email: data.email, password: data.password, email_confirm: true });
     if (error) {
       await supabaseAdmin.from("empresas").delete().eq("id", emp.id);
-      throw new Error(/already|registered|exists/i.test(error.message) ? "Este e-mail já tem cadastro. Use Acessar sistema." : error.message);
+      throw new Error(/already|registered|exists/i.test(error.message) ? "Este e-mail já tem cadastro. Use Acessar sistema." : /weak|guess/i.test(error.message) ? "Senha muito comum. Escolha outra senha." : error.message);
     }
     const { error: vErr } = await supabaseAdmin.from("empresa_usuarios").insert({ user_id: created.user.id, empresa_id: emp.id });
     if (vErr) {
