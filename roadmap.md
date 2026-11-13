@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Corrigir envio privado do mapa com empresa selecionada pelo superadmin e alinhar limite de 100 MB; verificar envio e releitura com acesso real.
 - [x] Corrigir bloqueio de empresa ao lançar tora: consultas fora do aviso de login, vínculo independente das permissões e recuperação após reconexão; 193 testes passaram. Lançamento offline da árvore 48 confirmado com acesso real e permissões lentas; fila relida e teste removido sem enviar ao estoque. Atualização no aparelho depende da publicação.
 - [x] Permitir importar e medir saldo AUTESP sem seção, preservando identidade e duplicidade; 23 testes passaram. Árvore 48 do saldo real identificada e salva offline com seção nula; fila relida e teste removido sem alterar estoque. Tela 384 px conferida.
 - [x] PDF de toras segue Medida física/comercial em Manejo e Serraria, com totais gerais/por AUTEX/espécie; 23 testes passaram e ambos PDFs baixados com dados reais da Serraria, sem erros. Manejo sem toras disponíveis para download nesta conferência.
