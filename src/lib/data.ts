@@ -3,7 +3,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { getEmpresaAtiva } from "./empresa";
 import { comCache } from "./offline/cache";
 
-export type Tora = Database["public"]["Tables"]["toras"]["Row"];
+/** publico_id só existe depois de sincronizada; toras projetadas offline não têm. */
+export type Tora = Omit<Database["public"]["Tables"]["toras"]["Row"], "publico_id"> & { publico_id?: string };
 export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];
 export type Romaneio = Database["public"]["Tables"]["romaneios"]["Row"];
 export type RastroGPS = Database["public"]["Tables"]["rastros_gps"]["Row"];
