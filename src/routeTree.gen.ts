@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApresentacaoRouteImport } from './routes/apresentacao'
 import { Route as BaseRouteImport } from './routes/base'
 import { Route as CortadorRouteImport } from './routes/cortador'
 import { Route as EntradaRouteImport } from './routes/entrada'
@@ -26,10 +27,16 @@ import { Route as BaseIndexRouteImport } from './routes/base.index'
 import { Route as BaseAutexRouteImport } from './routes/base.$autex'
 import { Route as HistoricoIndexRouteImport } from './routes/historico.index'
 import { Route as HistoricoIdRouteImport } from './routes/historico.$id'
+import { Route as TIdRouteImport } from './routes/t/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApresentacaoRoute = ApresentacaoRouteImport.update({
+  id: '/apresentacao',
+  path: '/apresentacao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BaseRoute = BaseRouteImport.update({
@@ -112,9 +119,15 @@ const HistoricoIdRoute = HistoricoIdRouteImport.update({
   path: '/historico/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TIdRoute = TIdRouteImport.update({
+  id: '/t/$id',
+  path: '/t/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/apresentacao': typeof ApresentacaoRoute
   '/base': typeof BaseRouteWithChildren
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
@@ -129,11 +142,13 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
   '/historico/$id': typeof HistoricoIdRoute
+  '/t/$id': typeof TIdRoute
   '/base/': typeof BaseIndexRoute
   '/historico/': typeof HistoricoIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/apresentacao': typeof ApresentacaoRoute
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
@@ -147,12 +162,14 @@ export interface FileRoutesByTo {
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
   '/historico/$id': typeof HistoricoIdRoute
+  '/t/$id': typeof TIdRoute
   '/base': typeof BaseIndexRoute
   '/historico': typeof HistoricoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/apresentacao': typeof ApresentacaoRoute
   '/base': typeof BaseRouteWithChildren
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
@@ -167,6 +184,7 @@ export interface FileRoutesById {
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
   '/historico/$id': typeof HistoricoIdRoute
+  '/t/$id': typeof TIdRoute
   '/base/': typeof BaseIndexRoute
   '/historico/': typeof HistoricoIndexRoute
 }
@@ -174,6 +192,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/apresentacao'
     | '/base'
     | '/cortador'
     | '/entrada'
@@ -188,11 +207,13 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/base/$autex'
     | '/historico/$id'
+    | '/t/$id'
     | '/base/'
     | '/historico/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/apresentacao'
     | '/cortador'
     | '/entrada'
     | '/etiquetas'
@@ -206,11 +227,13 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/base/$autex'
     | '/historico/$id'
+    | '/t/$id'
     | '/base'
     | '/historico'
   id:
     | '__root__'
     | '/'
+    | '/apresentacao'
     | '/base'
     | '/cortador'
     | '/entrada'
@@ -225,12 +248,14 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/base/$autex'
     | '/historico/$id'
+    | '/t/$id'
     | '/base/'
     | '/historico/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApresentacaoRoute: typeof ApresentacaoRoute
   BaseRoute: typeof BaseRouteWithChildren
   CortadorRoute: typeof CortadorRoute
   EntradaRoute: typeof EntradaRoute
@@ -244,6 +269,7 @@ export interface RootRouteChildren {
   TorasRoute: typeof TorasRoute
   UsuariosRoute: typeof UsuariosRoute
   HistoricoIdRoute: typeof HistoricoIdRoute
+  TIdRoute: typeof TIdRoute
   HistoricoIndexRoute: typeof HistoricoIndexRoute
 }
 
@@ -254,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apresentacao': {
+      id: '/apresentacao'
+      path: '/apresentacao'
+      fullPath: '/apresentacao'
+      preLoaderRoute: typeof ApresentacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/base': {
@@ -368,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoricoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/t/$id': {
+      id: '/t/$id'
+      path: '/t/$id'
+      fullPath: '/t/$id'
+      preLoaderRoute: typeof TIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -385,6 +425,7 @@ const BaseRouteWithChildren = BaseRoute._addFileChildren(BaseRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApresentacaoRoute: ApresentacaoRoute,
   BaseRoute: BaseRouteWithChildren,
   CortadorRoute: CortadorRoute,
   EntradaRoute: EntradaRoute,
@@ -398,6 +439,7 @@ const rootRouteChildren: RootRouteChildren = {
   TorasRoute: TorasRoute,
   UsuariosRoute: UsuariosRoute,
   HistoricoIdRoute: HistoricoIdRoute,
+  TIdRoute: TIdRoute,
   HistoricoIndexRoute: HistoricoIndexRoute,
 }
 export const routeTree = rootRouteImport
