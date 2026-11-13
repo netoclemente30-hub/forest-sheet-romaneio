@@ -1,4 +1,5 @@
 # Tarefas
+- [x] Mostrar a apresentação do Gestor Florestal para quem entra sem login, com cards ilustrados por módulo e botão "Acessar sistema" abrindo o login; logado entra direto no painel. Quatro testes de rota pública passaram e as duas telas foram conferidas assinadas/sem assinar em desktop e em 384 px, sem erros de console.
 - [x] Reforçar troca de empresa: cancelar/remover consultas anteriores, reiniciar telas e manter cache na empresa de origem mesmo em resposta atrasada; 18 testes passaram, troca RICARDO RMS/RJ e downloads reais conferidos sem erros.
 - [x] Corrigir saldo antigo exibido ao trocar de empresa com saldo/cache separado; RJ Madeiras mantém 1.542 medidas e 439 restantes após recarregar. Nenhum estoque foi alterado; empresa sem saldo não mostra saldo de outra.
 - [x] Exportar em Excel/PDF as toras do saldo que ainda não foram medidas, com identidade e volume original, excluindo medições offline; 13 testes passaram. Ambos arquivos das 439 toras reais baixados com acesso autenticado; Excel recalculado sem erros e tela 384 px sem corte.
