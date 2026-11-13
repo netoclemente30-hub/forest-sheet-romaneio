@@ -1,0 +1,1 @@
+- GeoPDF parsing supports ISO Measure/GEO and OGC LGIDict with explicit projection/datum and validated controls; never infer missing georeferencing. Why: field GPS must use the uploaded map's actual coordinates rather than plausible guesses.

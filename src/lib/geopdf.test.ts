@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ajustarControle, aplicarMatriz, arvoresProximas, inverterMatriz, lerGeoReferencia } from "./geopdf";
-import { PDFDocument, PDFName } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString } from "pdf-lib";
 
 describe("GeoPDF e árvores próximas", () => {
   async function globalMapper(datum = "NAR", deslocamento = 0) {
@@ -8,10 +8,10 @@ describe("GeoPDF e árvores próximas", () => {
     const page = doc.addPage([612, 792]);
     const lgi = doc.context.register(doc.context.obj({
       Type: "LGIDict", Version: "2.1",
-      CTM: ["2.713901054248", "0.0", "0.0", "2.713901054248", "419065.266477928089", "9043718.886557903141"],
-      Projection: { Type: "Projection", ProjectionType: "UT", Datum: datum, Hemisphere: "S", Zone: "20" },
-      Registration: [["0", "0", String(419065.266477928089 + deslocamento), "9043718.886557903141"], ["612", "792", "420726.173923127644", "9045868.296192867681"]],
-      Neatline: ["54", "738", "559", "738", "559", "54", "54", "54"],
+      CTM: ["2.713901054248", "0.0", "0.0", "2.713901054248", "419065.266477928089", "9043718.886557903141"].map((n) => PDFString.of(n)),
+      Projection: { Type: "Projection", ProjectionType: "UT", Datum: datum, Hemisphere: "S", Zone: PDFString.of("20") },
+      Registration: [["0", "0", String(419065.266477928089 + deslocamento), "9043718.886557903141"], ["612", "792", "420726.173923127644", "9045868.296192867681"]].map((row) => row.map((n) => PDFString.of(n))),
+      Neatline: ["54", "738", "559", "738", "559", "54", "54", "54"].map((n) => PDFString.of(n)),
     }));
     page.node.set(PDFName.of("LGIDict"), doc.context.obj([lgi]));
     return doc.save();
