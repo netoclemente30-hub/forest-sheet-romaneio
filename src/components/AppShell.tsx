@@ -8,14 +8,14 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { LoginScreen } from "./LoginScreen";
+import { ApresentacaoPagina } from "@/components/apresentacao/ApresentacaoPagina";
 import { supabase } from "@/integrations/supabase/client";
 import { listarEmpresas } from "@/lib/usuarios.functions";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
-import { MANEJO, emManejo, emSerraria } from "@/lib/nav";
+import { MANEJO, emManejo, emSerraria, ehRotaPublica } from "@/lib/nav";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
@@ -53,9 +53,10 @@ export function AppShell() {
   }
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
   // Páginas públicas (QR da tora e apresentação) abrem sem login.
-  if (pathname.startsWith("/t/") || pathname === "/apresentacao") return <Outlet />;
+  if (ehRotaPublica(pathname)) return <Outlet />;
   if (loading) return <div className="min-h-screen bg-forest" />;
-  if (!session) return <LoginScreen />;
+  // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
+  if (!session) return <ApresentacaoPagina />;
   const items = isAdmin || isSuperAdmin
     ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
     : nav;
