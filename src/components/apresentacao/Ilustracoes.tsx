@@ -110,7 +110,7 @@ export function IlusRomaneio({ className = base }: Props) {
         <rect x="180" y="54" width="2" height="12" opacity="0.9" />
         <rect x="196" y="66" width="2" height="12" opacity="0.9" />
       </g>
-      <text x="192" y="128" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">TXT NF-e pronto para baixar</text>
+      <text x="236" y="128" textAnchor="end" fill="currentColor" fontSize="9.5" className="text-muted-foreground">TXT NF-e pronto para baixar</text>
     </svg>
   );
 }
@@ -137,7 +137,7 @@ export function IlusOffline({ className = base }: Props) {
         <path d="M166 94l6 8 6-8" strokeWidth="2" />
         <path d="M112 40l-14 4 8 6" strokeWidth="2" opacity="0.7" />
       </g>
-      <text x="166" y="122" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">fila no aparelho · envia ao voltar o sinal</text>
+      <text x="120" y="122" textAnchor="middle" fill="currentColor" fontSize="9.5" className="text-muted-foreground">fila no aparelho · envia ao voltar o sinal</text>
     </svg>
   );
 }
