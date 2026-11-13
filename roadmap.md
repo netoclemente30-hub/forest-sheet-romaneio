@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Exportar em Excel/PDF as toras cadastradas que ainda não foram medidas, com identidade e volume do saldo; conferir download com dados reais.
 - [x] Importar planilha só de coordenadas em Cortador / Mapa, com prévia por árvore/AUTEX, preservando ficha e abatimentos e atualizando o localizador; 11 testes passaram. Coordenadas da árvore real 353 importadas online e relidas após recarregar, localizador abriu registro de abate sem alterar medidas/histórico; posição original restaurada após teste, botão conferido em 384 px.
 - [x] Adicionar ao final de Cortador / Mapa modelo Excel da ficha de campo com coordenadas para solicitar ao engenheiro; download autenticado e botão em 384 px conferidos, arquivo com ficha vazia/orientações/exemplo fictício, nove testes passaram.
 - [x] Reconhecer o GeoPDF AVZ do Global Mapper (/LGIDict); oito testes passaram. PDF privado real aberto com acesso autenticado, ponto azul/GPS simulado dentro da planta, ampliação e centralização conferidos em desktop/384 px, sem erros. GPS físico continua pendente no aparelho.
