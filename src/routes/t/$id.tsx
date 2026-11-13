@@ -5,13 +5,14 @@ import { CheckCircle2, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, TreePin
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { medidaComercial, fmtComprimentoComercial } from "@/lib/medida-comercial";
+import { EscolherAparencia } from "@/components/Aparencia";
 
 export const Route = createFileRoute("/t/$id")({
   head: () => ({
     meta: [
-      { title: "Rastreabilidade da tora · Gestor Florestal" },
+      { title: "Rastreio de tora · Gestor Florestal" },
       { name: "description", content: "Origem, medidas e situação de uma tora rastreada pelo Gestor Florestal." },
-      { property: "og:title", content: "Rastreabilidade da tora · Gestor Florestal" },
+      { property: "og:title", content: "Rastreio de tora · Gestor Florestal" },
       { property: "og:description", content: "Origem, medidas e situação de uma tora rastreada pelo Gestor Florestal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -43,7 +44,8 @@ function ToraPublica() {
       <header className="border-b bg-card px-4 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-center gap-2 text-primary">
           <TreePine className="h-6 w-6" />
-          <div><p className="font-display text-xl font-bold leading-none">Gestor Florestal</p><p className="text-[10px] uppercase tracking-widest text-muted-foreground">Rastreabilidade florestal</p></div>
+          <div><p className="font-display text-xl font-bold leading-none">Gestor Florestal</p><p className="text-[10px] uppercase tracking-widest text-muted-foreground">Rastreio de tora</p></div>
+          <div className="ml-auto"><EscolherAparencia /></div>
         </div>
       </header>
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-4">
@@ -70,39 +72,50 @@ function Detalhes({ t }: { t: Publica }) {
   const temGps = t.latitude != null && t.longitude != null;
   return (
     <>
-      <section className="rounded-2xl bg-forest px-4 py-8 text-center text-primary-foreground shadow-lg">
+      <section className="rounded-2xl bg-forest px-4 py-8 text-center text-forest-foreground shadow-lg">
         <QrCode className="mx-auto h-8 w-8 opacity-50" />
-        <p className="mt-1 text-[11px] uppercase tracking-[0.2em] opacity-80">Gestor Florestal · Rastreabilidade</p>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.2em] opacity-80">Gestor Florestal · Rastreio de tora</p>
         <h1 className="mt-1 font-display text-4xl font-bold">Tora Nº {t.plaqueta}</h1>
+        <div className="mt-4 space-y-3 border-y border-forest-foreground/30 py-4">
+          <div><p className="text-xs uppercase opacity-80">AUTEX</p><p className="break-words text-base font-semibold">{t.autex || "—"}</p></div>
+          <div><p className="text-xs uppercase opacity-80">Árvore</p><p className="font-display text-3xl font-bold">Nº{t.arvore} {t.secao || ""}</p></div>
+        </div>
         <p className="mt-1 text-sm uppercase opacity-90">{t.especie ?? "Espécie não informada"}</p>
-        <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/40 bg-primary-foreground/10 px-3 py-1 text-xs"><CheckCircle2 className="h-3.5 w-3.5" />Verificada &amp; Autêntica</span>
+        <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-forest-foreground/40 bg-forest-foreground/10 px-3 py-1 text-xs"><CheckCircle2 className="h-3.5 w-3.5" />Verificada &amp; Autêntica</span>
       </section>
 
       <Cartao icone={TreePine} titulo="Resumo da Madeira">
         <div className="grid grid-cols-2 gap-2">
           <Caixa r="Espécie / Essência" v={(t.especie ?? "—").toUpperCase()} />
-          <Caixa r="Volume" v={n4(t.volume)} u="m³" />
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Caixa r="Comprimento" v={n2(t.comprimento)} u="m" />
           <Caixa r="Secção" v={t.secao || "—"} />
-          <Caixa r="DC1" v={c ? n0(c.d1) : "—"} u="cm" />
-          <Caixa r="DC2" v={c ? n0(c.d2) : "—"} u="cm" />
         </div>
-        {c && <div className="mt-2 grid grid-cols-2 gap-2"><Caixa r="Comprimento comercial" v={fmtComprimentoComercial(c.comprimento)} u="m" /><Caixa r="Volume comercial" v={n4(c.volume)} u="m³" /></div>}
         {t.nome_cientifico && <Linha k="Nome científico" v={<i>{t.nome_cientifico}</i>} />}
       </Cartao>
 
-      <Cartao icone={Ruler} titulo="Diâmetros Aferidos" extra="em centímetros">
-        <div className="grid grid-cols-4 gap-2">
-          <Caixa r="D1" v={n0(t.d_topo1)} /><Caixa r="D2" v={n0(t.d_topo2)} /><Caixa r="D3" v={n0(t.d_pe1)} /><Caixa r="D4" v={n0(t.d_pe2)} />
+      <Cartao icone={Ruler} titulo="Medida florestal (física)">
+        <div className="grid grid-cols-2 gap-2">
+          <Caixa r="Comprimento florestal" v={n2(t.comprimento)} u="m" />
+          <Caixa r="Volume florestal" v={n4(t.volume)} u="m³" />
+          <Caixa r="Topo D1" v={n0(t.d_topo1)} u="cm" />
+          <Caixa r="Topo D2" v={n0(t.d_topo2)} u="cm" />
+          <Caixa r="Pé D1" v={n0(t.d_pe1)} u="cm" />
+          <Caixa r="Pé D2" v={n0(t.d_pe2)} u="cm" />
+        </div>
+      </Cartao>
+
+      <Cartao icone={Ruler} titulo="Medida comercial">
+        <div className="grid grid-cols-2 gap-2">
+          <Caixa r="DC1" v={c ? n0(c.d1) : "—"} u="cm" />
+          <Caixa r="DC2" v={c ? n0(c.d2) : "—"} u="cm" />
+          <Caixa r="Comprimento comercial" v={c ? fmtComprimentoComercial(c.comprimento) : "—"} u="m" />
+          <Caixa r="Volume comercial" v={c ? n4(c.volume) : "—"} u="m³" />
         </div>
       </Cartao>
 
       <Cartao icone={Sprout} titulo="Origem Florestal">
         <Linha k="Fazenda / Projeto" v={t.fazenda || t.empresa_nome} />
         <Linha k="AUTEX" v={t.autex || "—"} />
-        <Linha k="Árvore Nº" v={<span className="text-primary">{t.arvore}</span>} />
+        <Linha k="Árvore Nº" v={<span className="text-primary">{t.arvore} {t.secao || ""}</span>} />
         <Linha k="Empresa" v={t.empresa_nome} />
       </Cartao>
 

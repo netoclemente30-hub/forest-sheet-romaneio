@@ -17,6 +17,7 @@ import { SyncStatus } from "./SyncStatus";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MANEJO, emManejo, emSerraria, ehRotaPublica } from "@/lib/nav";
+import { EscolherAparencia } from "@/components/Aparencia";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
@@ -65,9 +66,10 @@ export function AppShell() {
     : nav;
   return (
     <div className="min-h-screen pb-20">
-      <header className="no-print bg-forest text-primary-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
+      <header className="no-print bg-forest text-forest-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
         <span className="font-display text-xl font-bold uppercase min-w-0">GESTOR FLORESTAL{"\n"}</span>
         <div className="ml-auto flex items-center gap-1 shrink-0">
+          <EscolherAparencia />
           <Button size="icon" variant="ghost" aria-label="Este aparelho" title="Este aparelho" onClick={abrirAparelho} className="opacity-80">
             <Smartphone className="size-5" />
           </Button>

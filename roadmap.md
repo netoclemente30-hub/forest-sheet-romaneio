@@ -1,4 +1,6 @@
 # Tarefas
+- [x] Rastreio de tora: AUTEX e árvore/secção abaixo da plaqueta, medidas florestais/comerciais separadas; tora real 585/117 B conferida sem login em desktop/celular, 16 testes passaram.
+- [x] Escolha claro/escuro no topo, lembrada no aparelho; troca/reabertura verificadas com acesso real, desktop/384 px sem corte ou erros.
 - [x] Mostrar a apresentação do Gestor Florestal para quem entra sem login, com cards ilustrados por módulo e botão "Acessar sistema" abrindo o login; logado entra direto no painel. Quatro testes de rota pública passaram e as duas telas foram conferidas assinadas/sem assinar em desktop e em 384 px, sem erros de console.
 - [x] Reforçar troca de empresa: cancelar/remover consultas anteriores, reiniciar telas e manter cache na empresa de origem mesmo em resposta atrasada; 18 testes passaram, troca RICARDO RMS/RJ e downloads reais conferidos sem erros.
 - [x] Corrigir saldo antigo exibido ao trocar de empresa com saldo/cache separado; RJ Madeiras mantém 1.542 medidas e 439 restantes após recarregar. Nenhum estoque foi alterado; empresa sem saldo não mostra saldo de outra.
