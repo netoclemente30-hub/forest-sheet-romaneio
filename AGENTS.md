@@ -52,3 +52,4 @@ use the editor.
 - Fitted-log comparisons use company-scoped audit snapshots and offline inserts, excluding reversals. Why: retain original saldo/measurements, not later imports or reused labels.
 - Inventory mutations use registrar_operacao (stable offline IDs, atomic snapshot logs); triggers capture other stock writes. Reversal is an admin/company-checked RPC comparing current snapshots and appending a compensating event; legacy logs are non-reversible. Why: undo must never invent old data or overwrite newer work.
 - AppShell groups routes into nav sections with sub-tabs. Why: keep URLs/QR links.
+- Company status (pendente/demonstracao/ativa/inativa) is enforced by a BEFORE INSERT trigger on toras plus an AppShell block screen; only superadmin changes status/roles. Why: the demo limit must hold even for offline replays and RPC writes.
