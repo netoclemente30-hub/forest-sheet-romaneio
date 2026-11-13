@@ -123,7 +123,7 @@ export function AppShell() {
       <SyncStatus />
       <main className="mx-auto max-w-3xl p-4">
         {manejo && (
-          <nav aria-label="Manejo" className="no-print mb-4 grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+          <nav aria-label="Manejo" className="no-print mb-4 grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
             {MANEJO.map((m) => {
               const ativo = pathname === m.to || pathname.startsWith(`${m.to}/`) || (m.to === "/romaneio" && pathname.startsWith("/historico"));
               return (

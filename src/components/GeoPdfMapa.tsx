@@ -83,10 +83,10 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, onArvore
           <image href={mapa.imagem} width={mapa.largura} height={mapa.altura} />
           {[...percursos].map(([id, pontos]) => <polyline key={id} points={pontos.join(" ")} fill="none" stroke="var(--color-accent)" strokeWidth="3" vectorEffect="non-scaling-stroke" />)}
           {pontos.map(({ a, x, y }) => <g key={a.id} role="button" tabIndex={0} aria-label={`Árvore ${a.numero} no GeoPDF`} onClick={(e) => { e.stopPropagation(); onArvore(a); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onArvore(a); } }} className="cursor-pointer">
-            <circle cx={x} cy={y} r={mapa.largura / 180 / zoom} fill={a.abatida_em ? "var(--color-destructive)" : "var(--color-primary)"} stroke="var(--color-card)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+            <circle cx={x} cy={y} r={mapa.largura / 180 / zoom} fill={a.abatida_em ? "var(--color-destructive)" : a.nao_abatida_motivo ? "var(--color-muted-foreground)" : "var(--color-primary)"} stroke="var(--color-card)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
             <text x={x + mapa.largura / 160 / zoom} y={y} fontSize={mapa.largura / 80 / zoom} fill="var(--color-foreground)" stroke="var(--color-card)" strokeWidth="2" paintOrder="stroke">{a.numero}</text>
           </g>)}
-          {noMapa && posicao && <circle aria-label="Minha posição no GeoPDF" cx={posicao[0]} cy={posicao[1]} r={mapa.largura / 120 / zoom} fill="var(--color-accent)" stroke="var(--color-primary)" strokeWidth="3" vectorEffect="non-scaling-stroke" />}
+          {noMapa && posicao && <circle aria-label="Minha posição no GeoPDF" cx={posicao[0]} cy={posicao[1]} r={mapa.largura / 120 / zoom} fill="var(--color-gps)" stroke="var(--color-card)" strokeWidth="3" vectorEffect="non-scaling-stroke" />}
         </svg>
       </div>
       <p role="status" className="text-xs text-muted-foreground">{atual ? noMapa ? "Sua posição está dentro da planta." : "Sua posição está fora desta planta." : "Inicie o GPS para mostrar sua posição."} · Mapa preparado neste aparelho.</p>
