@@ -49,8 +49,47 @@ export async function lerGeoReferencia(bytes: Uint8Array): Promise<GeoReferencia
   const { PDFDocument, PDFName, PDFArray, PDFDict, PDFNumber, PDFString, PDFHexString } = await import("pdf-lib");
   const proj4 = (await import("proj4")).default;
   const doc = await PDFDocument.load(bytes);
-  const nums = (obj: unknown): number[] => obj instanceof PDFArray ? obj.asArray().map((x) => { const n = doc.context.lookup(x); return n instanceof PDFNumber ? n.asNumber() : NaN; }) : [];
+  const valorNumero = (obj: unknown): number => obj instanceof PDFNumber ? obj.asNumber() : obj instanceof PDFString || obj instanceof PDFHexString ? Number(obj.decodeText().trim() || NaN) : NaN;
+  const nums = (obj: unknown): number[] => obj instanceof PDFArray ? obj.asArray().map((x) => valorNumero(doc.context.lookup(x))) : [];
+  const texto = (obj: unknown): string => obj instanceof PDFString || obj instanceof PDFHexString ? obj.decodeText() : obj instanceof PDFName ? obj.asString().replace(/^\//, "") : "";
   for (const [index, page] of doc.getPages().entries()) {
+    // Global Mapper exports the OGC LGIDict variant, including string numbers.
+    const lgi = page.node.lookup(PDFName.of("LGIDict"));
+    const referencias = lgi instanceof PDFArray ? lgi.asArray() : lgi instanceof PDFDict ? [lgi] : [];
+    for (const ref of referencias) {
+      const dict = doc.context.lookup(ref);
+      if (!(dict instanceof PDFDict)) continue;
+      const projection = dict.lookupMaybe(PDFName.of("Projection"), PDFDict);
+      if (!projection) throw new Error("GeoPDF LGIDict sem sistema de coordenadas");
+      const tipo = texto(projection.lookup(PDFName.of("ProjectionType")));
+      const datum = texto(projection.lookup(PDFName.of("Datum")));
+      const hemisphere = texto(projection.lookup(PDFName.of("Hemisphere")));
+      const zone = valorNumero(projection.lookup(PDFName.of("Zone")));
+      // Never guess the datum or hemisphere: a plausible but wrong GPS is unsafe.
+      const datums: Record<string, string> = { NAR: "NAD83", WGE: "WGS84" };
+      const datumProj = datums[datum];
+      if (tipo !== "UT" || !datumProj || !Number.isInteger(zone) || zone < 1 || zone > 60 || !["N", "S"].includes(hemisphere)) {
+        throw new Error("Sistema de coordenadas do GeoPDF LGIDict não reconhecido; confira a projeção do arquivo original");
+      }
+      const crs = `+proj=utm +zone=${zone}${hemisphere === "S" ? " +south" : ""} +datum=${datumProj} +units=m +no_defs`;
+      const ctm = nums(dict.lookup(PDFName.of("CTM")));
+      if (ctm.length !== 6 || ctm.some((n) => !Number.isFinite(n))) throw new Error("GeoPDF LGIDict com transformação incompleta");
+      const matriz: Matriz = [numero(ctm, 0), numero(ctm, 1), numero(ctm, 2), numero(ctm, 3), numero(ctm, 4), numero(ctm, 5)];
+      inverterMatriz(matriz);
+      const registration = dict.lookup(PDFName.of("Registration"));
+      if (registration instanceof PDFArray) for (const controle of registration.asArray()) {
+        const pontos = nums(doc.context.lookup(controle));
+        if (pontos.length !== 4 || pontos.some((n) => !Number.isFinite(n))) throw new Error("Controle geográfico inválido no PDF LGIDict");
+        const [x, y] = aplicarMatriz(matriz, numero(pontos, 0), numero(pontos, 1));
+        if (Math.hypot(x - numero(pontos, 2), y - numero(pontos, 3)) > 3) throw new Error("Alinhamento do GeoPDF inconsistente; confira o arquivo original");
+      }
+      const neatline = nums(dict.lookup(PDFName.of("Neatline")));
+      if (neatline.length < 6 || neatline.length % 2 || neatline.some((n) => !Number.isFinite(n))) throw new Error("GeoPDF LGIDict com limites incompletos");
+      const xs = neatline.filter((_, i) => i % 2 === 0), ys = neatline.filter((_, i) => i % 2 === 1);
+      const bbox = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+      if (numero(bbox, 0) >= numero(bbox, 2) || numero(bbox, 1) >= numero(bbox, 3)) throw new Error("Controle geográfico sem área válida");
+      return { pagina: index + 1, bbox, crs, matriz };
+    }
     const vps = page.node.lookupMaybe(PDFName.of("VP"), PDFArray);
     if (!vps) continue;
     for (const ref of vps.asArray()) {
@@ -84,7 +123,7 @@ export async function lerGeoReferencia(bytes: Uint8Array): Promise<GeoReferencia
       return { pagina: index + 1, bbox, crs, matriz: ajustarControle(local, mundo) };
     }
   }
-  throw new Error("Este PDF não contém georreferenciamento compatível (GeoPDF /Measure /GEO). Envie o GeoPDF original; o PDF comum continua disponível em Abrir PDF.");
+  throw new Error("Este PDF não contém georreferenciamento compatível (GeoPDF /Measure /GEO ou /LGIDict). Envie o GeoPDF original; o PDF comum continua disponível em Abrir PDF.");
 }
 
 export async function renderizarGeoPdf(bytes: Uint8Array): Promise<MapaRenderizado> {

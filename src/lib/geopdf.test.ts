@@ -3,6 +3,40 @@ import { ajustarControle, aplicarMatriz, arvoresProximas, inverterMatriz, lerGeo
 import { PDFDocument, PDFName } from "pdf-lib";
 
 describe("GeoPDF e árvores próximas", () => {
+  async function globalMapper(datum = "NAR", deslocamento = 0) {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const lgi = doc.context.register(doc.context.obj({
+      Type: "LGIDict", Version: "2.1",
+      CTM: ["2.713901054248", "0.0", "0.0", "2.713901054248", "419065.266477928089", "9043718.886557903141"],
+      Projection: { Type: "Projection", ProjectionType: "UT", Datum: datum, Hemisphere: "S", Zone: "20" },
+      Registration: [["0", "0", String(419065.266477928089 + deslocamento), "9043718.886557903141"], ["612", "792", "420726.173923127644", "9045868.296192867681"]],
+      Neatline: ["54", "738", "559", "738", "559", "54", "54", "54"],
+    }));
+    page.node.set(PDFName.of("LGIDict"), doc.context.obj([lgi]));
+    return doc.save();
+  }
+  it("lê o formato LGIDict do AVZ com números em texto e UTM 20 sul NAD83", async () => {
+    const geo = await lerGeoReferencia(await globalMapper());
+    expect(geo.pagina).toBe(1);
+    expect(geo.bbox).toEqual([54, 54, 559, 738]);
+    expect(geo.crs).toContain("+zone=20 +south +datum=NAD83");
+    const mundo = aplicarMatriz(geo.matriz, 612, 792);
+    expect(mundo[0]).toBeCloseTo(420726.173923127644, 5);
+    expect(mundo[1]).toBeCloseTo(9045868.296192867681, 5);
+    const proj4 = (await import("proj4")).default;
+    const gps = proj4(geo.crs, "EPSG:4326", mundo);
+    expect(gps[0]).toBeGreaterThan(-64);
+    expect(gps[0]).toBeLessThan(-63);
+    expect(gps[1]).toBeGreaterThan(-9);
+    expect(gps[1]).toBeLessThan(-8);
+  });
+  it("recusa datum LGIDict desconhecido sem inventar a posição", async () => {
+    await expect(lerGeoReferencia(await globalMapper("UNKNOWN"))).rejects.toThrow("não reconhecido");
+  });
+  it("confere os registros LGIDict contra a transformação e recusa diferença maior que 3 metros", async () => {
+    await expect(lerGeoReferencia(await globalMapper("NAR", 4))).rejects.toThrow("inconsistente");
+  });
   it("lê controles indiretos do GeoPDF SIRGAS 2000 e recusa PDF comum", async () => {
     const doc = await PDFDocument.create();
     const page = doc.addPage([3370, 2384]);
