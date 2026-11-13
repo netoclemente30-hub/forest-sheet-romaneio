@@ -28,8 +28,8 @@ export function EscolherAparencia() {
   const { tema, escolher } = useContext(Contexto);
   return (
     <ToggleGroup type="single" value={tema} onValueChange={(valor) => { if (valor === "light" || valor === "dark") escolher(valor); }} aria-label="Aparência" className="gap-0 rounded-md bg-card p-0.5 text-foreground">
-      <ToggleGroupItem value="light" aria-label="Versão clara" title="Versão clara" className="h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"><Sun className="size-4" /></ToggleGroupItem>
-      <ToggleGroupItem value="dark" aria-label="Versão escura" title="Versão escura" className="h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"><Moon className="size-4" /></ToggleGroupItem>
+      <ToggleGroupItem value="light" aria-label="Versão clara" title="Versão clara" className="h-8 w-8 p-0 text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"><Sun className="size-4" /></ToggleGroupItem>
+      <ToggleGroupItem value="dark" aria-label="Versão escura" title="Versão escura" className="h-8 w-8 p-0 text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"><Moon className="size-4" /></ToggleGroupItem>
     </ToggleGroup>
   );
 }

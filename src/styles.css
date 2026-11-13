@@ -169,7 +169,11 @@
 
 @utility bg-forest {
   background-image: var(--gradient-forest);
+  color: var(--forest-foreground);
 }
+
+/* Forest panels retain a light foreground in both themes. */
+.bg-forest.text-primary-foreground { color: var(--forest-foreground); }
 
 .label-sheet { display: grid; gap: 16px; }
 .tora-label { background: var(--label-paper); color: var(--label-ink); border: 1px solid var(--border); padding: 20px; break-inside: avoid; font-family: Arial, sans-serif; }
