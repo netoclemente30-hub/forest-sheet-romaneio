@@ -61,3 +61,6 @@
 - [x] Encaixe de toras aceita AUTESP sem seção: a árvore pode ser escolhida com a seção vazia, a tora é guardada sem seção e o registro avisa "sem seção".
 - [x] Excluir carga de madeira serrada (pacotes voltam ao pátio; registro no histórico). Conferido na tela: botão na carga, confirmação antes de apagar.
 - [x] TXT de NF-e no romaneio de toras: já existe na tela de detalhes do romaneio (botões TXT NF-e e Copiar), aberta logo após salvar ou por "Ver romaneios emitidos".
+- [x] Empresa: situação pendente/demonstração/ativa/inativa, cadastro público com nome+CNPJ, limite 50 toras na demonstração
+- [x] Aviso ao Neto de novos cadastros antes de liberar (painel Usuários)
+- [x] Neto define admin ou operador

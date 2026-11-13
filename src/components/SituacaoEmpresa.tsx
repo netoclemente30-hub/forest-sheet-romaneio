@@ -18,14 +18,14 @@ export function useSituacaoEmpresa(ativo: boolean) {
   });
 }
 
-export function EmpresaInativa({ sair }: { sair: () => void }) {
+export function EmpresaInativa({ sair, pendente }: { sair: () => void; pendente?: boolean }) {
   return (
     <div className="min-h-screen bg-forest text-primary-foreground grid place-items-center p-6">
       <div className="max-w-sm space-y-4 text-center">
-        <h1 className="font-display text-3xl font-bold uppercase">Acesso suspenso</h1>
-        <p className="opacity-90">O acesso desta empresa está inativo. Fale com o administrador para liberar.</p>
+        <h1 className="font-display text-3xl font-bold uppercase">{pendente ? "Aguardando liberação" : "Acesso suspenso"}</h1>
+        <p className="opacity-90">{pendente ? "Seu cadastro foi recebido. O administrador foi avisado e vai liberar a demonstração de 50 toras." : "O acesso desta empresa está inativo. Fale com o administrador para liberar."}</p>
         <Button asChild size="lg" className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/90">
-          <a href={WHATS_ACESSO} target="_blank" rel="noreferrer">Pedir liberação pelo WhatsApp</a>
+          <a href={WHATS_ACESSO} target="_blank" rel="noreferrer">{pendente ? "Avisar pelo WhatsApp" : "Pedir liberação pelo WhatsApp"}</a>
         </Button>
         <Button variant="ghost" onClick={sair}>Sair</Button>
       </div>

@@ -170,7 +170,7 @@ export const removerUsuario = createServerFn({ method: "POST" })
 export const definirStatusEmpresa = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { empresaId: string; status: StatusEmpresa }) => {
-    if (!["demonstracao", "ativa", "inativa"].includes(input.status)) throw new Error("Situação inválida");
+    if (!["pendente", "demonstracao", "ativa", "inativa"].includes(input.status)) throw new Error("Situação inválida");
     return input;
   })
   .handler(async ({ data, context }) => {
@@ -182,7 +182,7 @@ export const definirStatusEmpresa = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Cadastro público: cria a empresa em demonstração e o acesso de operador. */
+/** Cadastro público: cria a empresa aguardando liberação e o acesso de operador. */
 export const cadastrarEmpresaPublica = createServerFn({ method: "POST" })
   .inputValidator((input: { nome: string; cnpj: string; email: string; password: string }) => ({
     nome: String(input?.nome ?? "").trim().slice(0, 120),
@@ -199,7 +199,7 @@ export const cadastrarEmpresaPublica = createServerFn({ method: "POST" })
     const { data: existe } = await supabaseAdmin.from("empresas").select("id").eq("cnpj", data.cnpj).maybeSingle();
     if (existe) throw new Error("Este CNPJ já está cadastrado. Peça acesso pelo WhatsApp (69) 99900-4121.");
     const { data: emp, error: eErr } = await supabaseAdmin.from("empresas")
-      .insert({ nome: data.nome, cnpj: data.cnpj, status: "demonstracao" }).select("id").single();
+      .insert({ nome: data.nome, cnpj: data.cnpj, status: "pendente" }).select("id").single();
     if (eErr) throw new Error(eErr.message);
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({ email: data.email, password: data.password, email_confirm: true });
     if (error) {

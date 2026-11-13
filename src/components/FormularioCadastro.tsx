@@ -24,7 +24,7 @@ export function FormularioCadastro({ onEntrar }: { onEntrar: () => void }) {
       sessionStorage.setItem("login-pendente", "1");
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: senha });
       if (error) { toast.success("Empresa cadastrada. Entre com seu e-mail e senha."); onEntrar(); }
-      else toast.success(`Bem-vindo! Demonstração liberada para ${LIMITE_DEMONSTRACAO} toras.`);
+      else toast.success(`Cadastro enviado! Assim que for liberado, você usa a demonstração de ${LIMITE_DEMONSTRACAO} toras.`);
     } catch (err) {
       toast.error((err as Error).message);
     }

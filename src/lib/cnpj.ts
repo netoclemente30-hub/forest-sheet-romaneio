@@ -26,4 +26,4 @@ export function formatarCnpj(v: string): string {
 }
 
 export const LIMITE_DEMONSTRACAO = 50;
-export type StatusEmpresa = "demonstracao" | "ativa" | "inativa";
+export type StatusEmpresa = "pendente" | "demonstracao" | "ativa" | "inativa";

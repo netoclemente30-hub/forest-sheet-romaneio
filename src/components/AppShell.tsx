@@ -59,7 +59,7 @@ export function AppShell() {
   if (loading) return <div className="min-h-screen bg-forest" />;
   // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
   if (!session) return <ApresentacaoPagina />;
-  if (!isSuperAdmin && situacao.data?.status === "inativa") return <EmpresaInativa sair={() => supabase.auth.signOut()} />;
+  if (!isSuperAdmin && (situacao.data?.status === "inativa" || situacao.data?.status === "pendente")) return <EmpresaInativa pendente={situacao.data.status === "pendente"} sair={() => supabase.auth.signOut()} />;
   const items = isAdmin || isSuperAdmin
     ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
     : nav;
