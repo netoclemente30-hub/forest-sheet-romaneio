@@ -53,9 +53,10 @@ export function AppShell() {
   }
   const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
   // Páginas públicas (QR da tora e apresentação) abrem sem login.
-  if (pathname.startsWith("/t/") || pathname === "/apresentacao") return <Outlet />;
+  if (ehRotaPublica(pathname)) return <Outlet />;
   if (loading) return <div className="min-h-screen bg-forest" />;
-  if (!session) return <LoginScreen />;
+  // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
+  if (!session) return <ApresentacaoPagina />;
   const items = isAdmin || isSuperAdmin
     ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
     : nav;
