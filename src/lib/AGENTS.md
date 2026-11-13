@@ -1,1 +1,2 @@
 - GeoPDF parsing supports ISO Measure/GEO and OGC LGIDict with explicit projection/datum and validated controls; never infer missing georeferencing. Why: field GPS must use the uploaded map's actual coordinates rather than plausible guesses.
+- Field-sheet templates keep the importable first worksheet empty and isolate instructions and fictional examples in separate worksheets. Why: engineers can fill compatible coordinates without accidentally importing sample trees.
