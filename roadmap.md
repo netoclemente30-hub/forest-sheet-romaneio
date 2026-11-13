@@ -1,4 +1,5 @@
 # Tarefas
+- [x] Reconhecer o GeoPDF AVZ do Global Mapper (/LGIDict); oito testes passaram. PDF privado real aberto com acesso autenticado, ponto azul/GPS simulado dentro da planta, ampliação e centralização conferidos em desktop/384 px, sem erros. GPS físico continua pendente no aparelho.
 - [x] Corrigir envio privado do mapa com empresa selecionada pelo superadmin e alinhar limite de 100 MB; PDF AVZ de 37,4 MB enviado com acesso real, relido após recarregar e baixado pela tela. Acesso comum continua restrito à própria empresa.
 - [x] Corrigir bloqueio de empresa ao lançar tora: consultas fora do aviso de login, vínculo independente das permissões e recuperação após reconexão; 193 testes passaram. Lançamento offline da árvore 48 confirmado com acesso real e permissões lentas; fila relida e teste removido sem enviar ao estoque. Atualização no aparelho depende da publicação.
 - [x] Permitir importar e medir saldo AUTESP sem seção, preservando identidade e duplicidade; 23 testes passaram. Árvore 48 do saldo real identificada e salva offline com seção nula; fila relida e teste removido sem alterar estoque. Tela 384 px conferida.
