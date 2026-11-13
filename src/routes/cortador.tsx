@@ -8,6 +8,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { salvarArquivo } from "@/lib/arquivo";
 import { modeloFichaCampo } from "@/lib/modelo-ficha-campo";
+import { ImportarCoordenadas } from "@/components/ImportarCoordenadas";
 
 export const Route = createFileRoute("/cortador")({
   head: () => ({
@@ -47,10 +48,11 @@ function CortadorPage() {
         <h2 className="border-b p-3 font-semibold">Não abatidas ({naoAbatidas.length})</h2>
         <div className="divide-y">{naoAbatidas.map((a) => <div key={a.id} className="flex justify-between gap-2 p-3 text-sm"><span>Árvore {a.numero} · {a.nome_vulgar}</span><span className="font-semibold text-destructive">{textoMotivo(a.nao_abatida_motivo)}</span></div>)}</div>
       </section>}
-      <section className="border-t pt-4 pb-4">
+      <section className="flex flex-wrap items-center gap-2 border-t pt-4 pb-4">
         <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal text-left" onClick={() => salvarArquivo(modeloFichaCampo())}>
           <Download className="shrink-0" /> Baixar modelo de planilha — ficha de campo com coordenadas
         </Button>
+        <ImportarCoordenadas autex={numero} arvores={lista} />
       </section>
     </div>
   );
