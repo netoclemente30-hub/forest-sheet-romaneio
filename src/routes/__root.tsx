@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
+import { AparenciaProvider } from "@/components/Aparencia";
 
 function NotFoundComponent() {
   return (
@@ -135,9 +136,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AparenciaProvider>
       {/* AppShell renders <Outlet /> once signed in. */}
       <AppShell />
       <Toaster richColors position="top-center" />
+      </AparenciaProvider>
     </QueryClientProvider>
   );
 }
