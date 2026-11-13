@@ -23,6 +23,11 @@ describe("PDF do mapa exploratório", () => {
     await expect(validarMapaPdf(file as never)).rejects.toThrow("no máximo 100 MB");
   });
 
+  it("aceita o limite de 100 MB anunciado para os mapas", async () => {
+    const file = { name: "mapa.pdf", type: "application/pdf", size: 104857600, slice: () => new Blob(["%PDF-"]) };
+    await expect(validarMapaPdf(file)).resolves.toBeUndefined();
+  });
+
   it("recusa extensão PDF sem assinatura PDF", async () => {
     await expect(validarMapaPdf(arquivo("mapa.pdf", 8, "application/pdf", "não é pdf"))).rejects.toThrow("não contém um PDF válido");
   });
