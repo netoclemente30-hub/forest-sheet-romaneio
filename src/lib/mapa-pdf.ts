@@ -7,7 +7,7 @@ import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { idb } from "@/lib/offline/db";
 
 export const MAPA_PDF_BUCKET = "mapas-exploracao";
-export const MAPA_PDF_MAX_BYTES = 25 * 1024 * 1024;
+export const MAPA_PDF_MAX_BYTES = 100 * 1024 * 1024;
 
 export type MapaPdf = Database["public"]["Tables"]["mapas_exploracao"]["Row"];
 export type ArquivoPdfParaValidar = Pick<File, "name" | "size" | "type" | "slice">;
@@ -32,7 +32,7 @@ export async function validarMapaPdf(file: ArquivoPdfParaValidar): Promise<void>
     throw new Error("Selecione um arquivo no formato PDF");
   }
   if (file.size <= 0) throw new Error("O PDF está vazio");
-  if (file.size > MAPA_PDF_MAX_BYTES) throw new Error("O PDF deve ter no máximo 25 MB");
+  if (file.size > MAPA_PDF_MAX_BYTES) throw new Error("O PDF deve ter no máximo 100 MB");
   const assinatura = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(new TextDecoder().decode(reader.result as ArrayBuffer));
