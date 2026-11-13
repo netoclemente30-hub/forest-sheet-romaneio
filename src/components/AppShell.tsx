@@ -91,10 +91,13 @@ export function AppShell() {
               aria-label="Empresa que você está visualizando"
               className="h-9 max-w-40 truncate rounded-md border border-primary-foreground/30 bg-forest px-2 text-sm"
               value={empresaSel}
-              onChange={(e) => {
-                setEmpresaSel(e.target.value);
-                setEmpresaAtiva(e.target.value || null);
-                qc.invalidateQueries();
+              onChange={async (e) => {
+                const proxima = e.target.value;
+                await qc.cancelQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
+                qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
+                setEmpresaAtiva(proxima || null);
+                setEmpresaSel(proxima);
+                void qc.invalidateQueries();
               }}
             >
               <option value="">Todas as empresas</option>
@@ -134,7 +137,7 @@ export function AppShell() {
             })}
           </nav>
         )}
-        <Outlet />
+        <div key={empresaSel}><Outlet /></div>
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">
         <div className="mx-auto max-w-3xl grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
