@@ -61,6 +61,8 @@ export type Database = {
           latitude: number | null
           localizado_em: string | null
           longitude: number | null
+          nao_abatida_em: string | null
+          nao_abatida_motivo: string | null
           nome_cientifico: string | null
           nome_vulgar: string
           numero: number
@@ -81,6 +83,8 @@ export type Database = {
           latitude?: number | null
           localizado_em?: string | null
           longitude?: number | null
+          nao_abatida_em?: string | null
+          nao_abatida_motivo?: string | null
           nome_cientifico?: string | null
           nome_vulgar?: string
           numero: number
@@ -101,6 +105,8 @@ export type Database = {
           latitude?: number | null
           localizado_em?: string | null
           longitude?: number | null
+          nao_abatida_em?: string | null
+          nao_abatida_motivo?: string | null
           nome_cientifico?: string | null
           nome_vulgar?: string
           numero?: number

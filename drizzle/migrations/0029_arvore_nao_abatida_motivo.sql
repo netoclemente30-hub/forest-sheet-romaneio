@@ -1,0 +1,2 @@
+ALTER TABLE public.arvores ADD COLUMN IF NOT EXISTS nao_abatida_motivo text, ADD COLUMN IF NOT EXISTS nao_abatida_em timestamptz;
+COMMENT ON COLUMN public.arvores.nao_abatida_motivo IS 'Motivo declarado pelo cortador para não abater: seca, oca, essencia_errada';
