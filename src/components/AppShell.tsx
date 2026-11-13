@@ -8,14 +8,14 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { LoginScreen } from "./LoginScreen";
+import { ApresentacaoPagina } from "@/components/apresentacao/ApresentacaoPagina";
 import { supabase } from "@/integrations/supabase/client";
 import { listarEmpresas } from "@/lib/usuarios.functions";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
-import { MANEJO, emManejo, emSerraria } from "@/lib/nav";
+import { MANEJO, emManejo, emSerraria, ehRotaPublica } from "@/lib/nav";
 
 const nav = [
   { to: "/", label: "Início", icon: Home },
