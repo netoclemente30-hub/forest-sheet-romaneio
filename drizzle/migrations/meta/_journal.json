@@ -218,6 +218,13 @@
       "when": 1794529062536,
       "tag": "0030_mapas_acesso_superadmin_limite_100mb",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794591226583,
+      "tag": "0031_tora_publica",
+      "breakpoints": true
     }
   ]
 }

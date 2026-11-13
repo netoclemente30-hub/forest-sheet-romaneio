@@ -703,6 +703,7 @@ export type Database = {
           nome_cientifico: string | null
           origem: string | null
           plaqueta: number
+          publico_id: string
           romaneio_id: string | null
           secao: string | null
           serrada_em: string | null
@@ -724,6 +725,7 @@ export type Database = {
           nome_cientifico?: string | null
           origem?: string | null
           plaqueta: number
+          publico_id?: string
           romaneio_id?: string | null
           secao?: string | null
           serrada_em?: string | null
@@ -745,6 +747,7 @@ export type Database = {
           nome_cientifico?: string | null
           origem?: string | null
           plaqueta?: number
+          publico_id?: string
           romaneio_id?: string | null
           secao?: string | null
           serrada_em?: string | null
@@ -930,6 +933,29 @@ export type Database = {
           _log: Json
         }
         Returns: string
+      }
+      tora_publica: {
+        Args: { _id: string }
+        Returns: {
+          arvore: number
+          autex: string
+          carregada: boolean
+          comprimento: number
+          created_at: string
+          d_pe1: number
+          d_pe2: number
+          d_topo1: number
+          d_topo2: number
+          empresa_nome: string
+          especie: string
+          nome_cientifico: string
+          origem: string
+          plaqueta: number
+          romaneio_data: string
+          secao: string
+          serrada_em: string
+          volume: number
+        }[]
       }
     }
     Enums: {
