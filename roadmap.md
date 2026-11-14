@@ -1,4 +1,5 @@
 # Tarefas
+- [ ] Árvores sumiram: plaqueta mostra só secção e nº, e lista de árvores vazia — investigar consulta/permissão da tabela de árvores.
 - [x] Rastreio de tora: AUTEX e árvore/secção abaixo da plaqueta, medidas florestais/comerciais separadas; tora real 585/117 B conferida sem login em desktop/celular, 16 testes passaram.
 - [x] Escolha claro/escuro no topo, lembrada no aparelho; troca/reabertura verificadas com acesso real, desktop/384 px sem corte ou erros.
 - [x] Mostrar a apresentação do Gestor Florestal para quem entra sem login, com cards ilustrados por módulo e botão "Acessar sistema" abrindo o login; logado entra direto no painel. Quatro testes de rota pública passaram e as duas telas foram conferidas assinadas/sem assinar em desktop e em 384 px, sem erros de console.
