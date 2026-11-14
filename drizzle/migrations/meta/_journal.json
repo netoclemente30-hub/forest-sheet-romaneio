@@ -246,6 +246,13 @@
       "when": 1794602683884,
       "tag": "0034_tora_publica_detalhada",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794659844530,
+      "tag": "0035_corrigir_publico_id_operacoes",
+      "breakpoints": true
     }
   ]
 }
