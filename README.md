@@ -1,14 +1,20 @@
-# Welcome to your Lovable project
+# Gestor Florestal
+
+Tenho está planilha nela contém a base (ficha de campo florestal)
+
+Cálculos inventário que são os dados coletados em campo e uma aba gerar romaneio que e pra somar as cargas dos caminhões
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://forest-sheet-romaneio.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5705700e-da9f-4996-a3d9-61406b8a4191).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +26,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
