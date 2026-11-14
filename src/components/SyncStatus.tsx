@@ -37,6 +37,7 @@ export function SyncStatus() {
   const [online, setOnline] = useState(true);
   const [itens, setItens] = useState<ItemFila[]>([]);
   const [sync, setSync] = useState(false);
+  const [enviando, setEnviando] = useState(0);
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<ItemFila | null>(null);
   const pendentes = itens.filter((i) => !i.erro).length;
@@ -51,6 +52,7 @@ export function SyncStatus() {
   const tentarSync = useCallback(async () => {
     await atualizar();
     if (!estaOnline()) return;
+    setEnviando((await fila().listar()).filter((i) => !i.erro).length);
     setSync(true);
     const r = await sincronizar(fila());
     setSync(false);
@@ -107,7 +109,7 @@ export function SyncStatus() {
         ) : !online ? (
           <><CloudOff className="size-3.5" /> Sem internet — {pendentes} lançamento(s) serão enviados quando conectar</>
         ) : sync ? (
-          <><RefreshCw className="size-3.5 animate-spin" /> Sincronizando…</>
+          <><RefreshCw className="size-3.5 animate-spin" /> {enviando > 0 ? `Sincronizando ${enviando} ${enviando === 1 ? "item" : "itens"}…` : "Sincronizando…"}</>
         ) : erros ? (
           <><AlertTriangle className="size-3.5" /> {erros} lançamento(s) com erro ao enviar — toque para ver</>
         ) : (
