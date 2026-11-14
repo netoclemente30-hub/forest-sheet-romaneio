@@ -137,7 +137,7 @@ function Index() {
           <Plus className="size-7" />
           <span className="font-display text-xl font-bold uppercase">Lançar tora</span>
         </Link>
-        <Link to="/serraria" className="bg-card border rounded-xl p-4 flex flex-col gap-2">
+        <Link to="/serraria" search={{ aba: undefined }} className="bg-card border rounded-xl p-4 flex flex-col gap-2">
           <Factory className="size-7 text-primary" />
           <span className="font-display text-xl font-bold uppercase">Serraria</span>
         </Link>
