@@ -1,5 +1,5 @@
 # Tarefas
-- [ ] Árvores sumiram: plaqueta mostra só secção e nº, e lista de árvores vazia — investigar consulta/permissão da tabela de árvores.
+- [x] Árvores "sumiram": investigado — etiqueta (tora 201), Base (515 árvores RICARDO RMS), Serraria RJ (1.591 toras) e página pública da tora 585 (AUTEX + árvore 117 B + secção) todos corretos no preview; sintomas são da versão publicada desatualizada — pendente publicar.
 - [x] Rastreio de tora: AUTEX e árvore/secção abaixo da plaqueta, medidas florestais/comerciais separadas; tora real 585/117 B conferida sem login em desktop/celular, 16 testes passaram.
 - [x] Escolha claro/escuro no topo, lembrada no aparelho; troca/reabertura verificadas com acesso real, desktop/384 px sem corte ou erros.
 - [x] Mostrar a apresentação do Gestor Florestal para quem entra sem login, com cards ilustrados por módulo e botão "Acessar sistema" abrindo o login; logado entra direto no painel. Quatro testes de rota pública passaram e as duas telas foram conferidas assinadas/sem assinar em desktop e em 384 px, sem erros de console.
