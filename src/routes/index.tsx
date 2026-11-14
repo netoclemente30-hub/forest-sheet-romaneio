@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { torasQuery, arvoresQuery, romaneiosQuery, autexQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
-import { Truck, Plus, Upload, PackageCheck, Factory, Send } from "lucide-react";
+import { Truck, Plus, Upload, PackageCheck, Factory, Send, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
-import { cargasSerradasQuery } from "@/lib/madeira-serrada";
+import { cargasSerradasQuery, madeiraQuery } from "@/lib/madeira-serrada";
+import { rendimentoDesdobro } from "@/lib/relatorios-gerais";
 import { hojeLocal, movimentoDoDia } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/")({
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string | undefined }) {
   return (
     <div className="bg-card rounded-xl border p-4">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -40,7 +41,25 @@ function Index() {
   const encerradasPainel = new Set((autexLista.data ?? []).filter((a) => a.encerrado).map((a) => a.numero));
   const roms = useQuery(romaneiosQuery);
   const { empresaId } = useAuth();
-  const cargasSer = useQuery(cargasSerradasQuery(getEmpresaAtiva() ?? empresaId));
+  const empresaAtual = getEmpresaAtiva() ?? empresaId;
+  const cargasSer = useQuery(cargasSerradasQuery(empresaAtual));
+  const pacotes = useQuery(madeiraQuery(empresaAtual));
+  const prod = useMemo(() => {
+    const t = toras.data ?? [];
+    const r = rendimentoDesdobro(t, pacotes.data ?? [], { inicio: "", fim: "", especie: "" });
+    const norm = (x: string | null | undefined) => (x ?? "").trim().toLocaleLowerCase("pt-BR") || "sem espécie";
+    const recebido = new Map<string, number>();
+    for (const x of t) recebido.set(norm(x.especie), (recebido.get(norm(x.especie)) ?? 0) + Number(x.volume));
+    const linhas = r.linhas.map((l) => ({ ...l, recebido: recebido.get(norm(l.especie)) ?? 0 }));
+    for (const x of t) {
+      const k = norm(x.especie);
+      if (!linhas.some((l) => norm(l.especie) === k)) linhas.push({ especie: x.especie?.trim() || "Sem espécie", qtdToras: 0, volToras: 0, pecas: 0, volSerrado: 0, rendimento: null, recebido: recebido.get(k) ?? 0 });
+    }
+    linhas.sort((a, b) => b.recebido + b.volSerrado - (a.recebido + a.volSerrado));
+    const perdas = r.total.volToras > 0 ? Math.max(0, r.total.volToras - r.total.volSerrado) : null;
+    return { linhas, total: r.total, perdas };
+  }, [toras.data, pacotes.data]);
+  const pctTxt = (n: number | null) => (n === null ? "—" : `${n.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`);
   const dia = movimentoDoDia(hojeLocal(), roms.data ?? [], toras.data ?? [], cargasSer.data ?? []);
   const s = useMemo(() => {
     const t = toras.data ?? [];
@@ -77,13 +96,39 @@ function Index() {
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Stat label="Árvores (BASE)" value={arvores.data ? String(arvores.data.filter((a) => !encerradasPainel.has(a.autex)).length) : "–"} />
-        <Stat label="Toras medidas" value={String(s.total)} sub={`${fmtM3(s.vol)} m³`} />
-        <Stat label="No pátio" value={String(s.patio)} sub={`${fmtM3(s.volPatio)} m³`} />
-        <Stat label="Carregadas" value={String(s.carr)} sub={`${fmtM3(s.volCarr)} m³`} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <Stat label="Árvores inventariadas" value={arvores.data ? String(arvores.data.filter((a) => !encerradasPainel.has(a.autex)).length) : "–"} />
+        <Stat label="Volume de toras" value={toras.data ? `${fmtM3(s.vol)}` : "–"} sub={toras.data ? `m³ · ${s.total} toras · pátio ${s.patio}` : undefined} />
+        <Stat label="Madeira serrada" value={pacotes.data ? fmtM3(prod.total.volSerrado) : "–"} sub={pacotes.data ? `m³ · ${prod.total.pecas} peças` : undefined} />
+        <Stat label="Rendimento" value={pctTxt(prod.total.rendimento)} sub={prod.total.volToras > 0 ? `de ${fmtM3(prod.total.volToras)} m³ serrados` : "sem toras serradas"} />
+        <Stat label="Perdas" value={prod.perdas === null ? "—" : fmtM3(prod.perdas)} sub={prod.perdas === null ? "sem toras serradas" : "m³ no desdobro"} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div>
+        <h2 className="text-sm font-bold uppercase text-muted-foreground mb-2">Produção por essência</h2>
+        {prod.linhas.length === 0 ? (
+          <p className="bg-card border rounded-xl p-4 text-sm text-muted-foreground">Sem dados de toras ou madeira serrada ainda.</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {prod.linhas.map((l) => (
+              <div key={l.especie} className="bg-card border rounded-xl p-3 space-y-2">
+                <div className="flex justify-between items-baseline gap-2">
+                  <span className="font-semibold truncate">{l.especie}</span>
+                  <span className="font-display text-lg font-bold text-primary shrink-0">{pctTxt(l.rendimento)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><div className="text-muted-foreground">Toras recebidas</div><div className="font-semibold">{l.recebido > 0 ? `${fmtM3(l.recebido)} m³` : "—"}</div></div>
+                  <div><div className="text-muted-foreground">Serrado</div><div className="font-semibold">{l.volSerrado > 0 ? `${fmtM3(l.volSerrado)} m³` : "—"}</div></div>
+                </div>
+                {l.rendimento !== null && (
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${Math.min(100, l.rendimento)}%` }} /></div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-[11px] text-muted-foreground mt-1">Aproveitamento = madeira serrada ÷ volume das toras serradas da essência.</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Link to="/romaneio" className="bg-forest text-primary-foreground rounded-xl p-4 flex flex-col gap-2">
           <Truck className="size-7 text-accent" />
           <span className="font-display text-xl font-bold uppercase">Nova carga</span>
@@ -91,6 +136,14 @@ function Index() {
         <Link to="/toras" search={{ nova: true }} className="bg-accent text-accent-foreground rounded-xl p-4 flex flex-col gap-2">
           <Plus className="size-7" />
           <span className="font-display text-xl font-bold uppercase">Lançar tora</span>
+        </Link>
+        <Link to="/serraria" search={{ aba: undefined }} className="bg-card border rounded-xl p-4 flex flex-col gap-2">
+          <Factory className="size-7 text-primary" />
+          <span className="font-display text-xl font-bold uppercase">Serraria</span>
+        </Link>
+        <Link to="/relatorios" className="bg-card border rounded-xl p-4 flex flex-col gap-2">
+          <BarChart3 className="size-7 text-primary" />
+          <span className="font-display text-xl font-bold uppercase">Relatórios</span>
         </Link>
       </div>
       <div>
