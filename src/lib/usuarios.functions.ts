@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { cnpjValido, limparCnpj, type StatusEmpresa } from "@/lib/cnpj";
 
-type Ctx = { supabase: any; userId: string };
+type Ctx = { supabase: SupabaseClient<Database>; userId: string };
 
 async function exigirAdmin(supabase: Ctx["supabase"], userId: string) {
   const [{ data: isAdmin }, { data: isSuper }] = await Promise.all([
@@ -25,7 +27,7 @@ async function empresaDoAdmin(supabase: Ctx["supabase"]): Promise<string | null>
 }
 
 /** Garante que o usuário-alvo pertence à empresa do admin (quando ele não é administrador geral). */
-async function exigirMesmaEmpresa(supabaseAdmin: any, minha: string | null, userId: string) {
+async function exigirMesmaEmpresa(supabaseAdmin: SupabaseClient<Database>, minha: string | null, userId: string) {
   if (!minha) return;
   const { data } = await supabaseAdmin.from("empresa_usuarios").select("empresa_id").eq("user_id", userId).maybeSingle();
   if (data?.empresa_id !== minha) throw new Error("Você só pode gerenciar usuários da sua empresa");
