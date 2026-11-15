@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { lerEmpresaSalva, salvarEmpresaDoUsuario } from "@/lib/empresa";
+import { papelDoUsuario, funcaoValida, type FuncaoFuncionario } from "@/lib/funcoes";
 
 async function checarAdmin(userId: string): Promise<boolean> {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -11,6 +12,13 @@ async function checarAdmin(userId: string): Promise<boolean> {
 async function checarSuperAdmin(userId: string): Promise<boolean> {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
   return !!data;
+}
+
+/** A função é sempre consultada no banco; metadados editáveis do usuário não autorizam ações. */
+async function checarFuncao(): Promise<FuncaoFuncionario | null> {
+  const { data, error } = await supabase.rpc("minha_funcao" as never);
+  if (error) return null; // Antes da ativação do banco: negar acesso operacional.
+  return funcaoValida(data) ? data : null;
 }
 
 async function checarEmpresa(): Promise<string | null> {
@@ -23,6 +31,7 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [funcao, setFuncao] = useState<FuncaoFuncionario | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissoesCarregando, setPermissoesCarregando] = useState(true);
@@ -47,8 +56,8 @@ export function useAuth() {
           if (vigente()) atualizar(id, atual);
         }, 10000);
       });
-      void Promise.all([checarAdmin(id), checarSuperAdmin(id)])
-        .then(([a, sa]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); } })
+      void Promise.all([checarAdmin(id), checarSuperAdmin(id), checarFuncao()])
+        .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); } })
         .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); } })
         .finally(() => { if (vigente()) setPermissoesCarregando(false); });
     }
@@ -59,7 +68,7 @@ export function useAuth() {
       clearTimeout(tentativa);
       const atual = ++versao;
       const id = s?.user.id ?? null;
-      if (id !== usuario) { setIsAdmin(false); setIsSuperAdmin(false); }
+      if (id !== usuario) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); }
       usuario = id;
       setSession(s);
       setLoading(false);
@@ -94,5 +103,6 @@ export function useAuth() {
       data.subscription.unsubscribe();
     };
   }, []);
-  return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId };
+  const papel = papelDoUsuario(isSuperAdmin, isAdmin, funcao);
+  return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId, funcao, papel };
 }
