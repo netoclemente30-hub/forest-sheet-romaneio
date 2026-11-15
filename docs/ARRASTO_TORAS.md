@@ -15,14 +15,10 @@
 - GPS capturado recentemente, precisão máxima 100 m e distância da árvore até 100 m.
 - A operação no banco deve ser atômica e idempotente (um ID por operação). O registro de auditoria é inseparável da mudança de estoque.
 - Antigos romaneios não são retroativamente classificados como arrasto. Ausência de histórico não equivale a arrasto confirmado.
-- O mapa continua disponível para consulta antes da instalação SQL, mas **o botão de gravação fica desabilitado**. O contador aparece como indisponível para não exibir zero enganoso.
+- O botão de gravação fica disponível só para o cargo tratorista (e admin); os demais apenas consultam.
 
-## Banco de dados — APENAS PROPOSTA
+## Banco de dados — APLICADO
 
-O projeto especifica em AGENTS.md que mudanças em drizzle/ e no banco sejam realizadas **pela Lovable**, não pelo GitHub. Por esse motivo, o SQL **não** foi colocado em drizzle/migrations/ nem executado:
-
-- docs/propostas/arrasto-de-toras.sql — definição técnica para revisão e adaptação no editor Lovable, depois de autorizados os custos de Cloud
-- Todos os novos campos são opcionais; não há exclusão de dados ou migração destrutiva
-- Requer validação em banco de homologação: vínculo empresa e AUTEX, RLS, autorização de operadores, triggers de auditoria, GPS, concorrência, retry offline e confirmação do dashboard
-
-Não executar no banco de produção nem publicar esta branch enquanto faltarem migrações e testes de homologação. O GitHub Actions verifica sintaxe SQL, testes, TypeScript, lint e build sem enviar prompts à IA da Lovable.
+- Campos e explanadas: `drizzle/migrations/0036_cargos_estrutura_seguranca.sql`; transação `registrar_arrasto_toras` (cargo tratorista, GPS ≤100 m, idempotente por operação, auditoria com snapshot completo): `0037_cargos_rls_rpcs_arrasto.sql`.
+- Reversão (só admin/superadmin): `0038_reverter_arrasto_completo.sql` restaura `arrastada_em`, `arrastada_por`, `arrasto_operacao_id`, `arrasto_lat`, `arrasto_lng` e `arrasto_explanada_id`. É recusada se o snapshot não tiver todos esses campos, se a explanada original não existir mais ou se a tora mudou depois.
+- `docs/propostas/arrasto-de-toras.sql` fica apenas como histórico da proposta.

@@ -23,3 +23,15 @@ describe("registros numerados", () => {
     expect(podeReverterRegistro({ mudancas: [{}], revertido_em: null, reversao_de: "original" })).toBe(false);
   });
 });
+import { CAMPOS_ARRASTO } from "./registros-lista";
+describe("reversão de arrasto", () => {
+  const completo = Object.fromEntries(CAMPOS_ARRASTO.map((k) => [k, null]));
+  const base = { revertido_em: null, reversao_de: null };
+  it("permite reverter com snapshot completo de arrasto/explanada", () => {
+    expect(podeReverterRegistro({ ...base, mudancas: [{ tabela: "toras", antes: { plaqueta: 1, ...completo }, depois: { plaqueta: 1, ...completo, arrastada_em: "2026-11-15" } }] })).toBe(true);
+  });
+  it("não oferece reversão quando falta campo de arrasto", () => {
+    const { arrasto_explanada_id: _x, ...semExplanada } = completo;
+    expect(podeReverterRegistro({ ...base, mudancas: [{ tabela: "toras", antes: { plaqueta: 1, ...semExplanada }, depois: { plaqueta: 1, ...completo } }] })).toBe(false);
+  });
+});

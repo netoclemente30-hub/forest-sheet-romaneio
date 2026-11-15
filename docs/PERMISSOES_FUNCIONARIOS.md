@@ -24,22 +24,27 @@
 - Explanadas são pontos de entrega na floresta, não os pátios de recebimento da serraria. O romaneador cria pontos por AUTEX; o tratorista escolhe o destino ao arrastar.
 - Funções e autorizações são consultadas do banco, nunca de metadados editáveis do usuário. Sem função atribuída, o aplicativo nega acesso operacional.
 
-## Segurança de verdade — dependências para homologação
+## Segurança no banco — APLICADA
 
-A interface NÃO é barreira suficiente: alguém pode chamar a API diretamente. A implantação exige a mesma matriz no banco com RLS, validação de RPCs SECURITY DEFINER e isolamento multiempresa.
+A interface não é barreira: a mesma matriz está no banco (RLS, guardas nas RPCs SECURITY DEFINER e isolamento por empresa). Migrações aplicadas (0036–0039) no banco da Lovable Cloud (compartilhado pela prévia e pelo app publicado):
 
-Propostas SQL (não executadas, só para aplicação futura pela Lovable):
-1. docs/propostas/funcoes-funcionarios.sql — função por usuário, empresa, explanadas, verificação de permissões, vínculo do arrasto
-2. docs/propostas/controle-acesso-rls.sql — políticas de leitura e escrita por cargo, bloqueio de alterações indevidas de árvores
-3. docs/propostas/controle-acesso-rpcs.sql — autorização dentro das RPCs de romaneio, estoque e madeira serrada
-4. docs/propostas/arrasto-de-toras.sql — transação auditável de arrasto por tora e explanada
+1. `drizzle/migrations/0036_cargos_estrutura_seguranca.sql` — tabela `funcoes_funcionarios`, `minha_funcao()`, `pode_funcao(empresa, ação)`, `explanadas`, campos de arrasto em `toras`, ID estável de operação em `romaneios`.
+2. `drizzle/migrations/0037_cargos_rls_rpcs_arrasto.sql` — políticas por cargo em 16 tabelas, Storage dos mapas, guardas em `registrar_operacao`, `salvar_romaneio_toras`, `excluir_romaneio_toras`, `importar_ficha_manejo`, `registrar_arrasto_toras` e RPCs de madeira serrada.
+3. `drizzle/migrations/0038_reverter_arrasto_completo.sql` — a reversão restaura os seis campos de arrasto/explanada a partir do snapshot; recusa snapshots incompletos e explanada inexistente.
+4. `drizzle/migrations/0039_marcar_registro_revertido.sql` — marca o registro original como revertido.
 
-Revisar ordem, dependências e privilégios com a Lovable em banco de homologação isolado. Cadastro de cargos e gravação do arrasto permanecem indisponíveis até ativar o backend.
+Os arquivos em `docs/propostas/*.sql` são o histórico das propostas revisadas; não executar. `docs/propostas/legado/` guarda duas migrações nunca aplicadas, cujo conteúdo seguro foi incorporado em 0036/0037.
 
-A migração de dados deve: (a) identificar administradores atuais, (b) preservar suas permissões, (c) atribuir cargos a cada funcionário, (d) testar usuários sem cargo e outras empresas, (e) tentar operações diretas na API e chamadas de RPC com JWT de todos os perfis, (f) conferir fila offline após troca de cargo.
+Limites reais:
+- Usuários sem cargo nem papel admin ficam sem acesso operacional até um administrador atribuir o cargo em /usuarios (hoje 5 usuários; nenhum cargo foi atribuído automaticamente).
+- Reversão: somente admin da empresa ou superadmin. Gerente de escritório e de pátio não revertem.
+- Motorista cria carga mas não recebe; recebimento exige `serraria_operar` (gerente de pátio/admin).
+- Funções SECURITY DEFINER antigas (`has_role`, `minha_empresa` etc.) seguem executáveis por anônimos, mas retornam vazio sem sessão; `tora_publica` é pública por desenho.
+- `aparelhos` continua editável por qualquer usuário da mesma empresa.
+- 0039: ao reverter, o registro original recebe `revertido_em`/`revertido_por`; segunda reversão é recusada ("Registro já revertido").
+- O app publicado antes destas migrações grava algumas tabelas diretamente e falhará nessas ações até publicar a versão nova.
 
-Não foi aplicada migração em produção nem foram alterados cadastros reais. Não publicar nem mesclar antes de homologar.
-
+Testes feitos em transação com rollback (sem dados reais): 8 cargos + sem cargo + admin de outra empresa, duas empresas; reversão de arrasto com restauração, snapshot incompleto e explanada removida.
 
 ## Revisão de 15/11/2026
 A branch de revisão parte de 0389d7a07225fda69899f6e3bf968209ed2d4f93.
@@ -74,7 +79,4 @@ alterações; o evento de login continua permitido.
   têm consulta interativa sem liberar gravação. Revisar a experiência dessas
   telas na homologação antes de liberar o perfil de escritório.
 
-Não mesclar/publicar antes da ativação coordenada e testes do backend pela
-Lovable. As propostas contêm blocos transacionais separados: a equipe deve
-consolidá-los em uma única implantação, com verificação de dependências
-e rollback, sem ativar RLS ou cargos parcialmente.
+Atualização: as propostas foram consolidadas e aplicadas nas migrações 0036–0038 (ver "Segurança no banco — APLICADA"). Os números de testes acima são históricos; a contagem atual está no roadmap.md.

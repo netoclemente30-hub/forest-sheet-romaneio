@@ -1,5 +1,79 @@
-# Roadmap
-- [x] /entrada na Serraria; QR confere toras/empresa; recebimento offline idempotente
-- [x] Cargos/RLS/RPC/arrasto aplicados (0036, 0037) e testados com rollback
+# Tarefas
+- [x] Aceitar a ficha enviada em Inserir planilha de coordenadas: detectar UTM e converter com fuso/hemisfério/datum explícitos, preservando ficha/abates. Prévia autenticada reconheceu 128 árvores da MADENORTE, sem erros em desktop/384 px; 15 testes passaram. Nenhuma posição gravada: fuso e datum reais ainda precisam de confirmação do engenheiro.
+- [x] Árvores "sumiram": investigado — etiqueta (tora 201), Base (515 árvores RICARDO RMS), Serraria RJ (1.591 toras) e página pública da tora 585 (AUTEX + árvore 117 B + secção) todos corretos no preview; sintomas são da versão publicada desatualizada — pendente publicar.
+- [x] Rastreio de tora: AUTEX e árvore/secção abaixo da plaqueta, medidas florestais/comerciais separadas; tora real 585/117 B conferida sem login em desktop/celular, 16 testes passaram.
+- [x] Escolha claro/escuro no topo, lembrada no aparelho; troca/reabertura verificadas com acesso real, desktop/384 px sem corte ou erros.
+- [x] Mostrar a apresentação do Gestor Florestal para quem entra sem login, com cards ilustrados por módulo e botão "Acessar sistema" abrindo o login; logado entra direto no painel. Quatro testes de rota pública passaram e as duas telas foram conferidas assinadas/sem assinar em desktop e em 384 px, sem erros de console.
+- [x] Reforçar troca de empresa: cancelar/remover consultas anteriores, reiniciar telas e manter cache na empresa de origem mesmo em resposta atrasada; 18 testes passaram, troca RICARDO RMS/RJ e downloads reais conferidos sem erros.
+- [x] Corrigir saldo antigo exibido ao trocar de empresa com saldo/cache separado; RJ Madeiras mantém 1.542 medidas e 439 restantes após recarregar. Nenhum estoque foi alterado; empresa sem saldo não mostra saldo de outra.
+- [x] Exportar em Excel/PDF as toras do saldo que ainda não foram medidas, com identidade e volume original, excluindo medições offline; 13 testes passaram. Ambos arquivos das 439 toras reais baixados com acesso autenticado; Excel recalculado sem erros e tela 384 px sem corte.
+- [x] Importar planilha só de coordenadas em Cortador / Mapa, com prévia por árvore/AUTEX, preservando ficha e abatimentos e atualizando o localizador; 11 testes passaram. Coordenadas da árvore real 353 importadas online e relidas após recarregar, localizador abriu registro de abate sem alterar medidas/histórico; posição original restaurada após teste, botão conferido em 384 px.
+- [x] Adicionar ao final de Cortador / Mapa modelo Excel da ficha de campo com coordenadas para solicitar ao engenheiro; download autenticado e botão em 384 px conferidos, arquivo com ficha vazia/orientações/exemplo fictício, nove testes passaram.
+- [x] Reconhecer o GeoPDF AVZ do Global Mapper (/LGIDict); oito testes passaram. PDF privado real aberto com acesso autenticado, ponto azul/GPS simulado dentro da planta, ampliação e centralização conferidos em desktop/384 px, sem erros. GPS físico continua pendente no aparelho.
+- [x] Corrigir envio privado do mapa com empresa selecionada pelo superadmin e alinhar limite de 100 MB; PDF AVZ de 37,4 MB enviado com acesso real, relido após recarregar e baixado pela tela. Acesso comum continua restrito à própria empresa.
+- [x] Corrigir bloqueio de empresa ao lançar tora: consultas fora do aviso de login, vínculo independente das permissões e recuperação após reconexão; 193 testes passaram. Lançamento offline da árvore 48 confirmado com acesso real e permissões lentas; fila relida e teste removido sem enviar ao estoque. Atualização no aparelho depende da publicação.
+- [x] Permitir importar e medir saldo AUTESP sem seção, preservando identidade e duplicidade; 23 testes passaram. Árvore 48 do saldo real identificada e salva offline com seção nula; fila relida e teste removido sem alterar estoque. Tela 384 px conferida.
+- [x] PDF de toras segue Medida física/comercial em Manejo e Serraria, com totais gerais/por AUTEX/espécie; 23 testes passaram e ambos PDFs baixados com dados reais da Serraria, sem erros. Manejo sem toras disponíveis para download nesta conferência.
+- [x] Medida comercial pela ponta mais fina e comprimento para baixo em 0,5 m: lançamento/edição, abas no Manejo/Serraria e romaneio/PDF com comparação física. Exemplo 52×54/6,6 conferido (6,5 m e 1,4340 m³); romaneio real temporário/PDF validado e excluído, tora 348 liberada; 169 testes passaram e celular 384 px sem cortes/erros.
+- [x] Ler etiqueta por câmera na Serraria, abrir a tora atual com medidas e manter confirmação de serragem; QR real da plaqueta 201/árvore 353 lido com câmera simulada em acesso autenticado, sem alterações de estoque; desktop/384 px sem cortes nem erros, QR inválido recusado e 15 testes passaram. Câmera física aguarda aparelho.
+- [x] Mover Conferir saldo do Manejo para a Serraria: abas compartilhadas Estoque/Pátio, Toras Encaixadas, Toras serradas, Madeira serrada e Conferir saldo; rota /saldo mantida para QR e links. Teste da lista de abas passou; telas 384 px conferidas com login real (Manejo com 3 abas, saldo com aba ativa e menu inferior em Serraria), sem erros de console.
+- [x] Adicionar Toras Encaixadas na Serraria com histórico confirmado, saldo capturado vs medido, diferença em m³/% e medidas. Dados reais 2253-B e 2215-A conferidos com acesso autenticado; desktop/384 px sem cortes ou erros, atualização pelo cache offline validada e 22 testes passaram. Reabertura offline não testada no preview (sem worker); validação física continua pendente abaixo.
+- [x] Ler GeoPDF /Measure /GEO do manejo com controles validados, planta ampliável, GPS e percursos sobrepostos; vínculo manual confirmado do símbolo à árvore, proximidade e abatimento offline verificados com árvore 349 em sessão autenticada sem enviar alterações reais. PDF real lido online/offline, telas 384 px e desktop sem cortes/erros. Números desenhados do exemplo não têm extração automática; exigem vínculo manual ou coordenadas da ficha. GPS físico aguarda aparelho.
+- [x] Anexar um PDF de referência por AUTEX dentro do mapa exploratório, com envio, substituição, visualização e download privados por empresa; preservado após encerramento. Exemplo real enviado/substituído/aberto/baixado com login em 384 px, conteúdo idêntico ao original, sem erros nem corte; 130 testes passaram e dados temporários foram removidos. Envio e abertura exigem internet; validação no Android publicado permanece na pendência do aparelho.
+- [x] Abrir cada AUTEX como manejo dentro da Base após a importação, manter a ficha vinculada até o encerramento e preservar o histórico arquivado; abertura automática, encerramento, consulta da ficha e reabertura verificados com login real em 384 px.
+- [x] Mapa exploratório offline por manejo: posição atual, percursos separados, árvores localizadas e abatimento com desfazer; rastro online/offline, retomada após recarregar e sincronização verificados com GPS simulado, sem erros nem corte horizontal.
+- [x] Importar Latitude/Longitude quando existirem, exigir AUTEX para o vínculo e preservar GPS/abatimento ao reimportar sem coordenadas; persistência na nuvem confirmada e 124 testes passaram. Dados temporários removidos. GPS físico no Android permanece pendente abaixo.
+- [x] Importar fichas PDF/Excel pela Base com prévia, colunas variadas, números locais e DAP por CAP; PDF anexado reconheceu 388 árvores e 26 picadas. Excel temporário salvo/relido/excluído com login real; 9 testes passaram e tela 384 px sem corte. PDF escaneado sem texto requer Excel; gravação exige internet. Publicação/validação Android aguardam aparelho.
+- [x] Gerar pacote de toras serradas selecionadas, confirmar espécie/AUTEX ou escolher grupo; novos pacotes persistem em IndexedDB, editam offline e sincronizam sem duplicar auditoria. 26 testes passaram; baixa local de tora real, sugestão, pacote offline, reabertura, envio e leitura na nuvem verificados com login real; pacote temporário removido e baixa de teste não enviada. Tela de 384 px conferida. Validação Android publicado continua dependente do aparelho.
+- [x] AUTEX em Madeira Serrada: 15 opções do cadastro e texto livre, independente de toras serradas; pacote salvo/reaberto com AUTEX livre e três bitolas em teste autenticado, removido ao final. PDF inclui AUTEX. Seis testes passaram; tela 384 px sem corte.
+- [x] Madeira serrada: pacotes multi-bitola e cargas por empresa, PDF A4 paisagem com subtotais/assinaturas, download e compartilhamento. 18 testes passaram; cadastro real de duas bitolas (30 peças, 0,6600 m³), expedição e download verificados com acesso autenticado; dados temporários removidos. Tela conferida em 384 px. Salvar/expedir requer internet; compartilhamento nativo no Android aguarda teste no aparelho.
+- [x] Corrigir o aviso "Aguarde carregar a empresa" no tablet usando o vínculo de empresa já confirmado no aparelho quando a consulta online falhar; 5 testes passaram e salvamento offline verificado em tela de tablet, sem enviar dados à nuvem.
+- [x] Editar lançamentos com erro pelo aviso laranja, preservando a operação original e permitindo tentar de novo após salvar; 25 testes passaram e edição/reabertura verificadas com acesso autenticado em desktop e 384 px. Reenvio interceptado no teste sem alterar estoque real.
+- [x] Explicar acesso offline: reutilizar sessão já salva no próprio aparelho; primeiro login e validação de senha exigem internet, sem distribuir senhas ou contas dos demais usuários.
+- [x] Separar Toras de manejo (medições da Base) das toras medidas na conferência/encaixe; estas aparecem no pátio da Serraria, com relatórios compartilhados, filtros e seleção. 28 testes passaram; PDF/Excel baixados com login real; medição 1861-B lançada offline, vista no pátio e excluída do manejo, removida após teste; telas em 384 px sem corte. Publicação e validação no Android continuam pendentes abaixo.
+- [x] Reforçar reabertura offline: página estática de emergência, NetworkFirst com fallback apenas em falha, preparação sem iframe e lista vazia sem cache; 14 testes passaram, worker gerado isolado reabriu página salva e fallback sem rede, links e reconexão verificados em 384 px e desktop. Verificação autenticada offline no preview não concluída; validação no Android publicado permanece pendente abaixo.
+- [x] Downloads PDF/Excel e SINAFLOR com arquivo preparado e botão de salvar; os três arquivos baixados com acesso autenticado, PDF renderizado e planilhas verificadas; janela conferida em 384 px. Atualização no aparelho depende da publicação.
+- [x] Numerar registros e filtrar por usuário; verificado com acesso autenticado em desktop e tela de 542 px.
+- [x] Registrar estados anteriores e permitir reversões confirmadas de toras e serraria, respeitando empresa, permissões e conflitos; lançamento, edição, exclusão, serragem e recebimento testados com dados temporários removidos ao final. Registros antigos sem cópia não podem ser restaurados. Testes de lista, edição, encaixe e fila passaram.
+- [x] Escolher sugestão de encaixe, confirmar identidade, salvar medidas com menor plaqueta azul livre e disponibilizar etiqueta; 24 testes passaram e escolha 1861-B/plaqueta 8 com PDF local validada no desktop e na largura de 562 px, sem envio à nuvem. Teste de impressão no Android publicado depende de publicação.
+- [x] Retirar das sugestões de encaixe as toras lançadas offline, imediatamente e ao reabrir no mesmo aparelho, respeitando empresa e AUTEX; 17 testes passaram e lançamento 1861-B validado offline com acesso autenticado, sem envio à nuvem.
+- [x] Adicionar Encaixe de toras na conferência: nome científico, cinco medidas e opções do saldo por proximidade de volume com AUTEX e árvore/secção; 14 testes passaram e fluxo autenticado verificado com saldo real, em desktop e celular, sem alterar estoque.
+- [x] Reduzir sobrecarga da conferência de saldo: comparação indexada, filtros otimizados e páginas de 50 toras; busca, seleção entre páginas e abertura/preenchimento da medição verificados com as 1.981 linhas reais em tela de tablet, sem alterar dados.
+- [x] Adicionar botão Instalar app no canto superior direito; testes de pedido de instalação e orientação alternativa, tela autenticada e largura de celular verificados.
+- [x] Ocultar a marca Edit with Lovable na publicação.
+- [x] Explicar onde consultar dados das empresas e registros dos funcionários, incluindo a limitação de identidade em acessos compartilhados.
+- [x] Corrigir abertura offline no Android: caminhos corrigidos, primeira navegação preparada, cache acessível sem rede; testes de abertura com worker corrigido isolado e lançamento offline passaram.
+- [ ] Validar atualização, abertura offline, GPS e envio/abertura do PDF do mapa no Android publicado — aguarda publicação e primeiro acesso conectado no aparelho.
+- [x] Modo offline + instalável no Android (PWA): manifest/ícones, service worker com guards, fila IndexedDB, sync, indicador. Offline só funciona no app publicado.
+- [x] Log de registros: quem inseriu, horário e coordenadas GPS (link Google Maps) para cada lançamento.
+- [x] Criar planilha modelo para importar BASE sem exigir toras.
+- [x] Cadastrar e selecionar AUTEX ao medir toras.
+- [x] Mostrar toras salvas (aba Estoque excluída depois: duplicava a aba Toras).
+- [x] Selecionar toras e imprimir etiquetas conforme PDF enviado.
+- [x] Incluir dados da tora no QR e ler QR para montar romaneio.
+- [x] Validar importação, medição, estoque, etiquetas e romaneio com dados temporários; câmera e impressão física dependem do dispositivo.- [x] Escolher pátio na entrada e aba Serraria (pátio de toras / serrar).
+- [x] AUTEX na base (coluna J), escolha de AUTEX quando o nº da árvore repete, relatórios separados por AUTEX.
+- [x] Acesso por convite: Neto admin, cadastro público fechado, tela Usuários (criar acesso com senha, trocar senha, tornar admin, remover), WhatsApp na tela de login, importação de planilha só para admin.
+- [x] Dados separados por empresa: tabela empresas, vínculo usuário→empresa, empresa_id em todas as tabelas de dados, RLS por empresa, admin cria empresa + acesso único compartilhado pelos funcionários. Testado: empresa nova não vê dados da RJ.
+- [x] Etiqueta: nº da árvore e secção em destaque (maiores), plaqueta menor.
+- [x] Conferir saldo da serraria (CSV/Excel) e cadastrar fora de estoque com plaquetas em sequência
+- [x] Excluir toras já romaneadas (aba Toras)
+- [x] Editar e excluir toras na aba Toras (painel com dados e medidas, volume calculado, confirmação antes de excluir, offline enfileira). Conferência de saldo usa o mesmo painel.
+- [x] Listas de toras mais legíveis no celular: nome popular em destaque no topo, plaqueta/árvore/secção/AUTEX/volume embaixo, botões menores à direita. Verificado em 384 px sem corte.
+- [x] Navegação em Início/Manejo/Serraria/Relatórios e aba Relatórios (rendimento, romaneios, estoque) em PDF/Excel.
+- [x] Botão WhatsApp no relatório de toras: envia o arquivo com o resumo (ou abre o WhatsApp com o resumo da lista quando o aparelho não aceita anexo) e botão Copiar resumo; resumo segue a medida ativa (física/comercial).
+- [x] Encaixe de toras aceita AUTESP sem seção: a árvore pode ser escolhida com a seção vazia, a tora é guardada sem seção e o registro avisa "sem seção".
+- [x] Excluir carga de madeira serrada (pacotes voltam ao pátio; registro no histórico). Conferido na tela: botão na carga, confirmação antes de apagar.
+- [x] TXT de NF-e no romaneio de toras: já existe na tela de detalhes do romaneio (botões TXT NF-e e Copiar), aberta logo após salvar ou por "Ver romaneios emitidos".
+- [x] Empresa: situação pendente/demonstração/ativa/inativa, cadastro público com nome+CNPJ, limite 50 toras na demonstração
+- [x] Aviso ao Neto de novos cadastros antes de liberar (painel Usuários)
+- [x] Neto define admin ou operador
+
+## Entrega 15/11/2026 — cargos, entrada no pátio e reversão de arrasto (não publicada)
+- [x] Entrada no pátio na Serraria; QR confere toras e empresa; recebimento offline sem duplicar
+- [x] Cargos/RLS/RPCs/arrasto aplicados (migrações 0036, 0037) e testados com rollback
+- [x] Reversão de arrasto restaura todos os campos de arrasto/explanada (0038); snapshot incompleto ou explanada removida são recusados
+- [x] Registro original marcado como revertido (0039); tela oculta "Reverter" quando falta cópia completa do arrasto
+- [x] 296 testes em 54 arquivos, verificação de tipos sem erros
 - [ ] Publicar — aguardando revisão do Neto
-- [ ] Atribuir cargos aos 5 usuários sem função — aguardando admin
+- [ ] Atribuir cargos aos 5 usuários sem função — aguardando o Neto informar as funções
