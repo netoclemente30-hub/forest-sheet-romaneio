@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compartilharNoWhatsapp } from "./arquivo";
+import { compartilharArquivoExato, compartilharNoWhatsapp } from "./arquivo";
 
 const arquivo = { blob: new Blob(["%PDF-1.4 teste"], { type: "application/pdf" }), nome: "relatorio_toras.pdf" };
 const texto = "*RELATÓRIO DE TORAS — PÁTIO*\n2 toras · 3,0000 m³";
@@ -45,5 +45,55 @@ describe("compartilharNoWhatsapp", () => {
     const aberto = vi.spyOn(window, "open").mockReturnValue(null);
     expect(await compartilharNoWhatsapp(arquivo, texto)).toBeNull();
     expect(aberto).not.toHaveBeenCalled();
+  });
+});
+
+describe("compartilharArquivoExato: somente arquivo, nunca WhatsApp em texto", () => {
+  it("compartilha PDF como arquivo quando o celular permite", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    definir("share", share);
+    definir("canShare", ({ files }: ShareData) => !!files?.length);
+    const wa = vi.spyOn(window, "open").mockReturnValue(null);
+    const resultado = await compartilharArquivoExato(arquivo);
+    expect(resultado).toBe("compartilhado");
+    expect((share.mock.calls[0]?.[0] as ShareData).files?.[0]?.name).toBe("relatorio_toras.pdf");
+    expect((share.mock.calls[0]?.[0] as ShareData).files?.[0]?.type).toBe("application/pdf");
+    expect((share.mock.calls[0]?.[0] as ShareData).text).toBeUndefined();
+    expect(wa).not.toHaveBeenCalled();
+  });
+
+  it("compartilha TXT como arquivo .txt sem colar conteúdo", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    definir("share", share);
+    definir("canShare", ({ files }: ShareData) => files?.[0]?.name.endsWith(".txt") ?? false);
+    const txt = new Blob(["NOTAFISCAL|1|\\nA|4.00|NFe|\\n"], { type: "text/plain;charset=utf-8" });
+    const resultado = await compartilharArquivoExato({ blob: txt, nome: "nfe-romaneio.txt" });
+    expect(resultado).toBe("compartilhado");
+    const dados = share.mock.calls[0]?.[0] as ShareData;
+    expect(dados.files?.[0]?.name).toBe("nfe-romaneio.txt");
+    expect(dados.text).toBeUndefined();
+  });
+
+  it("se o aparelho não permite anexo, baixa o PDF sem abrir WhatsApp", async () => {
+    definir("canShare", () => false);
+    const create = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:romaneio-teste");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const result = await compartilharArquivoExato(arquivo);
+    expect(result).toBe("baixado");
+    expect(create).toHaveBeenCalled();
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("cancelamento nativo não baixa nem abre WhatsApp", async () => {
+    definir("canShare", () => true);
+    definir("share", vi.fn().mockRejectedValue(new DOMException("Cancelado", "AbortError")));
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const download = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    expect(await compartilharArquivoExato(arquivo)).toBe("cancelado");
+    expect(download).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
   });
 });

@@ -43,3 +43,29 @@ export async function compartilharNoWhatsapp(arquivo: ArquivoGerado, texto: stri
   window.open(linkWhatsapp(texto), "_blank");
   return "texto";
 }
+
+/**
+ * Compartilha O ARQUIVO REAL pela folha nativa do Android/iOS.
+ * Se o navegador impedir o anexo, faz download do próprio arquivo;
+ * NUNCA abre WhatsApp com texto substituindo o PDF/TXT.
+ *
+ * Chame diretamente a partir do clique do usuário.
+ */
+export async function compartilharArquivoExato(
+  arquivo: ArquivoGerado,
+): Promise<"compartilhado" | "baixado" | "cancelado"> {
+  const file = new File([arquivo.blob], arquivo.nome, { type: arquivo.blob.type });
+  if (typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: arquivo.nome });
+      return "compartilhado";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return "cancelado";
+    }
+  }
+  baixarArquivo(arquivo);
+  return "baixado";
+}
