@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { ShieldCheck, Trash2, KeyRound, UserPlus, Building2 } from "lucide-react";
 
 export const Route = createFileRoute("/usuarios")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

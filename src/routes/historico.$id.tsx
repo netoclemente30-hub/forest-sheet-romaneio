@@ -26,6 +26,7 @@ export function ordenarRomaneio(itens: Tora[]): Tora[] {
 }
 
 export const Route = createFileRoute("/historico/$id")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

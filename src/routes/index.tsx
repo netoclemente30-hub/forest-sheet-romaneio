@@ -10,6 +10,7 @@ import { cargasSerradasQuery } from "@/lib/madeira-serrada";
 import { hojeLocal, movimentoDoDia } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

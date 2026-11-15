@@ -5,6 +5,7 @@ const TITULO = "Gestor Florestal · Do manejo à serraria, tudo rastreado";
 const DESC = "App de manejo florestal: inventário, AUTEX, etiquetas com QR Code, romaneios com TXT NF-e, serraria, relatórios e trabalho offline no mato.";
 
 export const Route = createFileRoute("/apresentacao")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: TITULO },

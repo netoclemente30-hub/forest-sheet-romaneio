@@ -17,6 +17,7 @@ import { toast } from "sonner";
 type Registro = Database["public"]["Tables"]["registros"]["Row"];
 
 export const Route = createFileRoute("/registros")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

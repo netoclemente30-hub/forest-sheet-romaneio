@@ -6,6 +6,7 @@ import { fmtM3 } from "@/lib/volume";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/historico/")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

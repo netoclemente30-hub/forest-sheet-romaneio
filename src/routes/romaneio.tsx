@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Camera, X, AlertTriangle, Warehouse } from "lucide-react";
 
 export const Route = createFileRoute("/romaneio")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

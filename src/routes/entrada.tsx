@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Camera, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/entrada")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

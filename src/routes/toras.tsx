@@ -24,6 +24,7 @@ import { ToraEditor, excluirTora } from "@/components/ToraEditor";
 import { registrarOperacao } from "@/lib/registro-operacao";
 
 export const Route = createFileRoute("/toras")({
+  staticData: { sitemap: false },
   validateSearch: (s: Record<string, unknown>) => ({ nova: s["nova"] === true || s["nova"] === "true" ? true : undefined }),
   head: () => ({
     meta: [

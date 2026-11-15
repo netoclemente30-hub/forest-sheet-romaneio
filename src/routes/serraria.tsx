@@ -32,6 +32,7 @@ import { gruposParaPacote, type SugestaoPacote } from '@/lib/pacote-de-toras';
 import { TorasEncaixadas } from '@/components/TorasEncaixadas';
 
 export const Route = createFileRoute("/serraria")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
