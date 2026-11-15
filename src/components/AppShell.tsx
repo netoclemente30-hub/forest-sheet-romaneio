@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "./ui/input";
@@ -38,10 +38,10 @@ const navPorPapel = (papel: Papel) => {
   const registros = { to: "/registros" as const, label: "Registros", icon: ClipboardList };
   if (papel === "superadmin" || papel === "admin_empresa")
     return [...nav, registros, { to: "/usuarios" as const, label: "Usuários", icon: Users }];
-  if (papel === "cortador" || papel === "tratorista") return [inicio, mapa];
-  if (papel === "romaneador") return [inicio, toras, patios, mapa];
-  if (papel === "motorista") return [inicio, carga, { to: "/historico" as const, label: "Cargas", icon: Truck }];
-  if (papel === "gerente_patio") return [inicio, serraria, relatorios];
+  if (papel === "cortador" || papel === "tratorista") return [mapa];
+  if (papel === "romaneador") return [toras, patios, mapa];
+  if (papel === "motorista") return [carga, { to: "/historico" as const, label: "Cargas", icon: Truck }];
+  if (papel === "gerente_patio") return [serraria, relatorios];
   if (papel === "gerente_escritorio") return [...nav, registros];
   return [inicio];
 };
@@ -199,6 +199,8 @@ export function AppShell() {
           <div role="alert" className="rounded-xl border p-4 text-sm">
             Sua conta ainda não tem uma função atribuída. Solicite ao administrador da empresa que defina seu cargo.
           </div>
+        ) : !acessoPermitido && pathname === "/" ? (
+          <Navigate to={rotaInicial(papel)} replace />
         ) : !acessoPermitido ? (
           <div role="alert" className="rounded-xl border p-4 space-y-2 text-sm">
             <strong>Acesso restrito para {nomePapel(papel)}.</strong>
