@@ -12,6 +12,12 @@ async function exigirAdmin(supabase: Ctx["supabase"], userId: string) {
   if (!isAdmin && !isSuper) throw new Error("Apenas o administrador pode gerenciar usuários");
 }
 
+async function exigirSuperAdmin(supabase: Ctx["supabase"], userId: string) {
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Apenas o administrador geral pode executar esta operação");
+}
+
 /** Empresa que o admin logado pode gerenciar. NULL = administrador geral (gerencia todas). */
 async function empresaDoAdmin(supabase: Ctx["supabase"]): Promise<string | null> {
   const { data } = await supabase.rpc("admin_minha_empresa");
@@ -30,13 +36,22 @@ export const listarEmpresas = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
+    const { data: superadmin, error: roleError } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "superadmin" });
+    if (roleError) throw new Error(roleError.message);
+    const propriaEmpresa = superadmin ? null : await empresaDoAdmin(ctx.supabase);
+    if (!superadmin && !propriaEmpresa) throw new Error("Empresa do administrador não encontrada");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("empresas").select("id, nome, cnpj, status").order("nome");
+    let consulta = supabaseAdmin.from("empresas").select("id, nome, cnpj, status").order("nome");
+    if (!superadmin) consulta = consulta.eq("id", propriaEmpresa!);
+    const { data, error } = await consulta;
     if (error) throw new Error(error.message);
-    const { data: toras } = await supabaseAdmin.from("toras").select("empresa_id");
-    const qtd = new Map<string, number>();
-    for (const t of toras ?? []) qtd.set(t.empresa_id, (qtd.get(t.empresa_id) ?? 0) + 1);
-    return data.map((e) => ({ ...e, status: e.status as StatusEmpresa, toras: qtd.get(e.id) ?? 0 }));
+    // Contagem exata por empresa: não faz varredura global nem depende do limite de 1000 linhas.
+    return Promise.all((data ?? []).map(async (e) => {
+      const { count, error: erroContagem } = await supabaseAdmin.from("toras")
+        .select("plaqueta", { head: true, count: "exact" }).eq("empresa_id", e.id);
+      if (erroContagem) throw new Error(erroContagem.message);
+      return { ...e, status: e.status as StatusEmpresa, toras: count ?? 0 };
+    }));
   });
 
 export const criarEmpresa = createServerFn({ method: "POST" })
@@ -44,7 +59,7 @@ export const criarEmpresa = createServerFn({ method: "POST" })
   .inputValidator((input: { nome: string }) => input)
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
-    await exigirAdmin(ctx.supabase, ctx.userId);
+    await exigirSuperAdmin(ctx.supabase, ctx.userId);
     const nome = data.nome.trim();
     if (!nome) throw new Error("Informe o nome da empresa");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
