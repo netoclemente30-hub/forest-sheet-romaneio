@@ -154,7 +154,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 200)}>Mostrar mais</Button>}
 
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open && podeLancar} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Lançar tora de manejo</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">

@@ -39,3 +39,42 @@ Revisar ordem, dependências e privilégios com a Lovable em banco de homologaç
 A migração de dados deve: (a) identificar administradores atuais, (b) preservar suas permissões, (c) atribuir cargos a cada funcionário, (d) testar usuários sem cargo e outras empresas, (e) tentar operações diretas na API e chamadas de RPC com JWT de todos os perfis, (f) conferir fila offline após troca de cargo.
 
 Não foi aplicada migração em produção nem foram alterados cadastros reais. Não publicar nem mesclar antes de homologar.
+
+
+## Revisão de 15/11/2026
+A branch de revisão parte de 0389d7a07225fda69899f6e3bf968209ed2d4f93.
+A implementação inicial de cargos já estava nessa base; esta revisão corrige
+falhas de isolamento administrativo, descarte de permissões após erro de
+revalidação, envio de mapas por cargos de consulta e abertura de lançamento
+via parâmetro de URL. Etiquetas podem ser baixadas pelo escritório sem
+marcar impressão no estoque. Histórico permite baixar arquivos sem excluir.
+
+As propostas SQL agora separam lançamentos de manejo e serraria, autorizam
+medições de estoque recebido, impedem escrita direta nas tabelas de cargas
+serradas e protegem os PDFs no Storage. Os registros de encaixe necessários
+à serraria têm leitura específica. Escritório não grava auditoria avulsa de
+alterações; o evento de login continua permitido.
+
+### Validação e limites
+- 281 testes passaram localmente em 53 arquivos, incluindo matriz de cargos,
+  rotas, cache por conta, fila offline e isolamento da listagem no servidor.
+- Compilação e TypeScript passaram após geração automática das rotas.
+- Análise estática dos arquivos alterados: zero erros; um aviso preexistente
+  sobre exportação auxiliar em historico.$id.tsx.
+- As dependências locais foram instaladas com pnpm sem alterar o bun.lock.
+  A integração do PR usa Bun com o lockfile original.
+- O esquema revisado foi o versionado no repositório. Não houve consulta ao
+  catálogo de produção, execução SQL, migração, alteração de cadastros,
+  publicação ou solicitação à Lovable.
+- A validação sintática SQL não substitui testes de RLS/RPC com sessões reais
+  em homologação. Conferir também políticas adicionais existentes no ambiente.
+- O modo consulta legado ainda bloqueia formulários completos em Base,
+  recebimento, carregamento, saldo e serraria. Os relatórios gerais continuam
+  acessíveis em /relatorios; Mapa, Toras, Explanadas, Etiquetas e Histórico
+  têm consulta interativa sem liberar gravação. Revisar a experiência dessas
+  telas na homologação antes de liberar o perfil de escritório.
+
+Não mesclar/publicar antes da ativação coordenada e testes do backend pela
+Lovable. As propostas contêm blocos transacionais separados: a equipe deve
+consolidá-los em uma única implantação, com verificação de dependências
+e rollback, sem ativar RLS ou cargos parcialmente.

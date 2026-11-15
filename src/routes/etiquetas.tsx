@@ -35,7 +35,7 @@ function Etiquetas() {
   const router = useRouter();
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
-  const { empresaId, session } = useAuth();
+  const { empresaId, session, papel } = useAuth();
   const pendentes = useFilaOffline();
   const [empresaSalva, setEmpresaSalva] = useState<string | null>(null);
   useEffect(() => {
@@ -60,7 +60,7 @@ function Etiquetas() {
     try {
       const doc = await gerarEtiquetasPdf(selecionadas, tam);
       const nome = `etiquetas-${tam.largura}x${tam.altura}mm.pdf`;
-      if (navigator.onLine) {
+      if (navigator.onLine && papel !== "gerente_escritorio") {
         const agora = new Date().toISOString();
         const porEmp = new Map<string, number[]>();
         for (const t of selecionadas) { const k = t.empresa_id; porEmp.set(k, [...(porEmp.get(k) ?? []), t.plaqueta]); }

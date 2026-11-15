@@ -50,7 +50,8 @@ export const statusFuncoes = createServerFn({ method: "GET" })
 
 /** Empresa que o admin logado pode gerenciar. NULL = administrador geral (gerencia todas). */
 async function empresaDoAdmin(supabase: Ctx["supabase"]): Promise<string | null> {
-  const { data } = await supabase.rpc("admin_minha_empresa");
+  const { data, error } = await supabase.rpc("admin_minha_empresa");
+  if (error) throw new Error(error.message);
   return (data as string | null) ?? null;
 }
 
@@ -115,7 +116,7 @@ export const listarUsuarios = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
+    const { empresa: minha } = await escopoAdministrativo(ctx);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
     if (error) throw error;
@@ -188,8 +189,9 @@ export const definirFuncao = createServerFn({ method: "POST" })
     if (!escopo.superadmin && vinculo.empresa_id !== escopo.empresa) {
       throw new Error("Você só pode gerenciar funcionários da própria empresa");
     }
-    const { data: roles } = await supabaseAdmin
+    const { data: roles, error: rolesError } = await supabaseAdmin
       .from("user_roles").select("role").eq("user_id", data.userId);
+    if (rolesError) throw new Error(rolesError.message);
     if ((roles ?? []).some((role) => role.role === "superadmin" || role.role === "admin")) {
       throw new Error("Cargo administrativo não pode ser alterado como cargo de funcionário");
     }

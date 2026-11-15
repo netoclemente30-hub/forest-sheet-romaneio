@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS public.explanadas (
   criado_por uuid REFERENCES auth.users(id) DEFAULT auth.uid(),
   CONSTRAINT explanadas_coords_par CHECK (
     (latitude IS NULL AND longitude IS NULL)
-    OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)
+    OR (latitude IS NOT NULL AND longitude IS NOT NULL
+      AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)
   ),
   UNIQUE (empresa_id,autex,nome)
 );

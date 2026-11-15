@@ -1,3 +1,4 @@
+import { pode } from "@/lib/funcoes";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, ExternalLink, FileText, LoaderCircle, Upload } from "lucide-react";
@@ -15,7 +16,8 @@ function tamanho(bytes: number): string {
 
 export function MapaPdf({ autex, encerrado }: { autex: string; encerrado: boolean }) {
   const qc = useQueryClient();
-  const { empresaId, session } = useAuth();
+  const { empresaId, session, papel } = useAuth();
+  const podeEnviar = pode(papel, "base_importar");
   const empresa = getEmpresaAtiva() ?? empresaId;
   const consulta = useQuery({ ...mapaPdfQuery(autex), enabled: !!autex });
   const mapa = consulta.data?.[0] ?? null;
@@ -31,7 +33,7 @@ export function MapaPdf({ autex, encerrado }: { autex: string; encerrado: boolea
   }, [arquivo]);
 
   async function enviar(file: File | undefined) {
-    if (!file || enviando) return;
+    if (!podeEnviar || !file || enviando) return;
     if (!empresa) { toast.error("Aguarde carregar a empresa"); return; }
     setEnviando(true);
     try {
@@ -83,14 +85,14 @@ export function MapaPdf({ autex, encerrado }: { autex: string; encerrado: boolea
 
       <div className={`grid gap-2 ${mapa && !encerrado ? "grid-cols-2" : "grid-cols-1"}`}>
         {mapa && <Button disabled={preparando} onClick={preparar}>{preparando ? <LoaderCircle className="animate-spin" /> : <FileText />}{preparando ? "Carregando…" : "Abrir PDF"}</Button>}
-        {!encerrado && <>
+        {!encerrado && podeEnviar && <>
           <input ref={input} type="file" accept="application/pdf,.pdf" className="hidden" aria-label={`Selecionar PDF do mapa da AUTEX ${autex}`} onChange={(e) => { void enviar(e.target.files?.[0]); }} />
           <Button variant={mapa ? "outline" : "default"} disabled={enviando} onClick={() => { if (input.current) { input.current.value = ""; input.current.click(); } }}>
             {enviando ? <LoaderCircle className="animate-spin" /> : <Upload />}{enviando ? "Enviando…" : mapa ? "Substituir PDF" : "Enviar PDF do mapa"}
           </Button>
         </>}
       </div>
-      {!encerrado && <p className="text-xs text-muted-foreground">Somente PDF, até 100 MB. O envio precisa de internet; o arquivo é compartilhado somente com esta empresa.</p>}
+      {!encerrado && podeEnviar && <p className="text-xs text-muted-foreground">Somente PDF, até 100 MB. O envio precisa de internet; o arquivo é compartilhado somente com esta empresa.</p>}
       {encerrado && mapa && <p className="text-xs text-muted-foreground">Manejo encerrado: o PDF permanece disponível para consulta.</p>}
 
       <Dialog open={aberto} onOpenChange={setAberto}>

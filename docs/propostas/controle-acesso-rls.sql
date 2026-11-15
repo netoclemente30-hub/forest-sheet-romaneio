@@ -27,7 +27,8 @@ CREATE POLICY "funcao_arvores_excluir" ON public.arvores FOR DELETE TO authentic
 
 ALTER TABLE public.autex ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "funcao_autex_ler" ON public.autex FOR SELECT TO authenticated USING ((public.pode_funcao(empresa_id,'mapa_ver') OR public.pode_funcao(empresa_id,'toras_ver') OR public.pode_funcao(empresa_id,'carga_criar') OR public.pode_funcao(empresa_id,'serraria_ver')) OR public.pode_funcao(empresa_id,'informacoes_ver'));
-CREATE POLICY "funcao_autex_criar" ON public.autex FOR INSERT TO authenticated WITH CHECK (public.pode_funcao(empresa_id,'base_importar'));
+CREATE POLICY "funcao_autex_criar" ON public.autex FOR INSERT TO authenticated
+WITH CHECK (public.pode_funcao(empresa_id,'base_importar') OR public.pode_funcao(empresa_id,'serraria_operar'));
 CREATE POLICY "funcao_autex_editar" ON public.autex FOR UPDATE TO authenticated USING (public.pode_funcao(empresa_id,'base_importar')) WITH CHECK (public.pode_funcao(empresa_id,'base_importar'));
 CREATE POLICY "funcao_autex_excluir" ON public.autex FOR DELETE TO authenticated USING (public.pode_funcao(empresa_id,'base_importar'));
 
@@ -45,7 +46,11 @@ CREATE POLICY "funcao_rastros_gps_excluir" ON public.rastros_gps FOR DELETE TO a
 
 ALTER TABLE public.toras ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "funcao_toras_ler" ON public.toras FOR SELECT TO authenticated USING ((public.pode_funcao(empresa_id,'toras_ver')) OR public.pode_funcao(empresa_id,'informacoes_ver'));
-CREATE POLICY "funcao_toras_criar" ON public.toras FOR INSERT TO authenticated WITH CHECK (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
+CREATE POLICY "funcao_toras_criar" ON public.toras FOR INSERT TO authenticated
+WITH CHECK (public.pode_funcao(empresa_id,'usuarios_gerenciar') OR (
+  public.pode_funcao(empresa_id,'serraria_operar') AND origem='serraria'
+  AND NOT carregada AND romaneio_id IS NULL AND serrada_em IS NULL
+));
 CREATE POLICY "funcao_toras_editar" ON public.toras FOR UPDATE TO authenticated USING (public.pode_funcao(empresa_id,'usuarios_gerenciar')) WITH CHECK (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
 CREATE POLICY "funcao_toras_excluir" ON public.toras FOR DELETE TO authenticated USING (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
 
@@ -62,7 +67,7 @@ CREATE POLICY "funcao_patios_editar" ON public.patios FOR UPDATE TO authenticate
 CREATE POLICY "funcao_patios_excluir" ON public.patios FOR DELETE TO authenticated USING (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
 
 ALTER TABLE public.veiculos ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "funcao_veiculos_ler" ON public.veiculos FOR SELECT TO authenticated USING ((public.pode_funcao(empresa_id,'carga_criar')) OR public.pode_funcao(empresa_id,'informacoes_ver'));
+CREATE POLICY "funcao_veiculos_ler" ON public.veiculos FOR SELECT TO authenticated USING ((public.pode_funcao(empresa_id,'carga_criar') OR public.pode_funcao(empresa_id,'serraria_ver')) OR public.pode_funcao(empresa_id,'informacoes_ver'));
 CREATE POLICY "funcao_veiculos_criar" ON public.veiculos FOR INSERT TO authenticated WITH CHECK (public.pode_funcao(empresa_id,'carga_criar'));
 CREATE POLICY "funcao_veiculos_editar" ON public.veiculos FOR UPDATE TO authenticated USING (public.pode_funcao(empresa_id,'usuarios_gerenciar')) WITH CHECK (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
 CREATE POLICY "funcao_veiculos_excluir" ON public.veiculos FOR DELETE TO authenticated USING (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
@@ -110,7 +115,9 @@ CREATE POLICY "funcao_romaneio_carga_pacotes_editar" ON public.romaneio_carga_pa
 CREATE POLICY "funcao_romaneio_carga_pacotes_excluir" ON public.romaneio_carga_pacotes FOR DELETE TO authenticated USING (public.pode_funcao(empresa_id,'serraria_operar'));
 
 ALTER TABLE public.registros ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "funcao_registros_ler" ON public.registros FOR SELECT TO authenticated USING ((public.pode_funcao(empresa_id,'registros_ver')) OR public.pode_funcao(empresa_id,'informacoes_ver'));
+CREATE POLICY "funcao_registros_ler" ON public.registros FOR SELECT TO authenticated
+USING (public.pode_funcao(empresa_id,'registros_ver')
+  OR (acao='Encaixe confirmado' AND public.pode_funcao(empresa_id,'serraria_ver')));
 
 
 -- Cortador pode alterar só a localização e o estado de abate; não pode
@@ -136,6 +143,48 @@ FOR EACH ROW EXECUTE FUNCTION public.restringir_edicao_arvore_por_cargo();
 -- A tabela de registros só aceita mudanças por RPC autenticada/segura.
 REVOKE INSERT,UPDATE,DELETE ON public.registros FROM PUBLIC,anon,authenticated;
 GRANT SELECT ON public.registros TO authenticated;
+
+-- Etiquetas continuam editáveis só pelos cargos que lançam ou operam estoque.
+-- O grant da migração 0036 é exclusivamente de etiqueta_impressa_em.
+DROP POLICY IF EXISTS "funcao_toras_editar" ON public.toras;
+CREATE POLICY "funcao_toras_editar" ON public.toras FOR UPDATE TO authenticated
+USING (public.pode_funcao(empresa_id,'toras_lancar') OR public.pode_funcao(empresa_id,'serraria_operar'))
+WITH CHECK (public.pode_funcao(empresa_id,'toras_lancar') OR public.pode_funcao(empresa_id,'serraria_operar'));
+REVOKE UPDATE ON public.toras FROM PUBLIC,anon,authenticated;
+GRANT UPDATE(etiqueta_impressa_em) ON public.toras TO authenticated;
+
+-- Madeira serrada deve passar pelas RPCs que preservam totais, auditoria
+-- e imutabilidade das cargas. RLS permissiva não pode liberar escrita direta.
+REVOKE INSERT,UPDATE,DELETE ON public.pacotes_serrados,
+  public.itens_pacote_serrado,public.romaneios_madeira_serrada,
+  public.romaneio_carga_pacotes FROM PUBLIC,anon,authenticated;
+
+-- RLS da tabela de mapas não protege o arquivo PDF no Storage.
+-- Política RESTRICTIVE limita inclusive políticas permissivas legadas.
+CREATE POLICY "cargos mapas leitura" ON storage.objects AS RESTRICTIVE
+FOR SELECT TO authenticated USING (
+  bucket_id <> 'mapas-exploracao' OR EXISTS (
+    SELECT 1 FROM public.empresas e WHERE e.id::text=(storage.foldername(name))[1]
+      AND public.pode_funcao(e.id,'mapa_ver')));
+CREATE POLICY "cargos mapas envio" ON storage.objects AS RESTRICTIVE
+FOR INSERT TO authenticated WITH CHECK (
+  bucket_id <> 'mapas-exploracao' OR EXISTS (
+    SELECT 1 FROM public.empresas e WHERE e.id::text=(storage.foldername(name))[1]
+      AND public.pode_funcao(e.id,'base_importar')));
+CREATE POLICY "cargos mapas alteração" ON storage.objects AS RESTRICTIVE
+FOR UPDATE TO authenticated USING (
+  bucket_id <> 'mapas-exploracao' OR EXISTS (
+    SELECT 1 FROM public.empresas e WHERE e.id::text=(storage.foldername(name))[1]
+      AND public.pode_funcao(e.id,'base_importar')))
+WITH CHECK (
+  bucket_id <> 'mapas-exploracao' OR EXISTS (
+    SELECT 1 FROM public.empresas e WHERE e.id::text=(storage.foldername(name))[1]
+      AND public.pode_funcao(e.id,'base_importar')));
+CREATE POLICY "cargos mapas exclusão" ON storage.objects AS RESTRICTIVE
+FOR DELETE TO authenticated USING (
+  bucket_id <> 'mapas-exploracao' OR EXISTS (
+    SELECT 1 FROM public.empresas e WHERE e.id::text=(storage.foldername(name))[1]
+      AND public.pode_funcao(e.id,'base_importar')));
 COMMIT;
 
 -- Validação obrigatória em homologação:

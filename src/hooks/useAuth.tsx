@@ -5,13 +5,15 @@ import { lerEmpresaSalva, salvarEmpresaDoUsuario } from "@/lib/empresa";
 import { papelDoUsuario, funcaoValida, type FuncaoFuncionario } from "@/lib/funcoes";
 
 async function checarAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-  return !!data;
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  if (error) throw error;
+  return data === true;
 }
 
 async function checarSuperAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
-  return !!data;
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
+  if (error) throw error;
+  return data === true;
 }
 
 /** A função é sempre consultada no banco; metadados editáveis do usuário não autorizam ações. */
@@ -45,6 +47,10 @@ export function useAuth() {
 
     function atualizar(id: string, atual: number) {
       const vigente = () => ativo && usuario === id && versao === atual;
+      setPermissoesCarregando(true);
+      setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setFuncao(null);
       // Empresa e permissões são independentes: uma consulta lenta de cargo
       // não pode impedir lançamentos de campo.
       void checarEmpresa().catch(() => null).then((empresa) => {
@@ -58,7 +64,7 @@ export function useAuth() {
       });
       void Promise.all([checarAdmin(id), checarSuperAdmin(id), checarFuncao()])
         .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); } })
-        .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); } })
+        .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); } })
         .finally(() => { if (vigente()) setPermissoesCarregando(false); });
     }
 

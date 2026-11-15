@@ -19,7 +19,7 @@ export const Route = createFileRoute("/cortador")({
     meta: [
       { title: "Mapa — Manejo Florestal" },
       { name: "description", content: "Mapa georreferenciado para o cortador abater árvores ou declarar o motivo de não abater." },
-      { property: "og:title", content: "Cortador / Mapa — Manejo Florestal" },
+      { property: "og:title", content: "Mapa — Manejo Florestal" },
       { property: "og:description", content: "Veja sua posição no mapa da exploração e registre árvores abatidas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
