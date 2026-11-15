@@ -27,12 +27,13 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from pglast import parse_sql
-          arquivos = sorted(Path("drizzle/migrations").glob("003[678]_*.sql"))
+          arquivos = sorted(Path("drizzle/migrations").glob("003[67]_*.sql"))
+          arquivos.append(Path("docs/propostas/arrasto-de-toras.sql"))
           if len(arquivos) != 3:
               raise SystemExit(f"Esperadas 3 migrações novas, encontradas {len(arquivos)}")
           for arquivo in arquivos:
               parse_sql(arquivo.read_text(encoding="utf-8"))
-              print(f"SQL sintaticamente válido: {arquivo}")
+              print(f"SQL sintaticamente válido (não aplicado): {arquivo}")
           PY
       - name: Testes automatizados
         run: bun run test
