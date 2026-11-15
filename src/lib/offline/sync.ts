@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { gravarRegistro } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
 import { registrarOperacao } from "@/lib/registro-operacao";
+import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 
 export function estaOnline(): boolean {
   return typeof navigator === "undefined" ? true : navigator.onLine;
@@ -27,11 +28,14 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
     await registrarOperacao(op.tipo, empresa, dados, alvos, op.log, operacao);
     return;
   }
-  await executarOpSemLog(op);
-  if (op.log) await gravarRegistro(op.log);
+  await executarOpSemLog(op, operacao);
+  // A função SQL de romaneio já registra a operação na mesma transação.
+  if (op.log && op.tipo !== "romaneio_salvar") {
+    await gravarRegistro(op.log, "empresa_id" in op ? op.empresa_id ?? null : null);
+  }
 }
 
-async function executarOpSemLog(op: Op): Promise<void> {
+async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
   switch (op.tipo) {
     case 'pacote_serrado_salvar': return;
     case "tora_insert": {
@@ -68,39 +72,12 @@ async function executarOpSemLog(op: Op): Promise<void> {
       return;
     }
     case "romaneio_salvar": {
-      const { data: u } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from("romaneios")
-        .insert({
-          ...op.cab,
-          total_volume: op.total_volume,
-          qtd_toras: op.qtd_toras,
-          created_by: u.user?.id ?? null,
-          ...(op.empresa_id ? { empresa_id: op.empresa_id } : {}),
-        } as never)
-        .select()
-        .single();
-      if (error || !data) throw new Error(error?.message ?? "Erro ao salvar romaneio");
-      const romaneio = data as { id: string };
-      const { error: e2 } = await supabase
-        .from("toras")
-        .update({ carregada: true, romaneio_id: romaneio.id } as never)
-        .in("plaqueta", op.plaquetas);
-      if (e2) throw new Error(e2.message);
-      const emp = op.empresa_id ? { empresa_id: op.empresa_id } : {};
-      const up = (p: string, tipo: string) =>
-        p.trim() &&
-        supabase
-          .from("veiculos")
-          .upsert({ placa: p.trim().toUpperCase(), tipo, ...emp } as never, { onConflict: "empresa_id,placa,tipo", ignoreDuplicates: true });
-      await Promise.all([
-        up(op.cab.placa, "caminhao"),
-        up(op.cab.julieta, "reboque"),
-        op.cab.motorista.trim() &&
-          supabase
-            .from("motoristas")
-            .upsert({ nome: op.cab.motorista.trim(), cpf: op.cab.cpf.trim() || null, ...emp } as never, { onConflict: "empresa_id,nome" }),
-      ]);
+      // Um mesmo item offline preserva o ID na repetição após falha de rede.
+      const log = op.log ?? {
+        acao: "Romaneio salvo", detalhe: "Romaneio sincronizado", user_email: null,
+        lat: null, lng: null, criado_em: new Date().toISOString(),
+      };
+      await salvarRomaneioNoBanco(op.cab, op.plaquetas, log, op.empresa_id, operacao);
       return;
     }
     case "romaneio_recebido": {
