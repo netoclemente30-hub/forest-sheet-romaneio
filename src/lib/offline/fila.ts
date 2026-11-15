@@ -38,6 +38,7 @@ export type Op =
       autex: string;
       arvore: number;
       plaquetas: number[];
+      explanada_id: string;
       latitude: number;
       longitude: number;
       precisao: number;
