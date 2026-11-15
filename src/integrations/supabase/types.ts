@@ -205,6 +205,76 @@ export type Database = {
         }
         Relationships: []
       }
+      explanadas: {
+        Row: {
+          autex: string
+          criado_em: string
+          criado_por: string | null
+          empresa_id: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          nome: string
+        }
+        Insert: {
+          autex: string
+          criado_em?: string
+          criado_por?: string | null
+          empresa_id: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome: string
+        }
+        Update: {
+          autex?: string
+          criado_em?: string
+          criado_por?: string | null
+          empresa_id?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explanadas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funcoes_funcionarios: {
+        Row: {
+          atualizado_em: string
+          empresa_id: string
+          funcao: string
+          user_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          empresa_id: string
+          funcao: string
+          user_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          empresa_id?: string
+          funcao?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcoes_funcionarios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itens_pacote_serrado: {
         Row: {
           distribuicao_pecas: Json
@@ -564,6 +634,7 @@ export type Database = {
           id: string
           julieta: string | null
           motorista: string | null
+          operacao_id: string | null
           patio: string | null
           placa: string | null
           qtd_toras: number
@@ -579,6 +650,7 @@ export type Database = {
           id?: string
           julieta?: string | null
           motorista?: string | null
+          operacao_id?: string | null
           patio?: string | null
           placa?: string | null
           qtd_toras?: number
@@ -594,6 +666,7 @@ export type Database = {
           id?: string
           julieta?: string | null
           motorista?: string | null
+          operacao_id?: string | null
           patio?: string | null
           placa?: string | null
           qtd_toras?: number
@@ -694,6 +767,12 @@ export type Database = {
       }
       toras: {
         Row: {
+          arrastada_em: string | null
+          arrastada_por: string | null
+          arrasto_explanada_id: string | null
+          arrasto_lat: number | null
+          arrasto_lng: number | null
+          arrasto_operacao_id: string | null
           arvore: number
           autex: string | null
           carregada: boolean
@@ -716,6 +795,12 @@ export type Database = {
           volume: number
         }
         Insert: {
+          arrastada_em?: string | null
+          arrastada_por?: string | null
+          arrasto_explanada_id?: string | null
+          arrasto_lat?: number | null
+          arrasto_lng?: number | null
+          arrasto_operacao_id?: string | null
           arvore: number
           autex?: string | null
           carregada?: boolean
@@ -738,6 +823,12 @@ export type Database = {
           volume?: number
         }
         Update: {
+          arrastada_em?: string | null
+          arrastada_por?: string | null
+          arrasto_explanada_id?: string | null
+          arrasto_lat?: number | null
+          arrasto_lng?: number | null
+          arrasto_operacao_id?: string | null
           arvore?: number
           autex?: string | null
           carregada?: boolean
@@ -761,6 +852,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "toras_arrasto_explanada_empresa_autex_fkey"
+            columns: ["empresa_id", "autex", "arrasto_explanada_id"]
+            isOneToOne: false
+            referencedRelation: "explanadas"
+            referencedColumns: ["empresa_id", "autex", "id"]
+          },
+          {
             foreignKeyName: "toras_autex_fkey"
             columns: ["empresa_id", "autex"]
             isOneToOne: false
@@ -773,6 +871,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toras_romaneio_empresa_fkey"
+            columns: ["empresa_id", "romaneio_id"]
+            isOneToOne: false
+            referencedRelation: "romaneios"
+            referencedColumns: ["empresa_id", "id"]
           },
           {
             foreignKeyName: "toras_romaneio_id_fkey"
@@ -912,7 +1017,12 @@ export type Database = {
           toras: number
         }[]
       }
+      minha_funcao: { Args: never; Returns: string }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      pode_funcao: {
+        Args: { _acao: string; _empresa: string }
+        Returns: boolean
+      }
       registrar_operacao: {
         Args: {
           _alvos: Json
