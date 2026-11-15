@@ -937,6 +937,7 @@ export type Database = {
           _autex: string
           _arvore: number
           _plaquetas: number[]
+          _explanada: string
           _lat: number
           _lng: number
           _precisao: number
