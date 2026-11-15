@@ -20,6 +20,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _autex: op.autex,
       _arvore: op.arvore,
       _plaquetas: op.plaquetas,
+      _explanada: op.explanada_id,
       _lat: op.latitude,
       _lng: op.longitude,
       _precisao: op.precisao,
