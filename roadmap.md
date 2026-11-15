@@ -1,5 +1,5 @@
 # Tarefas
-- [ ] Aceitar a ficha enviada em Inserir planilha de coordenadas: detectar UTM, converter com fuso/hemisfério/datum confirmados, preservar ficha/abates e validar prévia autenticada sem gravar posições presumidas.
+- [x] Aceitar a ficha enviada em Inserir planilha de coordenadas: detectar UTM e converter com fuso/hemisfério/datum explícitos, preservando ficha/abates. Prévia autenticada reconheceu 128 árvores da MADENORTE, sem erros em desktop/384 px; 15 testes passaram. Nenhuma posição gravada: fuso e datum reais ainda precisam de confirmação do engenheiro.
 - [x] Árvores "sumiram": investigado — etiqueta (tora 201), Base (515 árvores RICARDO RMS), Serraria RJ (1.591 toras) e página pública da tora 585 (AUTEX + árvore 117 B + secção) todos corretos no preview; sintomas são da versão publicada desatualizada — pendente publicar.
 - [x] Rastreio de tora: AUTEX e árvore/secção abaixo da plaqueta, medidas florestais/comerciais separadas; tora real 585/117 B conferida sem login em desktop/celular, 16 testes passaram.
 - [x] Escolha claro/escuro no topo, lembrada no aparelho; troca/reabertura verificadas com acesso real, desktop/384 px sem corte ou erros.
