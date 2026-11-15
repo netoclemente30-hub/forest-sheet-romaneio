@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { cnpjValido, limparCnpj, type StatusEmpresa } from "@/lib/cnpj";
+import { funcaoValida, type FuncaoFuncionario } from "@/lib/funcoes";
 
 type Ctx = { supabase: SupabaseClient<Database>; userId: string };
 
@@ -19,6 +20,33 @@ async function exigirSuperAdmin(supabase: Ctx["supabase"], userId: string) {
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Apenas o administrador geral pode executar esta operação");
 }
+
+async function escopoAdministrativo(ctx: Ctx): Promise<{ superadmin: boolean; empresa: string | null }> {
+  await exigirAdmin(ctx.supabase, ctx.userId);
+  const { data: superadmin, error } = await ctx.supabase.rpc("has_role", {
+    _user_id: ctx.userId, _role: "superadmin",
+  });
+  if (error) throw new Error(error.message);
+  const empresa = superadmin ? null : await empresaDoAdmin(ctx.supabase);
+  if (!superadmin && !empresa) throw new Error("Seu cadastro de administrador não possui empresa");
+  return { superadmin: !!superadmin, empresa };
+}
+
+function tabelaFuncoes(supabaseAdmin: import("@supabase/supabase-js").SupabaseClient<Database>) {
+  // A tabela só existirá após a implantação pela Lovable.
+  // Não modificar o types.ts gerado. O cast é estritamente local à nova tabela.
+  return supabaseAdmin.from("funcoes_funcionarios" as "user_roles");
+}
+
+export const statusFuncoes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = context as unknown as Ctx;
+    await escopoAdministrativo(ctx);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await tabelaFuncoes(supabaseAdmin).select("user_id", { head: true, count: "exact" });
+    return { habilitadas: !error };
+  });
 
 /** Empresa que o admin logado pode gerenciar. NULL = administrador geral (gerencia todas). */
 async function empresaDoAdmin(supabase: Ctx["supabase"]): Promise<string | null> {
@@ -80,32 +108,38 @@ export const listarUsuarios = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
     if (error) throw error;
     const ids = data.users.map((u) => u.id);
-    const [{ data: roles }, { data: vinculos }, { data: empresas }] = await Promise.all([
+    const [{ data: roles }, { data: vinculos }, { data: empresas }, { data: funcoes, error: erroFuncoes }] = await Promise.all([
       supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
       supabaseAdmin.from("empresa_usuarios").select("user_id, empresa_id").in("user_id", ids),
       supabaseAdmin.from("empresas").select("id, nome"),
+      tabelaFuncoes(supabaseAdmin).select("user_id,empresa_id,funcao").in("user_id", ids),
     ]);
     const admins = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
     const supers = new Set((roles ?? []).filter((r) => r.role === "superadmin").map((r) => r.user_id));
     const empPorUser = new Map((vinculos ?? []).map((v) => [v.user_id, v.empresa_id]));
     const nomeEmpresa = new Map((empresas ?? []).map((e) => [e.id, e.nome]));
+    const atribuicoes = (erroFuncoes ? [] : (funcoes ?? [])) as unknown as {
+      user_id: string; empresa_id: string; funcao: string;
+    }[];
+    const porUsuario = new Map(atribuicoes.map((item) => [item.user_id, item]));
     return data.users
       .filter((u) => !minha || empPorUser.get(u.id) === minha)
       .map((u) => {
         const empId = empPorUser.get(u.id) ?? null;
-        return { id: u.id, email: u.email ?? "", admin: admins.has(u.id), super: supers.has(u.id), empresaId: empId, empresa: empId ? (nomeEmpresa.get(empId) ?? null) : null };
+        return { id: u.id, email: u.email ?? "", admin: admins.has(u.id), super: supers.has(u.id), empresaId: empId, empresa: empId ? (nomeEmpresa.get(empId) ?? null) : null, funcao: porUsuario.get(u.id)?.empresa_id === empId && funcaoValida(porUsuario.get(u.id)?.funcao) ? porUsuario.get(u.id)!.funcao as FuncaoFuncionario : null };
       });
   });
 
 export const criarUsuario = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { email: string; password: string; empresaId: string }) => input)
+  .inputValidator((input: { email: string; password: string; empresaId: string; funcao: FuncaoFuncionario }) => input)
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
     const minha = await empresaDoAdmin(ctx.supabase);
     const empresaId = minha ?? data.empresaId;
     if (!empresaId) throw new Error("Escolha a empresa do novo acesso");
+    if (!funcaoValida(data.funcao)) throw new Error("Escolha uma função válida para o funcionário");
     const email = data.email.trim().toLowerCase();
     if (!email || !data.password || data.password.length < 6) throw new Error("Informe um e-mail válido e uma senha de pelo menos 6 caracteres");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -116,7 +150,42 @@ export const criarUsuario = createServerFn({ method: "POST" })
       await supabaseAdmin.auth.admin.deleteUser(created.user.id);
       throw new Error(vincErr.message);
     }
+    const { error: funcErr } = await tabelaFuncoes(supabaseAdmin).insert({
+      user_id: created.user.id, empresa_id: empresaId, funcao: data.funcao,
+    } as never);
+    if (funcErr) {
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      throw new Error("As funções ainda não foram ativadas no banco: " + funcErr.message);
+    }
     return { id: created.user.id, email };
+  });
+
+/** Atribui um único cargo operacional ao funcionário, dentro da própria empresa. */
+export const definirFuncao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string; funcao: FuncaoFuncionario }) => input)
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as Ctx;
+    const escopo = await escopoAdministrativo(ctx);
+    if (!funcaoValida(data.funcao)) throw new Error("Função inválida");
+    if (data.userId === ctx.userId) throw new Error("Você não pode alterar sua própria função");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: vinculo, error: vincErr } = await supabaseAdmin
+      .from("empresa_usuarios").select("empresa_id").eq("user_id", data.userId).maybeSingle();
+    if (vincErr || !vinculo?.empresa_id) throw new Error("Funcionário sem empresa");
+    if (!escopo.superadmin && vinculo.empresa_id !== escopo.empresa) {
+      throw new Error("Você só pode gerenciar funcionários da própria empresa");
+    }
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles").select("role").eq("user_id", data.userId);
+    if ((roles ?? []).some((role) => role.role === "superadmin" || role.role === "admin")) {
+      throw new Error("Cargo administrativo não pode ser alterado como cargo de funcionário");
+    }
+    const { error } = await tabelaFuncoes(supabaseAdmin).upsert({
+      user_id: data.userId, empresa_id: vinculo.empresa_id, funcao: data.funcao,
+    } as never, { onConflict: "user_id" });
+    if (error) throw new Error("Funções ainda não habilitadas no banco: " + error.message);
+    return { ok: true };
   });
 
 export const definirEmpresa = createServerFn({ method: "POST" })
