@@ -53,6 +53,12 @@ function Index() {
 
   return (
     <div className="space-y-5">
+      <header className="space-y-1">
+        <h1 className="font-display text-2xl font-bold uppercase">Visão Geral · Gestor Florestal</h1>
+        <p className="text-sm text-muted-foreground">
+          Acompanhe o manejo e a serraria da sua empresa: toras medidas e etiquetadas com QR Code, estoque no pátio, cargas expedidas e movimento do dia — tudo rastreado da floresta ao romaneio.
+        </p>
+      </header>
       {vazio && (
         <Link to="/importar" className="block rounded-xl border-2 border-dashed border-primary p-5 text-center">
           <Upload className="mx-auto size-8 text-primary" />
