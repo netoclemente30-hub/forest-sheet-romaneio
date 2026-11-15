@@ -164,7 +164,7 @@ function Entrada() {
               </div>
             ))}
           </div>
-          <Link to="/serraria" className="text-sm underline">Voltar para a Serraria</Link>
+          <Link to="/serraria" search={{ aba: "patio" }} className="text-sm underline">Ver estoque do pátio na Serraria</Link>
         </>
       )}
     </div>
