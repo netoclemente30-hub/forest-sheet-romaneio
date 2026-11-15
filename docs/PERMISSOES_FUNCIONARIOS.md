@@ -26,11 +26,12 @@
 
 ## Segurança no banco — APLICADA
 
-A interface não é barreira: a mesma matriz está no banco (RLS, guardas nas RPCs SECURITY DEFINER e isolamento por empresa). Migrações aplicadas no banco da Lovable Cloud (compartilhado pela prévia e pelo app publicado):
+A interface não é barreira: a mesma matriz está no banco (RLS, guardas nas RPCs SECURITY DEFINER e isolamento por empresa). Migrações aplicadas (0036–0039) no banco da Lovable Cloud (compartilhado pela prévia e pelo app publicado):
 
 1. `drizzle/migrations/0036_cargos_estrutura_seguranca.sql` — tabela `funcoes_funcionarios`, `minha_funcao()`, `pode_funcao(empresa, ação)`, `explanadas`, campos de arrasto em `toras`, ID estável de operação em `romaneios`.
 2. `drizzle/migrations/0037_cargos_rls_rpcs_arrasto.sql` — políticas por cargo em 16 tabelas, Storage dos mapas, guardas em `registrar_operacao`, `salvar_romaneio_toras`, `excluir_romaneio_toras`, `importar_ficha_manejo`, `registrar_arrasto_toras` e RPCs de madeira serrada.
 3. `drizzle/migrations/0038_reverter_arrasto_completo.sql` — a reversão restaura os seis campos de arrasto/explanada a partir do snapshot; recusa snapshots incompletos e explanada inexistente.
+4. `drizzle/migrations/0039_marcar_registro_revertido.sql` — marca o registro original como revertido.
 
 Os arquivos em `docs/propostas/*.sql` são o histórico das propostas revisadas; não executar. `docs/propostas/legado/` guarda duas migrações nunca aplicadas, cujo conteúdo seguro foi incorporado em 0036/0037.
 
@@ -40,7 +41,7 @@ Limites reais:
 - Motorista cria carga mas não recebe; recebimento exige `serraria_operar` (gerente de pátio/admin).
 - Funções SECURITY DEFINER antigas (`has_role`, `minha_empresa` etc.) seguem executáveis por anônimos, mas retornam vazio sem sessão; `tora_publica` é pública por desenho.
 - `aparelhos` continua editável por qualquer usuário da mesma empresa.
-- A reversão não marca `revertido_em` no registro original; uma segunda reversão é recusada porque o estado atual não confere com o snapshot.
+- 0039: ao reverter, o registro original recebe `revertido_em`/`revertido_por`; segunda reversão é recusada ("Registro já revertido").
 - O app publicado antes destas migrações grava algumas tabelas diretamente e falhará nessas ações até publicar a versão nova.
 
 Testes feitos em transação com rollback (sem dados reais): 8 cargos + sem cargo + admin de outra empresa, duas empresas; reversão de arrasto com restauração, snapshot incompleto e explanada removida.

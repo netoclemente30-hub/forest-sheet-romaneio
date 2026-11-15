@@ -73,6 +73,7 @@
 - [x] Entrada no pátio na Serraria; QR confere toras e empresa; recebimento offline sem duplicar
 - [x] Cargos/RLS/RPCs/arrasto aplicados (migrações 0036, 0037) e testados com rollback
 - [x] Reversão de arrasto restaura todos os campos de arrasto/explanada (0038); snapshot incompleto ou explanada removida são recusados
-- [x] 294 testes em 54 arquivos, verificação de tipos sem erros
+- [x] Registro original marcado como revertido (0039); tela oculta "Reverter" quando falta cópia completa do arrasto
+- [x] 296 testes em 54 arquivos, verificação de tipos sem erros
 - [ ] Publicar — aguardando revisão do Neto
 - [ ] Atribuir cargos aos 5 usuários sem função — aguardando o Neto informar as funções
