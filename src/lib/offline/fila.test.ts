@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { criarFila, type FilaStore, type ItemFila, type Op } from "./fila";
+import { criarFila, pertenceAoUsuario, type FilaStore, type ItemFila, type Op } from "./fila";
 import { sincronizar } from "./sync";
 
 function memoria(): FilaStore & { itens: Map<string, ItemFila> } {
@@ -100,5 +100,24 @@ describe("sincronizar", () => {
     const restantes = await f.listar();
     expect(restantes).toHaveLength(2);
     expect(restantes[0]?.erro).toBeUndefined();
+  });
+});
+
+describe("isolamento da fila no mesmo dispositivo", () => {
+  it("oculta pendências de outra conta e preserva as próprias", () => {
+    const item = { id: "id", criadoEm: 0, op: opTora(10), usuario_id: "usuario-a" };
+    expect(pertenceAoUsuario(item, { id: "usuario-a", email: "a@teste.com" })).toBe(true);
+    expect(pertenceAoUsuario(item, { id: "usuario-b", email: "b@teste.com" })).toBe(false);
+  });
+  it("só recupera pendência legada quando o email coincide", () => {
+    const item = {
+      id: "id", criadoEm: 0,
+      op: { tipo: "tora_delete", plaqueta: 12, empresa_id: "emp", log: {
+        acao: "Tora excluída", detalhe: "12", user_email: "a@teste.com",
+        lat: null, lng: null, criado_em: new Date().toISOString(),
+      } },
+    } as ItemFila;
+    expect(pertenceAoUsuario(item, { id: "usuario-a", email: "a@teste.com" })).toBe(true);
+    expect(pertenceAoUsuario(item, { id: "usuario-b", email: "b@teste.com" })).toBe(false);
   });
 });
