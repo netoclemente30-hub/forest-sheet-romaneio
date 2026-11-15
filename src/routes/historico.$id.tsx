@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/useAuth";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -116,6 +117,8 @@ async function compartilharPdf(r: Romaneio, itens: Tora[]) {
 }
 
 function Detalhe() {
+  const { papel } = useAuth();
+  const podeExcluir = papel === "superadmin" || papel === "admin_empresa";
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -132,6 +135,7 @@ function Detalhe() {
   });
 
   async function excluir() {
+    if (!podeExcluir) return;
     if (!confirm("Excluir esta carga? As toras voltam para o pátio.")) return;
     await supabase.from("toras").update({ carregada: false, romaneio_id: null }).eq("romaneio_id", id);
     const { error } = await supabase.from("romaneios").delete().eq("id", id);
@@ -160,7 +164,7 @@ function Detalhe() {
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
         <Button variant="secondary" className="flex-1 h-12" onClick={() => compartilharPdf(r, itens)}><Share2 /> Enviar PDF</Button>
-        <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>
+        {podeExcluir && <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>}
       </div>
       <NfeWhatsapp titulo="ROMANEIO DE TORAS" nomeArquivo={`nfe-romaneio-${(r.placa || "sem-placa").replace(/\W/g, "")}-${r.data}`} dados={{ numero: `${r.placa || "SEM-PLACA"}-${r.data.replace(/-/g, "")}`, data: r.data, natureza: "REMESSA DE MADEIRA EM TORA", motorista: r.motorista ? { nome: r.motorista, cpf: r.cpf ?? "" } : null, placa: r.placa, reboque: r.julieta, itens: itensDeToras(itens) }} />
       <div className="bg-card border rounded-xl p-3 flex items-center gap-4">

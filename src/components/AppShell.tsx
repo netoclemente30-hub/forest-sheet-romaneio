@@ -209,9 +209,7 @@ export function AppShell() {
           </div>
         ) : (
           <div key={empresaSel}>
-            {somenteLeitura && !["/", "/registros", "/relatorios"].includes(pathname)
-              ? <fieldset disabled aria-label="Consulta sem edição"><Outlet /></fieldset>
-              : <Outlet />}
+            <Outlet />
           </div>
         )}
       </main>

@@ -28,7 +28,8 @@ function ManejoPage() {
   const { autex: numero } = Route.useParams();
   const arvores = useQuery(arvoresQuery);
   const autex = useQuery(autexQuery);
-  const { isAdmin } = useAuth();
+  const { isAdmin: adminEmpresa, isSuperAdmin } = useAuth();
+  const isAdmin = adminEmpresa || isSuperAdmin;
   const qc = useQueryClient();
   const [aba] = useState<"ficha">("ficha");
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,7 @@ function ManejoPage() {
   const encerrado = manejo?.encerrado ?? false;
 
   async function alternarEncerrado() {
+    if (!isAdmin) return;
     if (!manejo || busy) return;
     if (!navigator.onLine) { toast.error("Precisa de internet para encerrar ou reabrir o manejo"); return; }
     const acao = encerrado ? "reabrir" : "encerrar";

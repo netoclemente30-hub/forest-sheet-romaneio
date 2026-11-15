@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, fix/auditoria-multitenant-estoque-mapa-pdf]
   workflow_dispatch:
 
 permissions:

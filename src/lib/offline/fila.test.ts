@@ -121,3 +121,14 @@ describe("isolamento da fila no mesmo dispositivo", () => {
     expect(pertenceAoUsuario(item, { id: "usuario-b", email: "b@teste.com" })).toBe(false);
   });
 });
+
+
+it("preserva a fila após timeout mesmo quando o navegador indica conexão", async () => {
+  const f = criarFila(memoria());
+  await f.enfileirar(opTora(1));
+  await f.enfileirar(opTora(2));
+  const r = await sincronizar(f, async () => { throw new Error("Request timeout"); });
+  expect(r).toEqual({ enviados: 0, erros: 0 });
+  expect((await f.listar()).every(i => !i.erro)).toBe(true);
+  expect(await f.listar()).toHaveLength(2);
+});

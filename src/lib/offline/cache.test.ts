@@ -1,3 +1,4 @@
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getSession: vi.fn() } } }));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { comCache } from "./cache";
 import { idb } from "./db";

@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -33,6 +35,8 @@ export const Route = createFileRoute("/entrada")({
 });
 
 function Entrada() {
+  const { papel } = useAuth();
+  const podeReceber = pode(papel, "serraria_operar");
   const qc = useQueryClient();
   const [id, setId] = useState<string | null>(null);
   const [txt, setTxt] = useState("");
@@ -62,6 +66,7 @@ function Entrada() {
   }
 
   async function confirmar() {
+    if (!podeReceber) return;
     if (!id || !q.data?.r?.empresa_id) return;
     const empresa = q.data.r.empresa_id;
     const p = patio.trim();
@@ -106,7 +111,7 @@ function Entrada() {
           </div>
           {r.recebido_em ? (
             <div className="flex items-center gap-2 rounded-lg border p-3 text-success font-semibold"><CheckCircle2 /> Carga recebida em {new Date(r.recebido_em).toLocaleString("pt-BR")}{r.patio && ` · ${r.patio}`}</div>
-          ) : (
+          ) : podeReceber ? (
             <>
             <label className="text-sm font-semibold block space-y-1">Pátio de destino
               <input list="lista-patios" aria-label="Pátio de destino" placeholder="Ex.: Pátio RJ Madeiras" value={patio} onChange={(e) => setPatio(e.target.value)} className="w-full h-12 rounded-md border bg-background px-3 font-normal" />
@@ -115,7 +120,7 @@ function Entrada() {
             {!!patios.data?.length && <div className="flex flex-wrap gap-2">{patios.data.map((x) => <Button key={x.nome} type="button" size="sm" variant={patio === x.nome ? "default" : "outline"} onClick={() => setPatio(x.nome)}>{x.nome}</Button>)}</div>}
             <Button size="lg" className="w-full h-12" disabled={busy} onClick={confirmar}>Confirmar entrada das {itens.length} toras</Button>
             </>
-          )}
+          ) : <p className="text-sm text-muted-foreground">Carga aguardando recebimento.</p>}
           <div className="bg-card border rounded-xl p-3">
             {resumoPorEspecie(itens).map((e) => (
               <div key={e.especie} className="flex justify-between text-sm py-0.5"><span>{e.especie} ({e.qtd})</span><span className="font-medium">{fmtM3(e.volume)}</span></div>

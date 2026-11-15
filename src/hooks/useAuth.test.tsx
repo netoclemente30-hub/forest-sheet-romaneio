@@ -81,3 +81,44 @@ describe("empresa do usuário no aparelho", () => {
     expect(localStorage.getItem("encaixe-empresa:usuario-rj")).toBeNull();
   });
 });
+
+
+describe("revogação de permissões", () => {
+  it("não mantém cargo anterior quando a revalidação falha", async () => {
+    mocks.rpc.mockImplementation((nome: string) => Promise.resolve({
+      data: nome === "minha_empresa" ? "empresa-rj" : nome === "minha_funcao" ? "cortador" : false, error: null,
+    }));
+    const { result } = renderHook(useAuth);
+    await waitFor(() => expect(result.current.papel).toBe("cortador"));
+    mocks.rpc.mockRejectedValue(new Error("Falha de rede"));
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(result.current.permissoesCarregando).toBe(false));
+    expect(result.current.papel).toBe("sem_funcao");
+  });
+  it("não aceita resposta de cargo administrativo acompanhada de erro", async () => {
+    mocks.rpc.mockImplementation((nome: string) => Promise.resolve({
+      data: nome === "has_role" ? true : null, error: { message: "Consulta inválida" },
+    }));
+    const { result } = renderHook(useAuth);
+    await waitFor(() => expect(result.current.permissoesCarregando).toBe(false));
+    expect(result.current.papel).toBe("sem_funcao");
+  });
+});
+
+
+it("reabre offline com cargo confirmado da própria conta sem consultar rede", async () => {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  localStorage.setItem("permissoes-offline:usuario-rj", JSON.stringify({ usuario: "usuario-rj", admin: false, superadmin: false, funcao: "cortador" }));
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.papel).toBe("cortador"));
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  vi.restoreAllMocks();
+});
+it("não usa cargo offline de outra conta", async () => {
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  localStorage.setItem("permissoes-offline:usuario-rj", JSON.stringify({ usuario: "outro", admin: true }));
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.permissoesCarregando).toBe(false));
+  expect(result.current.papel).toBe("sem_funcao");
+  vi.restoreAllMocks();
+});
