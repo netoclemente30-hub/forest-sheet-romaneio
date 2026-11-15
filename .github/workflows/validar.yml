@@ -28,9 +28,14 @@ jobs:
           from pathlib import Path
           from pglast import parse_sql
           arquivos = sorted(Path("drizzle/migrations").glob("003[67]_*.sql"))
-          arquivos.append(Path("docs/propostas/arrasto-de-toras.sql"))
-          if len(arquivos) != 3:
-              raise SystemExit(f"Esperadas 3 migrações novas, encontradas {len(arquivos)}")
+          arquivos.extend(Path("docs/propostas") / nome for nome in [
+              "arrasto-de-toras.sql",
+              "funcoes-funcionarios.sql",
+              "controle-acesso-rls.sql",
+              "controle-acesso-rpcs.sql",
+          ])
+          if len(arquivos) != 6:
+              raise SystemExit(f"Esperados 6 arquivos SQL, encontrados {len(arquivos)}")
           for arquivo in arquivos:
               parse_sql(arquivo.read_text(encoding="utf-8"))
               print(f"SQL sintaticamente válido (não aplicado): {arquivo}")
