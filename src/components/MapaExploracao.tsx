@@ -258,7 +258,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
         <div className="rounded-lg border bg-card p-2"><div className="text-xs text-muted-foreground">Percurso atual</div><div className="font-display text-xl font-bold">{Math.round(distanciaAtiva)} m</div></div>
       </div>
 
-      <GeoPdfMapa autex={autex} arvores={arvores} atual={atual} rastros={todosPontos} encerrado={encerrado} onArvore={abrirArvore} />
+      <GeoPdfMapa podeVincular={podeAbater} autex={autex} arvores={arvores} atual={atual} rastros={todosPontos} encerrado={encerrado} onArvore={abrirArvore} />
 
       {!encerrado && <section className="space-y-2" aria-label="Árvores próximas ao GPS">
         <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">Árvores próximas</h2><select aria-label="Distância das árvores próximas" value={raio} onChange={(e) => setRaio(Number(e.target.value))} className="h-9 rounded-md border bg-background px-2 text-sm">{[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n} m</option>)}</select></div>
