@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
 import { fmtM3 } from "@/lib/volume";
@@ -104,28 +105,16 @@ function RomaneioPage() {
       return;
     }
     setBusy(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { data, error } = await supabase
-      .from("romaneios")
-      .insert({ ...cab, total_volume: Math.round(total * 10000) / 10000, qtd_toras: itens.length, created_by: u.user?.id ?? null, ...empresaIdGravacao() })
-      .select()
-      .single();
-    if (error || !data) { setBusy(false); { toast.error(error?.message ?? "Erro"); return; } }
-    const { error: e2 } = await supabase
-      .from("toras")
-      .update({ carregada: true, romaneio_id: data.id })
-      .in("plaqueta", itens.map((t) => t.plaqueta));
-    setBusy(false);
-    if (e2) { toast.error(e2.message); return; }
-    const up = (p: string, tipo: string) => p.trim() && supabase.from("veiculos").upsert({ placa: p.trim().toUpperCase(), tipo, ...empresaIdGravacao() }, { onConflict: "empresa_id,placa,tipo", ignoreDuplicates: true });
-    await Promise.all([
-      up(cab.placa, "caminhao"), up(cab.julieta, "reboque"),
-      cab.motorista.trim() && supabase.from("motoristas").upsert({ nome: cab.motorista.trim(), cpf: cab.cpf.trim() || null, ...empresaIdGravacao() }, { onConflict: "empresa_id,nome" }),
-    ]);
-    await gravarRegistro(log);
-    await qc.invalidateQueries();
-    toast.success("Romaneio salvo");
-    nav({ to: "/historico/$id", params: { id: data.id } });
+    try {
+      const id = await salvarRomaneioNoBanco(cab, itens.map((t) => t.plaqueta), log);
+      await qc.invalidateQueries();
+      toast.success("Romaneio salvo");
+      nav({ to: "/historico/$id", params: { id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o romaneio");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const f = (k: keyof typeof cab, label: string, type = "text", list?: string) => (
