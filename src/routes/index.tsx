@@ -9,6 +9,7 @@ import { getEmpresaAtiva } from "@/lib/empresa";
 import { cargasSerradasQuery } from "@/lib/madeira-serrada";
 import { hojeLocal, movimentoDoDia } from "@/lib/nfe-txt";
 import { hojeExploracao, resumoExploracaoDiaria } from "@/lib/exploracao-diaria";
+import { arrastosArvoresQuery } from "@/lib/arrasto-arvore";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
@@ -45,14 +46,15 @@ function Index() {
   const { empresaId, isSuperAdmin } = useAuth();
   const [dataExploracao, setDataExploracao] = useState(hojeExploracao);
   const empresaPainel = getEmpresaAtiva() ?? (isSuperAdmin ? null : empresaId);
+  const arrastosArvores = useQuery({ ...arrastosArvoresQuery(empresaPainel ?? ""), enabled: !!empresaPainel || isSuperAdmin });
   const exploracao = useMemo(
     () => resumoExploracaoDiaria(
-      dataExploracao, arvores.data ?? [], toras.data ?? [], roms.data ?? [], empresaPainel,
+      dataExploracao, arvores.data ?? [], toras.data ?? [], roms.data ?? [], empresaPainel, arrastosArvores.data ?? [],
     ),
-    [dataExploracao, arvores.data, toras.data, roms.data, empresaPainel],
+    [dataExploracao, arvores.data, toras.data, roms.data, empresaPainel, arrastosArvores.data],
   );
-  const carregandoExploracao = arvores.isLoading || toras.isLoading || roms.isLoading;
-  const erroExploracao = arvores.isError || toras.isError || roms.isError;
+  const carregandoExploracao = arvores.isLoading || toras.isLoading || roms.isLoading || arrastosArvores.isLoading;
+  const erroExploracao = arvores.isError || toras.isError || roms.isError || arrastosArvores.isError;
   const arrastoHabilitado = (toras.data ?? []).some((t) => Object.prototype.hasOwnProperty.call(t, "arrastada_em"));
   const cargasSer = useQuery(cargasSerradasQuery(getEmpresaAtiva() ?? empresaId));
   const dia = movimentoDoDia(hojeLocal(), roms.data ?? [], toras.data ?? [], cargasSer.data ?? []);
@@ -95,10 +97,11 @@ function Index() {
             Não foi possível atualizar todos os registros. Confira a conexão e a sincronização do aparelho.
           </p>
         )}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {[
             { icon: TreePine, label: "Árvores abatidas", valor: exploracao.abatidas, detalhe: "Abatidas no mapa", to: "/cortador" as const, indisponivel: false },
             { icon: Scissors, label: "Toras traçadas", valor: exploracao.tracadas, detalhe: exploracao.arvoresTracadas + " árvores de origem", to: "/toras" as const, indisponivel: false },
+            { icon: Tractor, label: "Árvores arrastadas", valor: exploracao.arvoresArrastadas, detalhe: exploracao.arrastosAguardandoAbate + " aguardando conciliação do abate", to: "/cortador" as const, indisponivel: false },
             { icon: Tractor, label: "Toras arrastadas", valor: exploracao.arrastadas, detalhe: arrastoHabilitado ? fmtM3(exploracao.volumeArrastado) + " m³ arrastados" : "Aguardando ativação no banco", to: "/cortador" as const, indisponivel: !arrastoHabilitado },
             { icon: Truck, label: "Carregadas para serraria", valor: exploracao.carregadas, detalhe: exploracao.cargas + " romaneios do dia", to: "/historico" as const, indisponivel: false },
           ].map(({ icon: Icon, label, valor, detalhe, to, indisponivel }) => (
@@ -121,7 +124,7 @@ function Index() {
         </div>
         <p className="text-xs text-muted-foreground">
           Abatidas: data do abate no GPS. Traçadas: data do lançamento da tora de manejo.
-          Arrastadas: data do arrasto concluído pelo tratorista. Carregadas: toras de manejo vinculadas a romaneios da data selecionada.
+          Árvores arrastadas: registro do tratorista, mesmo antes do traçamento. Toras arrastadas: plaquetas vinculadas ao arrasto. Carregadas: toras de manejo vinculadas a romaneios da data selecionada.
           Os totais consideram os registros sincronizados e o horário de Rondônia.
         </p>
       </section>
