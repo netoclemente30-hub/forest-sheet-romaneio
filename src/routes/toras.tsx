@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { capturarLog } from "@/lib/registro";
 import { useMemo, useState } from "react";
 import { RelatorioToras } from "@/components/RelatorioToras";
+import { SinaflorCsvExportacao } from "@/components/SinaflorCsvExportacao";
 import { torasDeManejo } from "@/lib/tora-origem";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
@@ -114,7 +115,8 @@ export function TorasList({ nova }: { nova?: boolean }) {
         ))}
       </div>
       <SeletorMedida valor={modo} onChange={setModo} />
-      <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" medida={modo} />
+      <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" medida={modo} ocultarSinaflor />
+      <SinaflorCsvExportacao arvores={arvores.data ?? []} toras={toras.data ?? []} />
       <div className="rounded-lg bg-secondary p-3 space-y-1 text-sm">
         <div className="flex justify-between gap-2"><span>{lista.length} toras · {modo === "comercial" ? "comercial" : "físico"}</span><b>{fmtM3(modo === "comercial" ? totais.comercial : totais.fisico)} m³</b></div>
         <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</span></div>
