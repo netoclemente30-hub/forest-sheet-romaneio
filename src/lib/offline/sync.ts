@@ -14,6 +14,21 @@ export function estaOnline(): boolean {
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
 export async function executarOp(op: Op, operacao?: string): Promise<void> {
+  if (op.tipo === "arrasto_arvore") {
+    const { error } = await supabase.rpc("registrar_arrasto_arvore", {
+      _empresa: op.empresa_id,
+      _autex: op.autex,
+      _arvore: op.arvore,
+      _explanada: op.explanada_id,
+      _lat: op.latitude,
+      _lng: op.longitude,
+      _precisao: op.precisao,
+      _capturado_em: op.capturado_em,
+      _operacao: op.log.operacao_id ?? operacao ?? "",
+    });
+    if (error) throw new Error(error.message);
+    return; // Auditoria inserida atomicamente no Postgres.
+  }
   if (op.tipo === "arrasto_toras") {
     const { error } = await supabase.rpc("registrar_arrasto_toras", {
       _empresa: op.empresa_id,
