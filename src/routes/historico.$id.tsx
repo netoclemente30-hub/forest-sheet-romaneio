@@ -3,6 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { capturarLog } from "@/lib/registro";
 import type { Romaneio, Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { TextoMedidaComercial } from "@/components/MedidaComercial";
@@ -137,8 +139,8 @@ function Detalhe() {
   async function excluir() {
     if (!podeExcluir) return;
     if (!confirm("Excluir esta carga? As toras voltam para o pátio.")) return;
-    await supabase.from("toras").update({ carregada: false, romaneio_id: null }).eq("romaneio_id", id);
-    const { error } = await supabase.from("romaneios").delete().eq("id", id);
+    const log = await capturarLog("Romaneio excluído", `Romaneio ${id}`);
+    const { error } = await supabase.rpc("excluir_romaneio_toras", { _empresa: q.data?.r.empresa_id ?? "", _id: id, _log: log as unknown as Json });
     if (error) { toast.error(error.message); return; }
     await qc.invalidateQueries();
     toast.success("Carga excluída");

@@ -21,7 +21,7 @@ import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, X, AlertTriangle, Warehouse } from "lucide-react";
+import { Camera, X, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/romaneio")({
   staticData: { sitemap: false },
