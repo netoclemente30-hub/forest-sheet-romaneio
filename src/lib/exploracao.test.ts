@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aceitarPontoRastro, atualizarDataAbatimento, comprimentoRastro, coordenadaValida, distanciaMetros, mesclarRastros, projetarMapa } from "./exploracao";
+import { aceitarPontoRastro, atualizarDataAbatimento, comprimentoRastro, coordenadaValida, distanciaMetros, mesclarRastros, projetarMapa, validarAbateProximo } from "./exploracao";
 
 describe("mapa exploratório", () => {
   it("valida coordenadas WGS84", () => {
@@ -39,5 +39,25 @@ describe("mapa exploratório", () => {
   it("mantém os pontos dentro do mapa mesmo sem variação de coordenadas", () => {
     const projetados = projetarMapa([{ id: "a", lat: -9, lng: -63 }]);
     expect(projetados).toEqual([{ ponto: { id: "a", lat: -9, lng: -63 }, x: 320, y: 210 }]);
+  });
+});
+
+describe("registro de abate pelo cortador próximo da árvore", () => {
+  const arvore = { latitude: -9, longitude: -63 };
+  const agora = new Date("2026-11-15T15:00:00Z").getTime();
+  const gps = { lat: -9.0001, lng: -63, precisao: 12, capturado_em: "2026-11-15T14:59:30Z" };
+
+  it("aceita posição recente e próxima", () => {
+    expect(validarAbateProximo(arvore, gps, agora)).toBeNull();
+    expect(validarAbateProximo({ latitude: null, longitude: null }, gps, agora)).toBeNull();
+  });
+  it("não aceita abate com coordenadas da árvore sem captura de GPS", () => {
+    expect(validarAbateProximo(arvore, { lat: -9, lng: -63 }, agora)).toContain("Capture");
+    expect(validarAbateProximo(arvore, null, agora)).toContain("Capture");
+  });
+  it("impede GPS antigo, impreciso ou distante", () => {
+    expect(validarAbateProximo(arvore, { ...gps, capturado_em: "2026-11-15T14:50:00Z" }, agora)).toContain("antigo");
+    expect(validarAbateProximo(arvore, { ...gps, precisao: 150 }, agora)).toContain("precisão");
+    expect(validarAbateProximo(arvore, { ...gps, lat: -9.01 }, agora)).toContain("mais de 100 m");
   });
 });
