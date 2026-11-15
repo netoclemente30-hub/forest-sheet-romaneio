@@ -3,7 +3,7 @@
 // descartados) para o usuário resolver.
 
 import { supabase } from "@/integrations/supabase/client";
-import { gravarRegistro } from "@/lib/registro";
+import { gravarRegistro, type LogCapturado } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
 import { registrarOperacao } from "@/lib/registro-operacao";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
@@ -37,12 +37,15 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
     return;
   }
   const suportada = ["tora_insert", "tora_update", "tora_delete", "toras_serradas", "romaneio_recebido"].includes(op.tipo);
-  if (suportada && op.log) {
+  if (suportada) {
+    // Old queued items without audit still go through the authorized RPC
+    // (direct table writes are blocked by role policies).
+    const log: LogCapturado = op.log ?? { acao: "Alteração sincronizada", detalhe: "Lançamento offline antigo", user_email: null, lat: null, lng: null, criado_em: new Date().toISOString() };
     let empresa = op.tipo === "tora_insert" ? String(op.dados["empresa_id"] ?? "") : "empresa_id" in op ? op.empresa_id ?? "" : "";
     if (!empresa) { const { data, error } = await supabase.rpc("minha_empresa"); if (error) throw error; empresa = data ?? ""; }
     const dados = op.tipo === "tora_insert" || op.tipo === "tora_update" ? op.dados : op.tipo === "toras_serradas" ? { desfazer: op.desfazer } : op.tipo === "romaneio_recebido" ? { patio: op.patio } : {};
     const alvos = op.tipo === "tora_update" || op.tipo === "tora_delete" ? [op.plaqueta] : op.tipo === "toras_serradas" ? op.plaquetas : op.tipo === "romaneio_recebido" ? [op.id] : [];
-    await registrarOperacao(op.tipo, empresa, dados, alvos, op.log, operacao);
+    await registrarOperacao(op.tipo, empresa, dados, alvos, log, operacao);
     return;
   }
   await executarOpSemLog(op, operacao);
