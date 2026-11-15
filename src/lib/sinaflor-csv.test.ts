@@ -101,7 +101,7 @@ describe("filtros, consistência e duplicidade", () => {
   it("impede secção com fórmula ou caractere de controle no CSV", () => {
     const grupo = selecionarTracadas([tora(123, "=1+1")], f);
     expect(grupo.incompletas).toHaveLength(1);
-    expect(() => exportarTracadasCsv([tora(123, "=1+1")], f)).toThrow("incompletas");
+    expect(() => exportarTracadasCsv([tora(123, "=1+1")], f)).toThrow("medidas completas");
   });
 
   it("recusa data inicial posterior à data final e AUTEX ausente", () => {
