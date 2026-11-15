@@ -39,5 +39,7 @@ jobs:
       - name: Análise estática (sem bloqueio por estilo legado)
         run: |
           bunx eslint . --rule "prettier/prettier: off"
+      - name: Conferir tipos TypeScript
+        run: bunx tsc --noEmit --pretty false
       - name: Compilar aplicação
         run: bun run build
