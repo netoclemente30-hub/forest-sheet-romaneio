@@ -10,12 +10,14 @@ import { salvarArquivo } from "@/lib/arquivo";
 import { modeloFichaCampo } from "@/lib/modelo-ficha-campo";
 import { ImportarCoordenadas } from "@/components/ImportarCoordenadas";
 import { SinaflorCsvExportacao } from "@/components/SinaflorCsvExportacao";
+import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 
 export const Route = createFileRoute("/cortador")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Cortador / Mapa — Manejo Florestal" },
+      { title: "Mapa — Manejo Florestal" },
       { name: "description", content: "Mapa georreferenciado para o cortador abater árvores ou declarar o motivo de não abater." },
       { property: "og:title", content: "Cortador / Mapa — Manejo Florestal" },
       { property: "og:description", content: "Veja sua posição no mapa da exploração e registre árvores abatidas." },
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/cortador")({
 });
 
 function CortadorPage() {
+  const { papel } = useAuth();
   const autex = useQuery(autexQuery);
   const arvores = useQuery(arvoresQuery);
   const ativos = useMemo(() => (autex.data ?? []).filter((a) => !a.encerrado), [autex.data]);
@@ -38,25 +41,25 @@ function CortadorPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-3xl font-bold">Cortador / Mapa</h1>
-        <p className="text-sm text-muted-foreground">Importe o mapa georreferenciado (GeoPDF), veja sua posição em azul e toque no número da árvore para abater ou declarar por que não foi abatida.</p>
+        <h1 className="text-3xl font-bold">Mapa</h1>
+        <p className="text-sm text-muted-foreground">Veja árvores, coordenadas e posição GPS. Cada funcionário utiliza as ações autorizadas para seu cargo.</p>
       </header>
       <select aria-label="Manejo (AUTEX)" value={numero} onChange={(e) => setNumero(e.target.value)} className="h-11 w-full rounded-md border bg-background px-3">
         {!ativos.length && <option value="">Nenhum manejo ativo — cadastre na Base</option>}
         {ativos.map((a) => <option key={a.numero} value={a.numero}>AUTEX {a.numero}{a.descricao ? ` · ${a.descricao}` : ""}</option>)}
       </select>
       {numero && <MapaExploracao key={numero} autex={numero} arvores={lista} encerrado={false} />}
-      {numero && <SinaflorCsvExportacao arvores={lista} toras={[]} autexFixa={numero} apenasAbatidas />}
+      {numero && (papel === "admin_empresa" || papel === "superadmin" || papel === "gerente_escritorio") && <SinaflorCsvExportacao arvores={lista} toras={[]} autexFixa={numero} apenasAbatidas />}
       {naoAbatidas.length > 0 && <section className="rounded-xl border bg-card">
         <h2 className="border-b p-3 font-semibold">Não abatidas ({naoAbatidas.length})</h2>
         <div className="divide-y">{naoAbatidas.map((a) => <div key={a.id} className="flex justify-between gap-2 p-3 text-sm"><span>Árvore {a.numero} · {a.nome_vulgar}</span><span className="font-semibold text-destructive">{textoMotivo(a.nao_abatida_motivo)}</span></div>)}</div>
       </section>}
-      <section className="flex flex-wrap items-center gap-2 border-t pt-4 pb-4">
+      {pode(papel, "base_importar") && <section className="flex flex-wrap items-center gap-2 border-t pt-4 pb-4">
         <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal text-left" onClick={() => salvarArquivo(modeloFichaCampo())}>
           <Download className="shrink-0" /> Baixar modelo de planilha — ficha de campo com coordenadas
         </Button>
         <ImportarCoordenadas autex={numero} arvores={lista} />
-      </section>
+      </section>}
     </div>
   );
 }
