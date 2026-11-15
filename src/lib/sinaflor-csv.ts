@@ -26,7 +26,11 @@ function dataLocal(iso: string | null | undefined): string {
 
 function validarFiltro(f: FiltroSinaflor) {
   if (!f.empresaId || !f.autex) throw new Error("Escolha uma empresa e uma AUTEX antes de gerar o CSV.");
-  const valido = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(v + "T00:00:00Z").toISOString().slice(0, 10) === v;
+  const valido = (v: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(v + "T00:00:00Z");
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  };
   if (!valido(f.inicio) || !valido(f.fim)) throw new Error("Informe a data inicial e a data final.");
   if (f.inicio > f.fim) throw new Error("A data inicial não pode ser posterior à data final.");
 }
