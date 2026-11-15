@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CheckCircle2, Clock3, LoaderCircle, Tractor } from "lucide-react";
 import type { Arvore, Tora } from "@/lib/data";
@@ -9,6 +9,7 @@ import { registrarArrasto } from "@/lib/arrasto-salvar";
 import { assinarFila, fila } from "@/lib/offline/fila";
 import { Button } from "./ui/button";
 import { fmtM3 } from "@/lib/volume";
+import { listarExplanadas } from "@/lib/explanadas";
 
 export function ArrastoToras({
   arvore, empresa, toras, encerrado,
@@ -20,6 +21,12 @@ export function ArrastoToras({
 }) {
   const qc = useQueryClient();
   const [ocupado, setOcupado] = useState(false);
+  const [explanadaId, setExplanadaId] = useState("");
+  const explanadas = useQuery({
+    queryKey: ["explanadas", empresa, arvore.autex],
+    queryFn: () => listarExplanadas(empresa, arvore.autex),
+    enabled: !!empresa && !!arvore.autex,
+  });
   const [selecionadas, setSelecionadas] = useState<number[]>([]);
   const [pendentesFila, setPendentesFila] = useState<number[]>([]);
 
@@ -66,6 +73,7 @@ export function ArrastoToras({
 
   async function registrar() {
     if (ocupado || !arvore.abatida_em || !bancoHabilitado || encerrado || !selecionadas.length) return;
+    if (!explanadaId) { toast.error("Escolha a explanada de destino antes de registrar"); return; }
     if (!navigator.geolocation) {
       toast.error("Este aparelho não oferece GPS. Não é possível registrar o arrasto.");
       return;
@@ -91,7 +99,7 @@ export function ArrastoToras({
       if (!window.confirm(confirmacao)) return;
 
       const resultado = await registrarArrasto({
-        arvore, empresa, plaquetas: selecionadas, gps,
+        arvore, empresa, plaquetas: selecionadas, explanadaId, gps,
       });
       if (!resultado.offline) {
         await qc.invalidateQueries({ queryKey: torasQuery.queryKey });
@@ -154,6 +162,20 @@ export function ArrastoToras({
       )}
       {disponiveis.length > 0 && (
         <>
+          <label className="block text-xs font-semibold">Explanada onde deixou as toras
+            <select aria-label="Explanada de destino do arrasto"
+              value={explanadaId} onChange={(e) => setExplanadaId(e.target.value)}
+              className="mt-1 h-11 w-full rounded-md border bg-background px-3 text-sm">
+              <option value="">Selecione a explanada</option>
+              {(explanadas.data ?? []).map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+            </select>
+          </label>
+          {explanadas.isError && <p className="text-xs text-muted-foreground">
+            Cadastro de explanadas ainda não habilitado no banco.
+          </p>}
+          {explanadas.isSuccess && !explanadas.data.length && <p className="text-xs text-muted-foreground">
+            Nenhuma explanada nesta AUTEX. Solicite ao romaneador o cadastro do ponto de entrega.
+          </p>}
           <div className="space-y-1">
             <p className="text-xs font-semibold">Selecione as toras arrastadas</p>
             {disponiveis.map((t) => (
@@ -180,7 +202,7 @@ export function ArrastoToras({
               Limpar
             </Button>
           </div>
-          <Button type="button" className="w-full" disabled={ocupado || encerrado || !bancoHabilitado || !selecionadas.length}
+          <Button type="button" className="w-full" disabled={ocupado || encerrado || !bancoHabilitado || !explanadaId || !selecionadas.length}
             onClick={() => void registrar()}>
             {ocupado ? <LoaderCircle className="size-4 animate-spin" /> : <Tractor className="size-4" />}
             Registrar arrasto concluído ({selecionadas.length})
