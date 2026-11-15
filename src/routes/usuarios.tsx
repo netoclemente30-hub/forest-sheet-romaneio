@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa } from "@/lib/usuarios.functions";
+import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa, definirFuncao, statusFuncoes } from "@/lib/usuarios.functions";
+import { FUNCOES, funcaoValida, nomePapel, type FuncaoFuncionario } from "@/lib/funcoes";
 import { formatarCnpj, LIMITE_DEMONSTRACAO, type StatusEmpresa } from "@/lib/cnpj";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ function UsuariosPage() {
   const qc = useQueryClient();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [funcaoNova, setFuncaoNova] = useState<FuncaoFuncionario>("cortador");
   const [empresaId, setEmpresaId] = useState("");
   const [novaEmpresa, setNovaEmpresa] = useState("");
   const [novaSenha, setNovaSenha] = useState<Record<string, string>>({});
@@ -42,6 +44,13 @@ function UsuariosPage() {
     queryFn: () => listarUsuarios(),
     enabled: isAdmin || isSuperAdmin,
   });
+  const situacaoFuncoes = useQuery({
+    queryKey: ["situacao-funcoes"],
+    queryFn: () => statusFuncoes(),
+    enabled: isAdmin || isSuperAdmin,
+  });
+  const habilitadas = situacaoFuncoes.data?.habilitadas === true;
+
   const empresas = useQuery({
     queryKey: ["empresas"],
     queryFn: () => listarEmpresas(),
@@ -63,8 +72,8 @@ function UsuariosPage() {
     if (!emp) { toast.error("Escolha a empresa do novo acesso"); return; }
     setBusy(true);
     try {
-      await criarUsuario({ data: { email, password: senha, empresaId: emp } });
-      toast.success(`Acesso criado para ${email}. Envie a senha pelo WhatsApp.`);
+      await criarUsuario({ data: { email, password: senha, empresaId: emp, funcao: funcaoNova } });
+      toast.success(`Funcionário ${email} cadastrado como ${nomePapel(funcaoNova)}.`);
       setEmail("");
       setSenha("");
       await qc.invalidateQueries({ queryKey: ["usuarios"] });
@@ -111,6 +120,17 @@ function UsuariosPage() {
     }
   }
 
+  async function trocarFuncao(userId: string, funcao: string) {
+    if (!funcaoValida(funcao)) return;
+    try {
+      await definirFuncao({ data: { userId, funcao } });
+      await qc.invalidateQueries({ queryKey: ["usuarios"] });
+      toast.success("Função atualizada: " + nomePapel(funcao));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível alterar a função");
+    }
+  }
+
   async function trocarEmpresa(userId: string, novaEmpresaId: string) {
     try {
       await definirEmpresa({ data: { userId, empresaId: novaEmpresaId } });
@@ -148,7 +168,7 @@ function UsuariosPage() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Usuários</h1>
       <p className="text-sm text-muted-foreground">
-        Cada empresa tem um acesso próprio, compartilhado pelos funcionários. Os dados de cada empresa ficam separados.
+        Cadastre um acesso individual por funcionário e defina o cargo. Cada funcionário terá acesso somente às áreas de trabalho permitidas na sua empresa.
       </p>
 
       {souSuperAdmin && pendentes.length > 0 && (
@@ -203,6 +223,13 @@ function UsuariosPage() {
         </form>
       )}
 
+      {!habilitadas && (
+        <p role="alert" className="rounded-xl border p-3 text-sm">
+          Cadastro de funções em preparação. A estrutura de permissões precisa ser habilitada no banco pela Lovable
+          antes que funcionários possam ser cadastrados ou receber cargos. Nenhum funcionário existente foi alterado.
+        </p>
+      )}
+
       <form onSubmit={criar} className="bg-card border rounded-xl p-3 space-y-2">
         <div className="space-y-1">
           <Label className="text-xs">Empresa</Label>
@@ -218,14 +245,24 @@ function UsuariosPage() {
           </select>
         </div>
         <div className="space-y-1">
+          <Label className="text-xs">Função do funcionário</Label>
+          <select value={funcaoNova} onChange={(ev) => {
+            if (funcaoValida(ev.target.value)) setFuncaoNova(ev.target.value);
+          }} className="w-full h-11 rounded-md border bg-background px-3 text-sm"
+            aria-label="Função do novo funcionário">
+            {FUNCOES.map((f) => <option key={f.valor} value={f.valor}>{f.nome}</option>)}
+          </select>
+          <p className="text-xs text-muted-foreground">{FUNCOES.find((f) => f.valor === funcaoNova)?.descricao}</p>
+        </div>
+        <div className="space-y-1">
           <Label className="text-xs">E-mail</Label>
           <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Senha (criada por você)</Label>
-          <Input type="text" required minLength={6} value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" />
+          <Input type="password" required minLength={6} value={senha} onChange={(e) => setSenha(e.target.value)} className="h-11" />
         </div>
-        <Button type="submit" className="w-full h-11" disabled={busy}>
+        <Button type="submit" className="w-full h-11" disabled={busy || !habilitadas}>
           <UserPlus /> Criar acesso
         </Button>
       </form>
@@ -249,7 +286,7 @@ function UsuariosPage() {
                   )}
                   {!u.super && (
                     <span className={`inline-flex items-center gap-1 ${u.admin ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                      {u.admin && <ShieldCheck className="size-3" />} {u.admin ? "Admin da empresa" : "Operador"}
+                      {u.admin && <ShieldCheck className="size-3" />} {u.admin ? "Admin da empresa" : (u.funcao ? nomePapel(u.funcao) : "Sem função atribuída")}
                     </span>
                   )}
                 </div>
@@ -260,12 +297,24 @@ function UsuariosPage() {
                     {souSuperAdmin && !u.super && (
                       <select
                         aria-label={`Função de ${u.email}`}
-                        value={u.admin ? "admin" : "operador"}
+                        value={u.admin ? "admin" : "funcionario"}
                         onChange={(ev) => (ev.target.value === "admin") !== u.admin && toggleAdmin(u.id, u.admin)}
                         className="h-9 rounded-md border bg-background px-2 text-sm"
                       >
-                        <option value="operador">Operador</option>
+                        <option value="funcionario">Funcionário</option>
                         <option value="admin">Admin</option>
+                      </select>
+                    )}
+                    {!u.admin && !u.super && (
+                      <select
+                        aria-label={`Cargo de ${u.email}`}
+                        className="h-9 max-w-40 rounded-md border bg-background px-2 text-xs"
+                        disabled={!habilitadas || busy}
+                        value={u.funcao ?? ""}
+                        onChange={(ev) => void trocarFuncao(u.id, ev.target.value)}
+                      >
+                        {!u.funcao && <option value="">Sem função</option>}
+                        {FUNCOES.map((f) => <option key={f.valor} value={f.valor}>{f.nome}</option>)}
                       </select>
                     )}
                     <Button size="icon" variant="ghost" aria-label="Remover usuário" onClick={() => remover(u.id, u.email)}>
@@ -290,7 +339,7 @@ function UsuariosPage() {
             )}
             <div className="flex gap-2">
               <Input
-                type="text"
+                type="password"
                 placeholder="Nova senha"
                 aria-label={`Nova senha para ${u.email}`}
                 value={novaSenha[u.id] ?? ""}
