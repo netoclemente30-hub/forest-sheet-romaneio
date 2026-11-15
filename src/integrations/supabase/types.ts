@@ -205,6 +205,59 @@ export type Database = {
         }
         Relationships: []
       }
+      arrastos_arvores: {
+        Row: {
+          id: string
+          empresa_id: string
+          autex: string
+          arvore: number
+          explanada_id: string | null
+          capturado_em: string
+          latitude: number
+          longitude: number
+          gps_precisao: number
+          operacao_id: string
+          realizado_por: string
+          criado_em: string
+        }
+        Insert: {
+          id?: string
+          empresa_id: string
+          autex: string
+          arvore: number
+          explanada_id?: string | null
+          capturado_em: string
+          latitude: number
+          longitude: number
+          gps_precisao: number
+          operacao_id: string
+          realizado_por: string
+          criado_em?: string
+        }
+        Update: {
+          id?: string
+          empresa_id?: string
+          autex?: string
+          arvore?: number
+          explanada_id?: string | null
+          capturado_em?: string
+          latitude?: number
+          longitude?: number
+          gps_precisao?: number
+          operacao_id?: string
+          realizado_por?: string
+          criado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arrastos_arvores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       explanadas: {
         Row: {
           autex: string
@@ -1030,6 +1083,20 @@ export type Database = {
       pode_funcao: {
         Args: { _acao: string; _empresa: string }
         Returns: boolean
+      }
+      registrar_arrasto_arvore: {
+        Args: {
+          _empresa: string
+          _autex: string
+          _arvore: number
+          _explanada: string | null
+          _lat: number
+          _lng: number
+          _precisao: number
+          _capturado_em: string
+          _operacao: string
+        }
+        Returns: string
       }
       registrar_arrasto_toras: {
         Args: {
