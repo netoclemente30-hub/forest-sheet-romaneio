@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS funcoes_empresa_idx ON public.funcoes_funcionarios(em
 ALTER TABLE public.funcoes_funcionarios ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.funcoes_funcionarios FROM PUBLIC,anon,authenticated;
 GRANT SELECT ON public.funcoes_funcionarios TO authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.funcoes_funcionarios TO service_role;
 
 -- Somente o próprio usuário vê seu cargo diretamente; administradores
 -- podem gerenciar cargos pela função servidor com chave service_role.
@@ -84,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public.explanadas (
   latitude double precision,
   longitude double precision,
   criado_em timestamptz NOT NULL DEFAULT now(),
-  criado_por uuid REFERENCES auth.users(id),
+  criado_por uuid REFERENCES auth.users(id) DEFAULT auth.uid(),
   CONSTRAINT explanadas_coords_par CHECK (
     (latitude IS NULL AND longitude IS NULL)
     OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)
@@ -94,7 +95,8 @@ CREATE TABLE IF NOT EXISTS public.explanadas (
 CREATE UNIQUE INDEX IF NOT EXISTS explanadas_ref_empresa_autex_id_idx
 ON public.explanadas(empresa_id,autex,id);
 ALTER TABLE public.explanadas ENABLE ROW LEVEL SECURITY;
-GRANT SELECT,INSERT ON public.explanadas TO authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.explanadas TO authenticated;
+GRANT ALL ON public.explanadas TO service_role;
 DROP POLICY IF EXISTS "explanadas consulta" ON public.explanadas;
 CREATE POLICY "explanadas consulta" ON public.explanadas FOR SELECT TO authenticated
 USING (public.pode_funcao(empresa_id,'mapa_ver') OR public.pode_funcao(empresa_id,'patios_criar'));
@@ -104,6 +106,15 @@ WITH CHECK (
   public.pode_funcao(empresa_id,'patios_criar')
   AND (criado_por IS NULL OR criado_por=auth.uid())
 );
+
+-- Apenas administrador pode corrigir ou excluir explanadas já cadastradas.
+DROP POLICY IF EXISTS "explanadas editar admin" ON public.explanadas;
+CREATE POLICY "explanadas editar admin" ON public.explanadas FOR UPDATE TO authenticated
+USING (public.pode_funcao(empresa_id,'usuarios_gerenciar'))
+WITH CHECK (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
+DROP POLICY IF EXISTS "explanadas excluir admin" ON public.explanadas;
+CREATE POLICY "explanadas excluir admin" ON public.explanadas FOR DELETE TO authenticated
+USING (public.pode_funcao(empresa_id,'usuarios_gerenciar'));
 
 -- Garantir que a explanada de destino de uma tora pertence à mesma empresa e AUTEX.
 -- Adiciona somente colunas novas, não recalcula nem move toras anteriores.
