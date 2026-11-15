@@ -916,6 +916,10 @@ export type Database = {
         }[]
       }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      importar_ficha_manejo: {
+        Args: { _empresa: string; _arvores: Json; _toras: Json }
+        Returns: Json
+      }
       registrar_evento: {
         Args: { _empresa: string | null; _log: Json }
         Returns: string
