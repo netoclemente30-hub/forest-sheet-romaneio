@@ -21,6 +21,19 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: Instalar dependências com lockfile
         run: bun install --frozen-lockfile
+      - name: Verificar sintaxe das migrações PostgreSQL
+        run: |
+          python -m pip install --disable-pip-version-check pglast
+          python - <<'PY'
+          from pathlib import Path
+          from pglast import parse_sql
+          arquivos = sorted(Path("drizzle/migrations").glob("003[67]_*.sql"))
+          if len(arquivos) != 2:
+              raise SystemExit(f"Esperadas 2 migrações novas, encontradas {len(arquivos)}")
+          for arquivo in arquivos:
+              parse_sql(arquivo.read_text(encoding="utf-8"))
+              print(f"SQL sintaticamente válido: {arquivo}")
+          PY
       - name: Testes automatizados
         run: bun run test
       - name: Análise estática (sem bloqueio por estilo legado)
