@@ -7,6 +7,7 @@ export type AbaSerrariaUrl = Exclude<AbaSerraria, "saldo">;
 export const MANEJO = [
   { to: "/base", label: "Base" },
   { to: "/toras", label: "Toras de manejo" },
+  { to: "/explanadas", label: "Explanadas" },
   { to: "/romaneio", label: "Romaneio de toras" },
   { to: "/cortador", label: "Mapa" },
 ] as const;
