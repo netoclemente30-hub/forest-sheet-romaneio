@@ -697,6 +697,11 @@ export type Database = {
       }
       toras: {
         Row: {
+          arrastada_em: string | null
+          arrastada_por: string | null
+          arrasto_operacao_id: string | null
+          arrasto_lat: number | null
+          arrasto_lng: number | null
           arvore: number
           autex: string | null
           carregada: boolean
@@ -719,6 +724,11 @@ export type Database = {
           volume: number
         }
         Insert: {
+          arrastada_em?: string | null
+          arrastada_por?: string | null
+          arrasto_operacao_id?: string | null
+          arrasto_lat?: number | null
+          arrasto_lng?: number | null
           arvore: number
           autex?: string | null
           carregada?: boolean
@@ -741,6 +751,11 @@ export type Database = {
           volume?: number
         }
         Update: {
+          arrastada_em?: string | null
+          arrastada_por?: string | null
+          arrasto_operacao_id?: string | null
+          arrasto_lat?: number | null
+          arrasto_lng?: number | null
           arvore?: number
           autex?: string | null
           carregada?: boolean
@@ -916,6 +931,20 @@ export type Database = {
         }[]
       }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      registrar_arrasto_toras: {
+        Args: {
+          _empresa: string
+          _autex: string
+          _arvore: number
+          _plaquetas: number[]
+          _lat: number
+          _lng: number
+          _precisao: number
+          _capturado_em: string
+          _operacao: string
+        }
+        Returns: number
+      }
       importar_ficha_manejo: {
         Args: { _empresa: string; _arvores: Json; _toras: Json }
         Returns: Json
