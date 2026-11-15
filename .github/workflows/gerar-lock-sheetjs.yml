@@ -1,0 +1,33 @@
+name: Atualizar lockfile SheetJS
+
+on:
+  push:
+    branches: ['fix/seguranca-sheetjs-0203']
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Resolver dependência oficial
+        run: bun install
+      - name: Confirmar versão corrigida
+        run: |
+          bun -e "const p = require('xlsx/package.json'); if (p.version !== '0.20.3') throw new Error('Versão insegura: ' + p.version);"
+      - name: Salvar lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.lock
+          if git diff --cached --quiet; then
+            echo "Lockfile já sincronizado"
+          else
+            git commit -m "chore(deps): atualizar bun.lock para SheetJS 0.20.3"
+            git push origin HEAD:fix/seguranca-sheetjs-0203
+          fi
