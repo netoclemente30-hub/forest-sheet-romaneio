@@ -23,6 +23,8 @@ export type ResumoExploracao = {
   abatidas: number;
   tracadas: number;
   arvoresTracadas: number;
+  arrastadas: number;
+  volumeArrastado: number;
   carregadas: number;
   cargas: number;
 };
@@ -55,6 +57,16 @@ export function resumoExploracaoDiaria(
   const torasTracadas = new Map(lancadas.map((t) => [t.empresa_id + ":" + t.plaqueta, t]));
   const arvoresTracadas = new Set(lancadas.map((t) => [t.empresa_id, t.autex ?? "", t.arvore].join(":")));
 
+  // Cada plaqueta arrastada conta uma vez no dia do trabalho do tratorista,
+  // mesmo quando a mesma árvore possui várias secções.
+  const torasArrastadas = new Map(toras.filter((t) =>
+    daEmpresa(t.empresa_id) &&
+    t.origem === "manejo" &&
+    dataExploracao(t.arrastada_em) === dia,
+  ).map((t) => [t.empresa_id + ":" + t.plaqueta, t]));
+  const volumeArrastado = [...torasArrastadas.values()].reduce((soma, t) =>
+    soma + (Number.isFinite(Number(t.volume)) ? Number(t.volume) : 0), 0);
+
   const romaneiosDoDia = romaneios.filter((r) =>
     daEmpresa(r.empresa_id) && r.data === dia,
   );
@@ -74,6 +86,8 @@ export function resumoExploracaoDiaria(
     abatidas: abatidas.size,
     tracadas: torasTracadas.size,
     arvoresTracadas: arvoresTracadas.size,
+    arrastadas: torasArrastadas.size,
+    volumeArrastado,
     carregadas: carregadas.size,
     cargas: romaneiosDoDia.length,
   };
