@@ -12,7 +12,7 @@ import { MapPin, Undo2, RefreshCw, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { filtrarRegistros, podeReverterRegistro } from "@/lib/registros-lista";
+import { filtrarRegistros, podeReverterRegistro, snapshotArrastoIncompleto } from "@/lib/registros-lista";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 type Registro = Database["public"]["Tables"]["registros"]["Row"];
@@ -117,7 +117,7 @@ function Registros() {
                   <span className="text-xs text-muted-foreground">sem GPS</span>
                 )}
               </div>
-              {r.revertido_em ? <p className="text-xs text-muted-foreground">Revertido em {new Date(r.revertido_em).toLocaleString("pt-BR")}</p> : podeReverter && podeReverterRegistro(r) ? <Button size="sm" variant="outline" onClick={() => setReverter(r)}><Undo2 /> Reverter</Button> : !r.reversao_de && podeReverter && <p className="text-xs text-muted-foreground">Sem cópia anterior para reverter</p>}
+              {r.revertido_em ? <p className="text-xs text-muted-foreground">Revertido em {new Date(r.revertido_em).toLocaleString("pt-BR")}</p> : podeReverter && podeReverterRegistro(r) ? <Button size="sm" variant="outline" onClick={() => setReverter(r)}><Undo2 /> Reverter</Button> : !r.reversao_de && podeReverter && <p className="text-xs text-muted-foreground">{snapshotArrastoIncompleto(r.mudancas) ? "Não reversível: registro sem cópia completa do arrasto" : "Sem cópia anterior para reverter"}</p>}
             </div>
           );
         })}
