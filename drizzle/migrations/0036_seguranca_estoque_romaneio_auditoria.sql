@@ -1,5 +1,30 @@
 -- Migração não destrutiva. Aplicar com backup e testar em homologação antes da produção.
 -- Idempotência de romaneios, auditoria autenticada, controles de exclusão e separação de empresas.
+-- Não permitir que um admin comum consulte vínculos/empresas de todos os clientes.
+DROP POLICY IF EXISTS "usuario le proprio vinculo" ON public.empresa_usuarios;
+CREATE POLICY "usuario le proprio vinculo" ON public.empresa_usuarios
+FOR SELECT TO authenticated
+USING (
+  user_id = auth.uid()
+  OR (empresa_id = public.minha_empresa() AND public.has_role(auth.uid(),'admin'))
+  OR public.has_role(auth.uid(),'superadmin')
+);
+
+DROP POLICY IF EXISTS "usuario le a propria empresa" ON public.empresas;
+CREATE POLICY "usuario le a propria empresa" ON public.empresas
+FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.empresa_usuarios eu
+    WHERE eu.empresa_id = empresas.id AND eu.user_id = auth.uid()
+  )
+  OR public.has_role(auth.uid(),'superadmin')
+);
+
+-- Reduzir os grants legados que não devem ser expostos pela Data API.
+REVOKE TRUNCATE, TRIGGER, REFERENCES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.registros FROM anon, authenticated;
+
 ALTER TABLE public.romaneios ADD COLUMN IF NOT EXISTS operacao_id uuid;
 CREATE UNIQUE INDEX IF NOT EXISTS romaneios_operacao_unica ON public.romaneios(operacao_id) WHERE operacao_id IS NOT NULL;
 
