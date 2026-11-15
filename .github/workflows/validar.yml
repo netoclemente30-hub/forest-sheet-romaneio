@@ -1,0 +1,32 @@
+name: Validar Gestor Florestal
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+      - 'feat/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Instalar dependências com lockfile
+        run: bun install --frozen-lockfile
+      - name: Testes automatizados
+        run: bun run test
+      - name: Análise estática
+        run: bun run lint
+      - name: Compilar aplicação
+        run: bun run build
