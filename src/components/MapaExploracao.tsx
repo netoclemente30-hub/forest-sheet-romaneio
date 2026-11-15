@@ -2,13 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Crosshair, MapPin, Play, Square, TreePine } from "lucide-react";
-import { arvoresQuery, rastrosQuery, type Arvore } from "@/lib/data";
+import { arvoresQuery, torasQuery, rastrosQuery, type Arvore } from "@/lib/data";
+import { ArrastoToras } from "@/components/ArrastoToras";
+import { situacaoArrasto } from "@/lib/arrasto";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import {
   aceitarPontoRastro,
   comprimentoRastro,
   coordenadaValida,
+  distanciaMetros,
   validarAbateProximo,
   mesclarRastros,
   pontoDaArvore,
@@ -42,6 +45,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const { empresaId, session } = useAuth();
   const empresa = getEmpresaAtiva() ?? empresaId;
   const rastros = useQuery({ ...rastrosQuery(autex), enabled: !!autex });
+  const toras = useQuery(torasQuery);
   const [atual, setAtual] = useState<Coordenada | null>(null);
   const [pontosAtivos, setPontosAtivos] = useState<PontoRastro[]>([]);
   const [sessaoId, setSessaoId] = useState("");
@@ -127,6 +131,16 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const todosPontos = useMemo(() => mesclarRastros<PontoRastro>(rastros.data ?? [], pontosAtivos), [rastros.data, pontosAtivos]);
   const distanciaAtiva = comprimentoRastro(pontosAtivos);
   const proximas = useMemo(() => arvoresProximas(arvores, atual, raio), [arvores, atual, raio]);
+  const proximasArrasto = useMemo(() => {
+    if (!empresa || !atual || (atual.precisao != null && atual.precisao > 100)) return [];
+    return arvores.flatMap((a) => {
+      if (!a.abatida_em || a.latitude == null || a.longitude == null) return [];
+      const pendentes = situacaoArrasto(a, empresa, toras.data ?? []).disponiveis.length;
+      if (!pendentes) return [];
+      const distancia = distanciaMetros(atual, { lat: Number(a.latitude), lng: Number(a.longitude) });
+      return distancia <= raio ? [{ arvore: a, distancia, pendentes }] : [];
+    }).sort((a, b) => a.distancia - b.distancia);
+  }, [arvores, atual, empresa, raio, toras.data]);
 
   const projecao = useMemo(() => {
     const pontos = [
@@ -245,6 +259,26 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
         {!atual ? <p className="text-sm text-muted-foreground">Aguardando posição GPS.</p> : atual.precisao != null && atual.precisao > 100 ? <p className="text-sm text-destructive">GPS impreciso; aguarde melhorar o sinal.</p> : !proximas.length ? <p className="text-sm text-muted-foreground">Nenhuma árvore em pé com posição registrada a até {raio} m.</p> : <div className="divide-y">{proximas.slice(0, 10).map(({ arvore, distancia }) => <div key={arvore.id} className="flex items-center gap-2 py-2"><TreePine className="size-5 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="break-words text-sm font-semibold">Árvore {arvore.numero} · {arvore.nome_vulgar}</div><div className="text-xs text-muted-foreground">{Math.round(distancia)} m · Picada {arvore.picada ?? "—"}</div></div><Button size="sm" variant="outline" onClick={() => abrirArvore(arvore)}>Selecionar</Button></div>)}</div>}
       </section>}
 
+      {!encerrado && proximasArrasto.length > 0 && (
+        <section className="space-y-2 rounded-xl border bg-card p-3" aria-label="Árvores próximas para arrasto">
+          <h2 className="font-semibold">🚜 Arrasto próximo · árvores abatidas</h2>
+          <p className="text-xs text-muted-foreground">Toras medidas que ainda precisam ser arrastadas. Toque na árvore para registrar o serviço.</p>
+          <div className="divide-y">
+            {proximasArrasto.slice(0, 10).map(({ arvore, distancia, pendentes }) => (
+              <div key={arvore.id} className="flex items-center gap-2 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm">Árvore {arvore.numero} · {arvore.nome_vulgar}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {pendentes} toras aguardando arrasto · {Math.round(distancia)} m de distância
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => abrirArvore(arvore)}>Arrasto</Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center justify-between gap-2 border-b p-3 text-xs text-muted-foreground">
           <span>Mapa GPS offline · norte para cima</span>
@@ -322,6 +356,9 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
                 {editando.nao_abatida_motivo && <Button variant="ghost" size="sm" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, null)}>Remover motivo</Button>}
               </div>}
             </>}
+            {!encerrado && editando.abatida_em && empresa && (
+              <ArrastoToras arvore={editando} empresa={empresa} toras={toras.data ?? []} encerrado={encerrado} />
+            )}
             {encerrado && <p className="text-sm text-muted-foreground">Manejo encerrado: o mapa e os registros ficam disponíveis para consulta.</p>}
           </div>}
         </DialogContent>
