@@ -43,16 +43,15 @@ BEGIN
   THEN RAISE EXCEPTION 'Você não tem permissão nesta empresa'; END IF;
 
   total := cardinality(_plaquetas);
-  IF _operacao IS NULL OR nullif(btrim(_autex),'') IS NULL OR _arvore <= 0
+  IF _operacao IS NULL OR nullif(btrim(_autex),'') IS NULL OR _arvore IS NULL OR _arvore <= 0
      OR total IS NULL OR total < 1 OR total > 100
      OR total <> (SELECT count(DISTINCT p) FROM unnest(_plaquetas) AS p)
      OR EXISTS (SELECT 1 FROM unnest(_plaquetas) AS p WHERE p IS NULL OR p <= 0)
   THEN RAISE EXCEPTION 'Seleção de toras ou operação inválida'; END IF;
 
   IF _lat IS NULL OR _lng IS NULL OR _precisao IS NULL
-    OR NOT (isfinite(_lat) AND isfinite(_lng) AND isfinite(_precisao))
-    OR abs(_lat)>90 OR abs(_lng)>180
-    OR _precisao < 0 OR _precisao > 100
+    OR NOT (_lat BETWEEN -90 AND 90 AND _lng BETWEEN -180 AND 180)
+    OR NOT (_precisao BETWEEN 0 AND 100)
   THEN RAISE EXCEPTION 'GPS inválido ou com precisão insuficiente'; END IF;
 
   -- Permite sincronização posterior da fila offline, mas rejeita relógios
@@ -72,6 +71,8 @@ BEGIN
   THEN RAISE EXCEPTION 'Registre o abate da árvore antes do arrasto'; END IF;
   IF arvore_lat IS NULL OR arvore_lng IS NULL
   THEN RAISE EXCEPTION 'Localize a árvore no mapa antes do arrasto'; END IF;
+  IF _capturado_em < abatida - interval '1 minute'
+  THEN RAISE EXCEPTION 'O arrasto não pode ser anterior ao abate'; END IF;
 
   -- Distância aproximada em metros, sem necessidade da extensão PostGIS.
   distancia_metros := 111195 * sqrt(
