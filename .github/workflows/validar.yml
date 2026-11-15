@@ -40,7 +40,9 @@ jobs:
       - name: Análise estática (sem bloqueio por estilo legado)
         run: |
           bunx eslint . --rule "prettier/prettier: off"
+      # O TanStack Router gera routeTree.gen.ts durante o build; rodar antes
+      # do tsc permite validar rotas novas sem editar arquivo gerado no GitHub.
+      - name: Compilar aplicação e gerar rotas
+        run: bun run build
       - name: Conferir tipos TypeScript
         run: bunx tsc --noEmit --pretty false
-      - name: Compilar aplicação
-        run: bun run build
