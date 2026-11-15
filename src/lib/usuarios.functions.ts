@@ -61,6 +61,18 @@ async function exigirMesmaEmpresa(supabaseAdmin: SupabaseClient<Database>, minha
   if (data?.empresa_id !== minha) throw new Error("Você só pode gerenciar usuários da sua empresa");
 }
 
+async function exigirAlvoGerenciavel(ctx: Ctx, supabaseAdmin: SupabaseClient<Database>, userId: string) {
+  const escopo = await escopoAdministrativo(ctx);
+  await exigirMesmaEmpresa(supabaseAdmin, escopo.empresa, userId);
+  if (!escopo.superadmin) {
+    const { data, error } = await supabaseAdmin.from("user_roles")
+      .select("role").eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    if ((data ?? []).some(({ role }) => role === "admin" || role === "superadmin"))
+      throw new Error("O administrador da empresa não pode alterar contas administrativas");
+  }
+}
+
 export const listarEmpresas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -136,8 +148,8 @@ export const criarUsuario = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
-    const empresaId = minha ?? data.empresaId;
+    const escopo = await escopoAdministrativo(ctx);
+    const empresaId = escopo.empresa ?? data.empresaId;
     if (!empresaId) throw new Error("Escolha a empresa do novo acesso");
     if (!funcaoValida(data.funcao)) throw new Error("Escolha uma função válida para o funcionário");
     const email = data.email.trim().toLowerCase();
@@ -194,8 +206,7 @@ export const definirEmpresa = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
-    const minha = await empresaDoAdmin(ctx.supabase);
-    if (minha) throw new Error("Apenas o administrador geral pode mudar a empresa de um usuário");
+    await exigirSuperAdmin(ctx.supabase, ctx.userId);
     if (data.userId === ctx.userId) throw new Error("Você não pode mudar a sua própria empresa");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("empresa_usuarios").upsert({ user_id: data.userId, empresa_id: data.empresaId });
@@ -210,9 +221,8 @@ export const alterarSenhaUsuario = createServerFn({ method: "POST" })
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
     if (!data.password || data.password.length < 6) throw new Error("A senha precisa de pelo menos 6 caracteres");
-    const minha = await empresaDoAdmin(ctx.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await exigirMesmaEmpresa(supabaseAdmin, minha, data.userId);
+    await exigirAlvoGerenciavel(ctx, supabaseAdmin, data.userId);
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, { password: data.password });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -245,9 +255,8 @@ export const removerUsuario = createServerFn({ method: "POST" })
     const ctx = context as unknown as Ctx;
     await exigirAdmin(ctx.supabase, ctx.userId);
     if (data.userId === ctx.userId) throw new Error("Você não pode remover a sua própria conta");
-    const minha = await empresaDoAdmin(ctx.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await exigirMesmaEmpresa(supabaseAdmin, minha, data.userId);
+    await exigirAlvoGerenciavel(ctx, supabaseAdmin, data.userId);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
