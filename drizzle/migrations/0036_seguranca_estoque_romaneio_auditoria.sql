@@ -62,7 +62,7 @@ USING (empresa_id = public.minha_empresa() OR public.has_role(auth.uid(),'supera
 WITH CHECK (empresa_id = public.minha_empresa() OR public.has_role(auth.uid(),'superadmin'));
 -- Operadores só podem marcar etiquetas via Data API; mudanças de estoque
 -- exigem funções transacionais SECURITY DEFINER com validação de permissão.
-REVOKE UPDATE ON public.toras FROM authenticated;
+REVOKE UPDATE ON public.toras FROM PUBLIC, anon, authenticated;
 GRANT UPDATE(etiqueta_impressa_em) ON public.toras TO authenticated;
 
 CREATE POLICY "empresa toras delete admin" ON public.toras FOR DELETE TO authenticated
