@@ -556,6 +556,7 @@ export type Database = {
       }
       romaneios: {
         Row: {
+          operacao_id: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -571,6 +572,7 @@ export type Database = {
           total_volume: number
         }
         Insert: {
+          operacao_id?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -586,6 +588,7 @@ export type Database = {
           total_volume?: number
         }
         Update: {
+          operacao_id?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -913,6 +916,20 @@ export type Database = {
         }[]
       }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      registrar_evento: {
+        Args: { _empresa: string | null; _log: Json }
+        Returns: string
+      }
+      salvar_romaneio_toras: {
+        Args: {
+          _empresa: string
+          _cab: Json
+          _plaquetas: number[]
+          _operacao: string
+          _log: Json
+        }
+        Returns: string
+      }
       registrar_operacao: {
         Args: {
           _alvos: Json
