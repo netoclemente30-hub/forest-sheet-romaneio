@@ -7,7 +7,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Copy, Download, ExternalLink, FileSpreadsheet, FileText, LoaderCircle, MessageCircle } from "lucide-react";
 
-export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, medida = "fisica" }: { lista: Tora[]; selecionadas: number[]; ordem: Ordem; setOrdem: (o: Ordem) => void; titulo: string; medida?: MedidaRelatorio }) {
+export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, medida = "fisica", ocultarSinaflor = false }: { lista: Tora[]; selecionadas: number[]; ordem: Ordem; setOrdem: (o: Ordem) => void; titulo: string; medida?: MedidaRelatorio; ocultarSinaflor?: boolean }) {
   const [gerando, setGerando] = useState(false);
   const [aberto, setAberto] = useState(false);
   const [arquivo, setArquivo] = useState<(ArquivoGerado & { url: string }) | null>(null);
@@ -48,7 +48,7 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, m
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" disabled={!itens.length || gerando} onClick={() => gerar("excel")}><FileSpreadsheet /> Excel</Button>
         <Button variant="outline" disabled={!itens.length || gerando} onClick={() => gerar("pdf")}><FileText /> PDF</Button>
-        <Button variant="outline" className="col-span-2" disabled={!itens.length || gerando} onClick={() => gerar("sinaflor")}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>
+        {!ocultarSinaflor && <Button variant="outline" className="col-span-2" disabled={!itens.length || gerando} onClick={() => gerar("sinaflor")}><FileSpreadsheet /> Exportar para SINAFLOR (repique)</Button>}
       </div>
     </div>
     <Dialog open={aberto} onOpenChange={setAberto}>
