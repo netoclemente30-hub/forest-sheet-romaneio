@@ -1,6 +1,6 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { registrarLogin } from "@/lib/registro";
 import { nomeAparelho, salvarNomeAparelho, detectarModelo } from "@/lib/aparelho";
@@ -30,6 +30,24 @@ export function AppShell() {
   const installation = useInstallApp();
   const { session, loading, isAdmin, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
+  const contaAnterior = useRef<string | null>(null);
+  // React Query mantém dados em memória mesmo depois de logout/troca de usuário.
+  useEffect(() => {
+    const atual = session?.user.id ?? null;
+    if (contaAnterior.current !== atual) {
+      qc.clear();
+      setEmpresaAtiva(null);
+      setEmpresaSel("");
+      contaAnterior.current = atual;
+    }
+  }, [session?.user.id, qc]);
+  async function sair() {
+    const { error } = await supabase.auth.signOut();
+    if (error) { toast.error(error.message); return; }
+    qc.clear();
+    setEmpresaAtiva(null);
+    setEmpresaSel("");
+  }
   const [empresaSel, setEmpresaSel] = useState<string>(() => getEmpresaAtiva() ?? "");
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const manejo = emManejo(pathname);
@@ -60,7 +78,7 @@ export function AppShell() {
   if (loading) return <div className="min-h-screen bg-forest" />;
   // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
   if (!session) return <ApresentacaoPagina />;
-  if (!isSuperAdmin && (situacao.data?.status === "inativa" || situacao.data?.status === "pendente")) return <EmpresaInativa pendente={situacao.data.status === "pendente"} sair={() => supabase.auth.signOut()} />;
+  if (!isSuperAdmin && (situacao.data?.status === "inativa" || situacao.data?.status === "pendente")) return <EmpresaInativa pendente={situacao.data.status === "pendente"} sair={sair} />;
   const items = isAdmin || isSuperAdmin
     ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
     : nav;
@@ -84,7 +102,7 @@ export function AppShell() {
               <Button onClick={salvarAparelho}>Salvar</Button>
             </DialogContent>
           </Dialog>
-          <Button size="icon" variant="ghost" aria-label="Sair" title="Sair" onClick={() => supabase.auth.signOut()} className="opacity-80">
+          <Button size="icon" variant="ghost" aria-label="Sair" title="Sair" onClick={() => void sair()} className="opacity-80">
             <LogOut className="size-5" />
           </Button>
           <Button size="sm" variant="ghost" onClick={installation.install} disabled={installation.installed || installation.busy}>
