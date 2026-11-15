@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone } from "lucide-react";
+import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { registrarLogin } from "@/lib/registro";
@@ -17,6 +17,7 @@ import { SyncStatus } from "./SyncStatus";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MANEJO, emManejo, emSerraria, ehRotaPublica } from "@/lib/nav";
+import { nomePapel, pode, rotaInicial, rotaPermitida, type Papel } from "@/lib/funcoes";
 import { EscolherAparencia } from "@/components/Aparencia";
 
 const nav = [
@@ -26,9 +27,28 @@ const nav = [
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ] as const;
 
+const navPorPapel = (papel: Papel) => {
+  const inicio = { to: "/" as const, label: "Início", icon: Home };
+  const mapa = { to: "/cortador" as const, label: "Mapa", icon: MapPinned };
+  const toras = { to: "/toras" as const, label: "Toras", icon: Scissors };
+  const patios = { to: "/explanadas" as const, label: "Explanadas", icon: Warehouse };
+  const carga = { to: "/romaneio" as const, label: "Carregar", icon: Truck };
+  const serraria = { to: "/serraria" as const, label: "Serraria", icon: Factory };
+  const relatorios = { to: "/relatorios" as const, label: "Relatórios", icon: BarChart3 };
+  const registros = { to: "/registros" as const, label: "Registros", icon: ClipboardList };
+  if (papel === "superadmin" || papel === "admin_empresa")
+    return [...nav, registros, { to: "/usuarios" as const, label: "Usuários", icon: Users }];
+  if (papel === "cortador" || papel === "tratorista") return [inicio, mapa];
+  if (papel === "romaneador") return [inicio, toras, patios, mapa];
+  if (papel === "motorista") return [inicio, carga, { to: "/historico" as const, label: "Cargas", icon: Truck }];
+  if (papel === "gerente_patio") return [inicio, serraria, relatorios];
+  if (papel === "gerente_escritorio") return [...nav, registros];
+  return [inicio];
+};
+
 export function AppShell() {
   const installation = useInstallApp();
-  const { session, loading, isAdmin, isSuperAdmin } = useAuth();
+  const { session, loading, isSuperAdmin, papel, permissoesCarregando } = useAuth();
   const qc = useQueryClient();
   const contaAnterior = useRef<string | null>(null);
   // React Query mantém dados em memória mesmo depois de logout/troca de usuário.
@@ -76,12 +96,14 @@ export function AppShell() {
   // Páginas públicas (QR da tora e apresentação) abrem sem login.
   if (ehRotaPublica(pathname)) return <Outlet />;
   if (loading) return <div className="min-h-screen bg-forest" />;
+  if (session && permissoesCarregando) return <div className="min-h-screen bg-forest" />;
   // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
   if (!session) return <ApresentacaoPagina />;
   if (!isSuperAdmin && (situacao.data?.status === "inativa" || situacao.data?.status === "pendente")) return <EmpresaInativa pendente={situacao.data.status === "pendente"} sair={sair} />;
-  const items = isAdmin || isSuperAdmin
-    ? [...nav, { to: "/registros", label: "Registros", icon: ClipboardList } as const, { to: "/usuarios", label: "Usuários", icon: Users } as const]
-    : nav;
+  const items = navPorPapel(papel);
+  const acessoPermitido = rotaPermitida(papel, pathname);
+  const somenteLeitura = papel === "gerente_escritorio";
+  const abasManejo = MANEJO.filter((m) => rotaPermitida(papel, m.to));
   return (
     <div className="min-h-screen pb-20">
       <header className="no-print bg-forest text-forest-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
@@ -157,11 +179,11 @@ export function AppShell() {
       <SyncStatus />
       <main className="mx-auto max-w-3xl p-4">
         {manejo && (
-          <nav aria-label="Manejo" className="no-print mb-4 grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
-            {MANEJO.map((m) => {
+          <nav aria-label="Manejo" className="no-print mb-4 flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+            {abasManejo.map((m) => {
               const ativo = pathname === m.to || pathname.startsWith(`${m.to}/`) || (m.to === "/romaneio" && pathname.startsWith("/historico"));
               return (
-                <Link key={m.to} to={m.to} data-ativo={ativo} className="rounded-md px-1 py-2 text-center text-xs leading-tight text-muted-foreground data-[ativo=true]:bg-background data-[ativo=true]:font-semibold data-[ativo=true]:text-foreground data-[ativo=true]:shadow-sm">
+                <Link key={m.to} to={m.to} data-ativo={ativo} className="min-w-0 flex-1 rounded-md px-1 py-2 text-center text-xs leading-tight text-muted-foreground data-[ativo=true]:bg-background data-[ativo=true]:font-semibold data-[ativo=true]:text-foreground data-[ativo=true]:shadow-sm">
                   {m.label}
                 </Link>
               );
@@ -169,7 +191,27 @@ export function AppShell() {
           </nav>
         )}
         {!isSuperAdmin && situacao.data?.status === "demonstracao" && <AvisoDemonstracao s={situacao.data} />}
-        <div key={empresaSel}><Outlet /></div>
+        <div className="mb-3 text-xs text-muted-foreground">Função: <strong>{nomePapel(papel)}</strong></div>
+        {somenteLeitura && <p role="status" className="mb-3 rounded-md border p-2 text-sm">
+          Modo consulta: você pode visualizar informações, registros e gerar relatórios, mas não alterar lançamentos nem reverter operações.
+        </p>}
+        {papel === "sem_funcao" ? (
+          <div role="alert" className="rounded-xl border p-4 text-sm">
+            Sua conta ainda não tem uma função atribuída. Solicite ao administrador da empresa que defina seu cargo.
+          </div>
+        ) : !acessoPermitido ? (
+          <div role="alert" className="rounded-xl border p-4 space-y-2 text-sm">
+            <strong>Acesso restrito para {nomePapel(papel)}.</strong>
+            <p>Esta página não faz parte das permissões do seu cargo.</p>
+            <Link to={rotaInicial(papel)} className="text-primary underline">Voltar para minha área</Link>
+          </div>
+        ) : (
+          <div key={empresaSel}>
+            {somenteLeitura && !["/", "/registros", "/relatorios"].includes(pathname)
+              ? <fieldset disabled aria-label="Consulta sem edição"><Outlet /></fieldset>
+              : <Outlet />}
+          </div>
+        )}
       </main>
       <nav className="no-print fixed bottom-0 inset-x-0 bg-card border-t z-20">
         <div className="mx-auto max-w-3xl grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
