@@ -2,6 +2,7 @@
 -- O projeto reserva a Lovable as alterações de banco. NÃO executar diretamente.
 -- Arrasto de toras da floresta ao pátio.
 -- Nenhum dado existente é alterado; os novos campos começam nulos.
+ALTER TABLE public.toras ADD COLUMN IF NOT EXISTS arrasto_explanada_id uuid;
 ALTER TABLE public.toras ADD COLUMN IF NOT EXISTS arrastada_em timestamptz;
 ALTER TABLE public.toras ADD COLUMN IF NOT EXISTS arrastada_por uuid;
 ALTER TABLE public.toras ADD COLUMN IF NOT EXISTS arrasto_operacao_id uuid;
@@ -17,6 +18,7 @@ CREATE OR REPLACE FUNCTION public.registrar_arrasto_toras(
   _autex text,
   _arvore integer,
   _plaquetas integer[],
+  _explanada uuid,
   _lat double precision,
   _lng double precision,
   _precisao double precision,
@@ -40,7 +42,7 @@ DECLARE
   contexto_anterior text;
 BEGIN
   IF auth.uid() IS NULL OR _empresa IS NULL OR
-    NOT (_empresa = public.minha_empresa() OR public.has_role(auth.uid(),'superadmin'))
+    NOT public.pode_funcao(_empresa, 'mapa_arrastar')
   THEN RAISE EXCEPTION 'Você não tem permissão nesta empresa'; END IF;
 
   total := cardinality(_plaquetas);
@@ -60,6 +62,11 @@ BEGIN
   IF _capturado_em IS NULL OR _capturado_em > now() + interval '1 minute'
     OR _capturado_em < now() - interval '30 days'
   THEN RAISE EXCEPTION 'Data da captura GPS inválida ou muito antiga'; END IF;
+
+  IF _explanada IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.explanadas e
+    WHERE e.id=_explanada AND e.empresa_id=_empresa AND e.autex=_autex
+  ) THEN RAISE EXCEPTION 'Explanada de destino inválida para a empresa/AUTEX'; END IF;
 
   PERFORM pg_advisory_xact_lock(hashtextextended(_empresa::text,0));
   SELECT a.abatida_em,a.latitude,a.longitude
@@ -115,7 +122,7 @@ BEGIN
   ) VALUES (
     _empresa,auth.uid(),auth.jwt()->>'email','Arrasto concluído',
     'Árvore '||_arvore||' · AUTEX '||_autex||' · '||total||' tora(s) · plaquetas '||
-      array_to_string(_plaquetas,', '),
+      array_to_string(_plaquetas,', ') || ' · explanada ' || _explanada,
     _lat,_lng,_capturado_em,_operacao,'[]'::jsonb
   ) RETURNING id INTO registro_id;
 
@@ -126,7 +133,8 @@ BEGIN
     arrastada_por=auth.uid(),
     arrasto_operacao_id=_operacao,
     arrasto_lat=_lat,
-    arrasto_lng=_lng
+    arrasto_lng=_lng,
+    arrasto_explanada_id=_explanada
   WHERE empresa_id=_empresa AND autex=_autex AND arvore=_arvore
     AND plaqueta=ANY(_plaquetas) AND origem='manejo'
     AND arrastada_em IS NULL AND NOT carregada AND romaneio_id IS NULL;
@@ -139,10 +147,10 @@ BEGIN
 END $$;
 
 REVOKE ALL ON FUNCTION public.registrar_arrasto_toras(
-  uuid,text,integer,integer[],double precision,double precision,
+  uuid,text,integer,integer[],uuid,double precision,double precision,
   double precision,timestamptz,uuid
 ) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.registrar_arrasto_toras(
-  uuid,text,integer,integer[],double precision,double precision,
+  uuid,text,integer,integer[],uuid,double precision,double precision,
   double precision,timestamptz,uuid
 ) TO authenticated;
