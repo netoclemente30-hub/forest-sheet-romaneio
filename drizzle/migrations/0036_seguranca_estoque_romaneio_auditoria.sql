@@ -53,10 +53,18 @@ DROP POLICY IF EXISTS "empresa toras delete admin" ON public.toras;
 CREATE POLICY "empresa toras select" ON public.toras FOR SELECT TO authenticated
 USING (empresa_id = public.minha_empresa() OR public.has_role(auth.uid(),'superadmin'));
 CREATE POLICY "empresa toras insert" ON public.toras FOR INSERT TO authenticated
-WITH CHECK (empresa_id = public.minha_empresa() OR public.has_role(auth.uid(),'superadmin'));
+WITH CHECK (
+  (empresa_id = public.minha_empresa() AND public.has_role(auth.uid(),'admin'))
+  OR public.has_role(auth.uid(),'superadmin')
+);
 CREATE POLICY "empresa toras update" ON public.toras FOR UPDATE TO authenticated
 USING (empresa_id = public.minha_empresa() OR public.has_role(auth.uid(),'superadmin'))
 WITH CHECK (empresa_id = public.minha_empresa() OR public.has_role(auth.uid(),'superadmin'));
+-- Operadores só podem marcar etiquetas via Data API; mudanças de estoque
+-- exigem funções transacionais SECURITY DEFINER com validação de permissão.
+REVOKE UPDATE ON public.toras FROM authenticated;
+GRANT UPDATE(etiqueta_impressa_em) ON public.toras TO authenticated;
+
 CREATE POLICY "empresa toras delete admin" ON public.toras FOR DELETE TO authenticated
 USING (
   (empresa_id = public.minha_empresa() AND public.has_role(auth.uid(),'admin'))
@@ -186,7 +194,16 @@ BEGIN
   anterior_contexto:=current_setting('app.registro_contexto',true);
   PERFORM set_config('app.registro_contexto',rid::text,true);
   IF _tipo='tora_insert' THEN
-    nova:=jsonb_populate_record(NULL::public.toras,jsonb_build_object('empresa_id',_empresa,'created_at',quando,'carregada',false,'volume',0)||_dados||jsonb_build_object('empresa_id',_empresa));
+    IF EXISTS(SELECT 1 FROM jsonb_object_keys(_dados) k WHERE k NOT IN
+      ('plaqueta','arvore','secao','especie','nome_cientifico','autex',
+       'volume','d_topo1','d_topo2','d_pe1','d_pe2','comprimento',
+       'origem','carregada','empresa_id')) THEN
+      RAISE EXCEPTION 'Campo não permitido ao lançar tora';
+    END IF;
+    IF COALESCE((_dados->>'carregada')::boolean,false) THEN
+      RAISE EXCEPTION 'Uma tora nova não pode ser marcada como carregada';
+    END IF;
+    nova:=jsonb_populate_record(NULL::public.toras,jsonb_build_object('empresa_id',_empresa,'created_at',quando,'carregada',false,'volume',0)||_dados||jsonb_build_object('empresa_id',_empresa,'carregada',false,'romaneio_id',null,'serrada_em',null,'created_at',quando));
     nova.publico_id:=coalesce(nova.publico_id,gen_random_uuid());
     IF EXISTS(SELECT 1 FROM public.toras t WHERE t.empresa_id=_empresa AND t.arvore=nova.arvore AND upper(trim(coalesce(t.secao,'')))=upper(trim(coalesce(nova.secao,''))) AND regexp_replace(upper(trim(coalesce(t.autex,''))),'^AUTEX[[:space:]:-]*','')=regexp_replace(upper(trim(coalesce(nova.autex,''))),'^AUTEX[[:space:]:-]*','')) THEN RAISE EXCEPTION 'Árvore e secção já lançadas nesta AUTEX'; END IF;
     INSERT INTO public.toras SELECT nova.*;
