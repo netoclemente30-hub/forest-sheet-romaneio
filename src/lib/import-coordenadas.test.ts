@@ -31,8 +31,8 @@ it("converte UTM com fuso e datum explícitos, sem modificar medidas da ficha", 
   const resultado = analisarCoordenadas(rows, [arvore], "empresa", "AUTEX-1", { tipo: "utm", fuso: 20, hemisferio: "sul", datum: "SIRGAS2000" });
   expect(resultado.erros).toEqual([]);
   expect(resultado.atualizacoes).toHaveLength(1);
-  expect(resultado.atualizacoes[0]?.latitude).toBeCloseTo(-8.68263, 4);
-  expect(resultado.atualizacoes[0]?.longitude).toBeCloseTo(-63.64380, 4);
+  expect(resultado.atualizacoes[0]?.latitude).toBeCloseTo(-8.682775, 6);
+  expect(resultado.atualizacoes[0]?.longitude).toBeCloseTo(-63.643775, 6);
   expect(resultado.atualizacoes[0]?.arvore.cap).toBe(150);
 });
 it("não assume fuso UTM ausente nem aceita fuso fora do intervalo", () => {
