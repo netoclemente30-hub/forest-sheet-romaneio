@@ -27,9 +27,9 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           from pglast import parse_sql
-          arquivos = sorted(Path("drizzle/migrations").glob("003[67]_*.sql"))
-          if len(arquivos) != 2:
-              raise SystemExit(f"Esperadas 2 migrações novas, encontradas {len(arquivos)}")
+          arquivos = sorted(Path("drizzle/migrations").glob("003[678]_*.sql"))
+          if len(arquivos) != 3:
+              raise SystemExit(f"Esperadas 3 migrações novas, encontradas {len(arquivos)}")
           for arquivo in arquivos:
               parse_sql(arquivo.read_text(encoding="utf-8"))
               print(f"SQL sintaticamente válido: {arquivo}")
