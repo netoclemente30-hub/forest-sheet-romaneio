@@ -69,9 +69,26 @@ describe("Exploração diária da página inicial", () => {
     expect(hojeExploracao(new Date("2026-11-16T01:30:00Z"))).toBe("2026-11-15");
   });
 
+  it("conta toras arrastadas na data do serviço, deduplicando plaquetas por empresa", () => {
+    const toras = [
+      tora(10, { arrastada_em: "2026-11-15T17:00:00Z", volume: 2.5 }),
+      tora(10, { arrastada_em: "2026-11-15T17:00:00Z", volume: 2.5 }),
+      tora(11, { arrastada_em: "2026-11-16T01:30:00Z", volume: 1.2 }),
+      tora(12, { arrastada_em: "2026-11-14T17:00:00Z", volume: 9 }),
+      tora(13, { arrastada_em: null, volume: 3 }),
+      tora(14, { arrastada_em: "2026-11-15T17:00:00Z", empresa_id: "emp-2", volume: 8 }),
+      tora(15, { arrastada_em: "2026-11-15T17:00:00Z", origem: "serraria", volume: 12 }),
+    ];
+    const um = resumoExploracaoDiaria(dia, [], toras, [], "emp-1");
+    expect(um.arrastadas).toBe(2);
+    expect(um.volumeArrastado).toBeCloseTo(3.7);
+    const todas = resumoExploracaoDiaria(dia, [], toras, []);
+    expect(todas.arrastadas).toBe(3);
+  });
+
   it("mostra zero quando não há atividade na data, sem criar dados artificiais", () => {
     expect(resumoExploracaoDiaria(dia, [], [], [], "emp-1")).toEqual({
-      abatidas: 0, tracadas: 0, arvoresTracadas: 0, carregadas: 0, cargas: 0,
+      abatidas: 0, tracadas: 0, arvoresTracadas: 0, arrastadas: 0, volumeArrastado: 0, carregadas: 0, cargas: 0,
     });
   });
 });
