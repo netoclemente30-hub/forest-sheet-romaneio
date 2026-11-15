@@ -5,7 +5,7 @@
  */
 export const FUNCOES = [
   { valor: "cortador", nome: "Cortador", descricao: "Mapa, localização e abatimento de árvores" },
-  { valor: "tratorista", nome: "Tratorista", descricao: "Mapa e arrasto das toras já traçadas" },
+  { valor: "tratorista", nome: "Tratorista", descricao: "Mapa e arrasto de árvores, mesmo antes do traçamento" },
   { valor: "romaneador", nome: "Romaneador", descricao: "Lançamento de toras e pátios/explanadas" },
   { valor: "motorista", nome: "Motorista", descricao: "Carregamento, romaneio de carga e TXT NF-e" },
   { valor: "gerente_patio", nome: "Gerente de pátio", descricao: "Operação completa da serraria" },

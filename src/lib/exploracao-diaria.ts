@@ -1,4 +1,5 @@
 import type { Arvore, Romaneio, Tora } from "./data";
+import type { ArrastoArvore } from "./arrasto-arvore";
 
 const FUSO = "America/Porto_Velho";
 
@@ -23,6 +24,8 @@ export type ResumoExploracao = {
   abatidas: number;
   tracadas: number;
   arvoresTracadas: number;
+  arvoresArrastadas: number;
+  arrastosAguardandoAbate: number;
   arrastadas: number;
   volumeArrastado: number;
   carregadas: number;
@@ -40,6 +43,7 @@ export function resumoExploracaoDiaria(
   toras: Tora[],
   romaneios: Romaneio[],
   empresa?: string | null,
+  arrastosArvores: ArrastoArvore[] = [],
 ): ResumoExploracao {
   const daEmpresa = (id: string | null | undefined) => !empresa || id === empresa;
 
@@ -56,6 +60,14 @@ export function resumoExploracaoDiaria(
   );
   const torasTracadas = new Map(lancadas.map((t) => [t.empresa_id + ":" + t.plaqueta, t]));
   const arvoresTracadas = new Set(lancadas.map((t) => [t.empresa_id, t.autex ?? "", t.arvore].join(":")));
+
+  const arvoresPorChave = new Map(arvores.map((a) =>
+    [[a.empresa_id ?? "", a.autex, a.numero].join(":"), a]));
+  const arrastosDoDia = new Map(arrastosArvores.filter((a) =>
+    daEmpresa(a.empresa_id) && dataExploracao(a.capturado_em) === dia,
+  ).map((a) => [[a.empresa_id, a.autex, a.arvore].join(":"), a]));
+  const aguardandoAbate = [...arrastosDoDia.keys()].filter((k) =>
+    !arvoresPorChave.get(k)?.abatida_em).length;
 
   // Cada plaqueta arrastada conta uma vez no dia do trabalho do tratorista,
   // mesmo quando a mesma árvore possui várias secções.
@@ -86,6 +98,8 @@ export function resumoExploracaoDiaria(
     abatidas: abatidas.size,
     tracadas: torasTracadas.size,
     arvoresTracadas: arvoresTracadas.size,
+    arvoresArrastadas: arrastosDoDia.size,
+    arrastosAguardandoAbate: aguardandoAbate,
     arrastadas: torasArrastadas.size,
     volumeArrastado,
     carregadas: carregadas.size,

@@ -33,6 +33,18 @@ export type Op =
   | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; empresa_id?: string; log?: LogCapturado }
   | { tipo: "arvore_gps"; id: string; empresa_id: string; autex: string; dados: DadosArvoreGPS; log: LogCapturado }
   | {
+      tipo: "arrasto_arvore";
+      empresa_id: string;
+      autex: string;
+      arvore: number;
+      explanada_id: string | null;
+      latitude: number;
+      longitude: number;
+      precisao: number;
+      capturado_em: string;
+      log: LogCapturado;
+    }
+  | {
       tipo: "arrasto_toras";
       empresa_id: string;
       autex: string;

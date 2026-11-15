@@ -86,9 +86,23 @@ describe("Exploração diária da página inicial", () => {
     expect(todas.arrastadas).toBe(3);
   });
 
+  it("conta o arrasto da árvore antes do abate sincronizado e antes de existirem toras", () => {
+    const movimento = [{
+      empresa_id: "emp-1", autex: "A1", arvore: 394,
+      capturado_em: "2026-11-15T18:00:00Z",
+    }] as import("./arrasto-arvore").ArrastoArvore[];
+    const pendente = resumoExploracaoDiaria(dia, [arvore(394, { abatida_em: null })], [], [], "emp-1", movimento);
+    expect(pendente.arvoresArrastadas).toBe(1);
+    expect(pendente.arrastosAguardandoAbate).toBe(1);
+    expect(pendente.arrastadas).toBe(0);
+    const conciliado = resumoExploracaoDiaria(dia, [arvore(394)], [], [], "emp-1", movimento);
+    expect(conciliado.arvoresArrastadas).toBe(1);
+    expect(conciliado.arrastosAguardandoAbate).toBe(0);
+  });
+
   it("mostra zero quando não há atividade na data, sem criar dados artificiais", () => {
     expect(resumoExploracaoDiaria(dia, [], [], [], "emp-1")).toEqual({
-      abatidas: 0, tracadas: 0, arvoresTracadas: 0, arrastadas: 0, volumeArrastado: 0, carregadas: 0, cargas: 0,
+      abatidas: 0, tracadas: 0, arvoresTracadas: 0, arvoresArrastadas: 0, arrastosAguardandoAbate: 0, arrastadas: 0, volumeArrastado: 0, carregadas: 0, cargas: 0,
     });
   });
 });
