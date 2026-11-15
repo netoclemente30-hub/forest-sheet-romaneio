@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { torasQuery, arvoresQuery, romaneiosQuery, autexQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
-import { Truck, Plus, PackageCheck, Factory, Send, TreePine, Scissors, CalendarDays } from "lucide-react";
+import { Truck, Plus, PackageCheck, Factory, Send, TreePine, Scissors, CalendarDays, Tractor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { cargasSerradasQuery } from "@/lib/madeira-serrada";
@@ -94,10 +94,11 @@ function Index() {
             Não foi possível atualizar todos os registros. Confira a conexão e a sincronização do aparelho.
           </p>
         )}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { icon: TreePine, label: "Árvores abatidas", valor: exploracao.abatidas, detalhe: "Abatidas no mapa", to: "/cortador" as const },
             { icon: Scissors, label: "Toras traçadas", valor: exploracao.tracadas, detalhe: exploracao.arvoresTracadas + " árvores de origem", to: "/toras" as const },
+            { icon: Tractor, label: "Toras arrastadas", valor: exploracao.arrastadas, detalhe: fmtM3(exploracao.volumeArrastado) + " m³ arrastados", to: "/cortador" as const },
             { icon: Truck, label: "Carregadas para serraria", valor: exploracao.carregadas, detalhe: exploracao.cargas + " romaneios do dia", to: "/historico" as const },
           ].map(({ icon: Icon, label, valor, detalhe, to }) => (
             <Link
@@ -119,7 +120,7 @@ function Index() {
         </div>
         <p className="text-xs text-muted-foreground">
           Abatidas: data do abate no GPS. Traçadas: data do lançamento da tora de manejo.
-          Carregadas: toras de manejo vinculadas a romaneios da data selecionada.
+          Arrastadas: data do arrasto concluído pelo tratorista. Carregadas: toras de manejo vinculadas a romaneios da data selecionada.
           Os totais consideram os registros sincronizados e o horário de Rondônia.
         </p>
       </section>
