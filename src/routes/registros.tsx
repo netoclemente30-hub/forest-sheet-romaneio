@@ -6,6 +6,7 @@ import { getEmpresaAtiva } from "@/lib/empresa";
 import { linkMaps, capturarLog } from "@/lib/registro";
 import { modeloDoUserAgent } from "@/lib/aparelho";
 import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { Input } from "@/components/ui/input";
 import { MapPin, Undo2, RefreshCw, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,9 @@ export const Route = createFileRoute("/registros")({
 });
 
 function Registros() {
-  const { isAdmin, isSuperAdmin, loading: loadingSessao, permissoesCarregando } = useAuth();
+  const { papel, loading: loadingSessao, permissoesCarregando } = useAuth();
+  const podeVer = pode(papel, "registros_ver");
+  const podeReverter = pode(papel, "registros_reverter");
   const loading = loadingSessao || permissoesCarregando;
   const nav = useNavigate();
   const [q, setQ] = useState("");
@@ -43,12 +46,12 @@ function Registros() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!loading && !isAdmin && !isSuperAdmin) nav({ to: "/" });
-  }, [loading, isAdmin, isSuperAdmin, nav]);
+    if (!loading && !podeVer) nav({ to: "/" });
+  }, [loading, podeVer, nav]);
 
   const regs = useQuery({
     queryKey: ["registros"],
-    enabled: isAdmin || isSuperAdmin,
+    enabled: podeVer,
     queryFn: async () => {
       const todos: Registro[] = [];
       for (let inicio = 0; ; inicio += 1000) {
@@ -63,11 +66,12 @@ function Registros() {
     },
   });
 
-  if (loading || (!isAdmin && !isSuperAdmin)) return null;
+  if (loading || !podeVer) return null;
 
   const lista = filtrarRegistros(regs.data ?? [], usuario === "todos" ? "" : usuario, q);
   const usuarios = [...new Set((regs.data ?? []).map((r) => r.user_email).filter((e): e is string => !!e))].sort();
   async function confirmarReversao() {
+    if (!podeReverter) { toast.error("Seu cargo não pode reverter registros"); return; }
     if (!reverter || busy) return;
     if (!navigator.onLine) { toast.error("Conecte à internet para reverter com segurança."); return; }
     setBusy(true);
@@ -113,7 +117,7 @@ function Registros() {
                   <span className="text-xs text-muted-foreground">sem GPS</span>
                 )}
               </div>
-              {r.revertido_em ? <p className="text-xs text-muted-foreground">Revertido em {new Date(r.revertido_em).toLocaleString("pt-BR")}</p> : podeReverterRegistro(r) ? <Button size="sm" variant="outline" onClick={() => setReverter(r)}><Undo2 /> Reverter</Button> : !r.reversao_de && <p className="text-xs text-muted-foreground">Sem cópia anterior para reverter</p>}
+              {r.revertido_em ? <p className="text-xs text-muted-foreground">Revertido em {new Date(r.revertido_em).toLocaleString("pt-BR")}</p> : podeReverter && podeReverterRegistro(r) ? <Button size="sm" variant="outline" onClick={() => setReverter(r)}><Undo2 /> Reverter</Button> : !r.reversao_de && podeReverter && <p className="text-xs text-muted-foreground">Sem cópia anterior para reverter</p>}
             </div>
           );
         })}
@@ -121,7 +125,7 @@ function Registros() {
       </div>
       {lista.length > limite && <Button variant="outline" className="w-full" onClick={() => setLimite((n) => n + 50)}>Mostrar mais</Button>}
       {regs.isError && <p role="alert" className="text-destructive">Não foi possível carregar os registros.</p>}
-      <Dialog open={!!reverter} onOpenChange={(o) => !busy && !o && setReverter(null)}><DialogContent><DialogHeader><DialogTitle>Reverter registro #{reverter?.numero}?</DialogTitle><DialogDescription>{reverter?.acao} · {reverter?.detalhe}</DialogDescription></DialogHeader><p className="text-sm">Os dados anteriores serão restaurados somente se não houver alterações posteriores ou números reutilizados. A reversão ficará registrada.</p><Button disabled={busy} onClick={confirmarReversao}><Undo2 />{busy ? "Revertendo…" : "Confirmar reversão"}</Button><Button disabled={busy} variant="outline" onClick={() => setReverter(null)}>Cancelar</Button></DialogContent></Dialog>
+      <Dialog open={podeReverter && !!reverter} onOpenChange={(o) => !busy && !o && setReverter(null)}><DialogContent><DialogHeader><DialogTitle>Reverter registro #{reverter?.numero}?</DialogTitle><DialogDescription>{reverter?.acao} · {reverter?.detalhe}</DialogDescription></DialogHeader><p className="text-sm">Os dados anteriores serão restaurados somente se não houver alterações posteriores ou números reutilizados. A reversão ficará registrada.</p><Button disabled={busy} onClick={confirmarReversao}><Undo2 />{busy ? "Revertendo…" : "Confirmar reversão"}</Button><Button disabled={busy} variant="outline" onClick={() => setReverter(null)}>Cancelar</Button></DialogContent></Dialog>
     </div>
   );
 }
