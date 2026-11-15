@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Crosshair, MapPin, Play, Square, TreePine } from "lucide-react";
 import { arvoresQuery, torasQuery, rastrosQuery, type Arvore } from "@/lib/data";
-import { ArrastoToras } from "@/components/ArrastoToras";
 import { ArrastoArvore } from "@/components/ArrastoArvore";
 import { arrastosArvoresQuery } from "@/lib/arrasto-arvore";
 import { situacaoArrasto } from "@/lib/arrasto";
@@ -367,9 +366,6 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             </>}
             {!encerrado && podeArrastar && empresa && (
               <ArrastoArvore arvore={editando} empresa={empresa} encerrado={encerrado} />
-            )}
-            {!encerrado && podeArrastar && editando.abatida_em && empresa && (
-              <ArrastoToras arvore={editando} empresa={empresa} toras={toras.data ?? []} encerrado={encerrado} />
             )}
             {encerrado && <p className="text-sm text-muted-foreground">Manejo encerrado: o mapa e os registros ficam disponíveis para consulta.</p>}
           </div>}
