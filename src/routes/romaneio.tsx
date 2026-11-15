@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -37,6 +39,8 @@ export const Route = createFileRoute("/romaneio")({
 });
 
 function RomaneioPage() {
+  const { papel } = useAuth();
+  const podeCarregar = pode(papel, "carga_criar");
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
   const nav = useNavigate();
@@ -85,6 +89,7 @@ function RomaneioPage() {
   const resumo = resumoPorEspecie(itens);
 
   async function salvar() {
+    if (!podeCarregar) return;
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
     const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
     if (!estaOnline()) {
@@ -216,7 +221,7 @@ function RomaneioPage() {
           <div className="p-4 text-sm text-muted-foreground flex gap-2"><AlertTriangle className="size-4 shrink-0" />Plaquetas já carregadas são bloqueadas automaticamente.</div>
         )}
       </div>
-      <Button size="lg" className="w-full h-12" disabled={busy || !itens.length} onClick={salvar}>Salvar romaneio</Button>
+      {podeCarregar && <Button size="lg" className="w-full h-12" disabled={busy || !itens.length} onClick={salvar}>Salvar romaneio</Button>}
     </div>
   );
 }
