@@ -39,3 +39,35 @@ export function estoqueComFila(toras: Tora[], itens: ItemFila[], empresa: string
   }
   return lista;
 }
+/** Queued yard receipt for a load (same company), if any. */
+export function recebimentoPendente(itens: ItemFila[], romaneioId: string, empresa: string | null) {
+  for (const { op, erro } of itens) {
+    if (op.tipo === "romaneio_recebido" && op.id === romaneioId && (!empresa || !op.empresa_id || op.empresa_id === empresa)) {
+      return { patio: op.patio, em: op.log?.criado_em ?? null, erro: erro ?? null };
+    }
+  }
+  return null;
+}
+
+/** Show queued receipts locally, without creating loads or copying logs. */
+export function romaneiosComFila(romaneios: Romaneio[], itens: ItemFila[], empresa: string | null): Romaneio[] {
+  return romaneios.map((r) => {
+    if (r.recebido_em) return r;
+    const p = recebimentoPendente(itens, r.id, empresa ?? r.empresa_id ?? null);
+    return p && !p.erro ? { ...r, recebido_em: p.em ?? new Date().toISOString(), patio: p.patio } : r;
+  });
+}
+
+export type ConferenciaCarga = { ok: true } | { ok: false; motivo: string };
+
+/** The QR must describe exactly the logs linked to the load in the database, in the expected company. */
+export function conferirCargaQr(
+  qrPlaquetas: number[], romaneio: Pick<Romaneio, "empresa_id">, toras: Pick<Tora, "plaqueta" | "empresa_id">[], empresaEsperada: string | null,
+): ConferenciaCarga {
+  if (empresaEsperada && romaneio.empresa_id !== empresaEsperada) return { ok: false, motivo: "Esta carga pertence a outra empresa" };
+  if (toras.some((t) => t.empresa_id !== romaneio.empresa_id)) return { ok: false, motivo: "Há toras de outra empresa nesta carga" };
+  const banco = [...new Set(toras.map((t) => t.plaqueta))].sort((a, b) => a - b);
+  const qr = [...new Set(qrPlaquetas)].sort((a, b) => a - b);
+  if (banco.length !== qr.length || banco.some((p, i) => p !== qr[i])) return { ok: false, motivo: "As toras do QR não conferem com a carga registrada. Confira o romaneio antes de receber" };
+  return { ok: true };
+}

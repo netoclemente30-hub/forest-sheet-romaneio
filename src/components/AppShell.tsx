@@ -16,7 +16,7 @@ import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
-import { MANEJO, emManejo, emSerraria, ehRotaPublica } from "@/lib/nav";
+import { MANEJO, secaoDaRota, ehRotaPublica } from "@/lib/nav";
 import { nomePapel, pode, rotaInicial, rotaPermitida, type Papel } from "@/lib/funcoes";
 import { EscolherAparencia } from "@/components/Aparencia";
 
@@ -70,8 +70,9 @@ export function AppShell() {
   }
   const [empresaSel, setEmpresaSel] = useState<string>(() => getEmpresaAtiva() ?? "");
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const manejo = emManejo(pathname);
-  const serraria = emSerraria(pathname);
+  const secao = secaoDaRota(pathname, papel);
+  const manejo = secao === "manejo";
+  const serraria = secao === "serraria";
   const [aparelhoAberto, setAparelhoAberto] = useState(false);
   const [nomeAp, setNomeAp] = useState("");
   const [modeloAp, setModeloAp] = useState("");

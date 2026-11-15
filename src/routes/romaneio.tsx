@@ -134,7 +134,6 @@ function RomaneioPage() {
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-3xl font-bold uppercase">Romaneio de carga</h1>
         <Link to="/historico" className="text-sm font-semibold text-primary underline">Ver romaneios emitidos</Link>
-        <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
       </div>
       <datalist id="lista-caminhao">{cad.data?.veiculos.filter((v) => v.tipo === "caminhao").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
       <datalist id="lista-reboque">{cad.data?.veiculos.filter((v) => v.tipo === "reboque").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
