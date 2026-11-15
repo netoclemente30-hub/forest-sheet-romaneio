@@ -12,17 +12,19 @@ function erroRede(error: unknown): boolean {
 }
 
 export async function registrarArrasto({
-  arvore, empresa, plaquetas, gps,
+  arvore, empresa, plaquetas, explanadaId, gps,
 }: {
   arvore: Arvore;
   empresa: string;
   plaquetas: number[];
+  explanadaId: string;
   gps: Coordenada;
 }): Promise<{ offline: boolean; op: Extract<Op, { tipo: "arrasto_toras" }> }> {
   const erroGps = validarPosicaoArrasto(arvore, gps);
   if (erroGps) throw new Error(erroGps);
   if (!empresa || arvore.empresa_id !== empresa)
     throw new Error("Empresa da árvore não corresponde à empresa selecionada");
+  if (!explanadaId) throw new Error("Escolha a explanada onde deixou as toras");
   if (!plaquetas.length || new Set(plaquetas).size !== plaquetas.length)
     throw new Error("Selecione pelo menos uma tora sem repetições");
   if (!gps.capturado_em || gps.precisao == null)
@@ -41,6 +43,7 @@ export async function registrarArrasto({
     autex: arvore.autex,
     arvore: arvore.numero,
     plaquetas,
+    explanada_id: explanadaId,
     latitude: gps.lat,
     longitude: gps.lng,
     precisao: gps.precisao,
