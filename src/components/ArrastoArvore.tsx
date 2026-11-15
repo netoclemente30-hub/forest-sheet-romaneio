@@ -80,6 +80,7 @@ export function ArrastoArvore({
       });
       if (!resultado.offline) {
         await qc.invalidateQueries({ queryKey: chave.queryKey });
+        await qc.invalidateQueries({ queryKey: ["toras"] });
       }
       toast.success(resultado.offline
         ? "Arrasto salvo offline neste aparelho. Será conciliado ao sincronizar."
@@ -148,12 +149,12 @@ export function ArrastoArvore({
                 <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
           </label>
-          <Button type="button" className="h-12 w-full" disabled={salvando || !arvore.latitude || !arvore.longitude}
+          <Button type="button" className="h-12 w-full" disabled={salvando || arvore.latitude == null || arvore.longitude == null}
             onClick={() => void confirmar()}>
             {salvando ? <LoaderCircle className="size-4 animate-spin" /> : <Tractor className="size-4" />}
             {salvando ? "Capturando GPS..." : "Registrar arrasto da árvore"}
           </Button>
-          {!arvore.latitude || !arvore.longitude ? (
+          {arvore.latitude == null || arvore.longitude == null ? (
             <p className="text-xs text-destructive">Esta árvore precisa ter coordenadas cadastradas no mapa.</p>
           ) : (
             <p className="text-xs text-muted-foreground">
