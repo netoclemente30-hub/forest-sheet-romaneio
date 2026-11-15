@@ -53,6 +53,7 @@ function Index() {
   );
   const carregandoExploracao = arvores.isLoading || toras.isLoading || roms.isLoading;
   const erroExploracao = arvores.isError || toras.isError || roms.isError;
+  const arrastoHabilitado = (toras.data ?? []).some((t) => Object.prototype.hasOwnProperty.call(t, "arrastada_em"));
   const cargasSer = useQuery(cargasSerradasQuery(getEmpresaAtiva() ?? empresaId));
   const dia = movimentoDoDia(hojeLocal(), roms.data ?? [], toras.data ?? [], cargasSer.data ?? []);
   const s = useMemo(() => {
@@ -96,22 +97,22 @@ function Index() {
         )}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
-            { icon: TreePine, label: "Árvores abatidas", valor: exploracao.abatidas, detalhe: "Abatidas no mapa", to: "/cortador" as const },
-            { icon: Scissors, label: "Toras traçadas", valor: exploracao.tracadas, detalhe: exploracao.arvoresTracadas + " árvores de origem", to: "/toras" as const },
-            { icon: Tractor, label: "Toras arrastadas", valor: exploracao.arrastadas, detalhe: fmtM3(exploracao.volumeArrastado) + " m³ arrastados", to: "/cortador" as const },
-            { icon: Truck, label: "Carregadas para serraria", valor: exploracao.carregadas, detalhe: exploracao.cargas + " romaneios do dia", to: "/historico" as const },
-          ].map(({ icon: Icon, label, valor, detalhe, to }) => (
+            { icon: TreePine, label: "Árvores abatidas", valor: exploracao.abatidas, detalhe: "Abatidas no mapa", to: "/cortador" as const, indisponivel: false },
+            { icon: Scissors, label: "Toras traçadas", valor: exploracao.tracadas, detalhe: exploracao.arvoresTracadas + " árvores de origem", to: "/toras" as const, indisponivel: false },
+            { icon: Tractor, label: "Toras arrastadas", valor: exploracao.arrastadas, detalhe: arrastoHabilitado ? fmtM3(exploracao.volumeArrastado) + " m³ arrastados" : "Aguardando ativação no banco", to: "/cortador" as const, indisponivel: !arrastoHabilitado },
+            { icon: Truck, label: "Carregadas para serraria", valor: exploracao.carregadas, detalhe: exploracao.cargas + " romaneios do dia", to: "/historico" as const, indisponivel: false },
+          ].map(({ icon: Icon, label, valor, detalhe, to, indisponivel }) => (
             <Link
               to={to}
               key={label}
               className="flex items-start gap-3 rounded-lg border bg-background p-3 transition-colors hover:border-primary/60"
-              aria-label={label + ": " + (carregandoExploracao || erroExploracao ? "carregando" : valor)}
+              aria-label={label + ": " + (carregandoExploracao || erroExploracao ? "carregando" : indisponivel ? "não habilitado" : valor)}
             >
               <Icon className="mt-1 size-5 shrink-0 text-primary" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold leading-tight">{label}</p>
                 <p className="font-display text-3xl font-bold tabular-nums">
-                  {carregandoExploracao || erroExploracao ? "—" : valor}
+                  {carregandoExploracao || erroExploracao || indisponivel ? "—" : valor}
                 </p>
                 <p className="text-xs text-muted-foreground">{detalhe}</p>
               </div>
