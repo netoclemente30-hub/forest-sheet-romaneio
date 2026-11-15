@@ -1001,12 +1001,20 @@ export type Database = {
         Args: { _empresa: string; _id: string; _log: Json }
         Returns: undefined
       }
+      excluir_romaneio_toras: {
+        Args: { _empresa: string; _id: string; _log: Json }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      importar_ficha_manejo: {
+        Args: { _arvores: Json; _empresa: string; _toras: Json }
+        Returns: Json
       }
       minha_empresa: { Args: never; Returns: string }
       minha_empresa_situacao: {
@@ -1022,6 +1030,25 @@ export type Database = {
       pode_funcao: {
         Args: { _acao: string; _empresa: string }
         Returns: boolean
+      }
+      registrar_arrasto_toras: {
+        Args: {
+          _arvore: number
+          _autex: string
+          _capturado_em: string
+          _empresa: string
+          _explanada: string
+          _lat: number
+          _lng: number
+          _operacao: string
+          _plaquetas: number[]
+          _precisao: number
+        }
+        Returns: number
+      }
+      registrar_evento: {
+        Args: { _empresa: string; _log: Json }
+        Returns: string
       }
       registrar_operacao: {
         Args: {
@@ -1055,6 +1082,16 @@ export type Database = {
           _id: string
           _itens: Json
           _log: Json
+        }
+        Returns: string
+      }
+      salvar_romaneio_toras: {
+        Args: {
+          _cab: Json
+          _empresa: string
+          _log: Json
+          _operacao: string
+          _plaquetas: number[]
         }
         Returns: string
       }
