@@ -15,7 +15,7 @@ export async function listarExplanadas(empresa: string, autex?: string): Promise
   // Tabela proposta para o banco administrado pela Lovable.
   let q = supabase.from("explanadas" as "patios")
     .select("*").eq("empresa_id", empresa).order("nome");
-  if (autex) q = q.eq("autex", autex);
+  if (autex) q = q.filter("autex", "eq", autex);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Explanada[];
