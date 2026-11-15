@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { salvarArquivo } from "@/lib/arquivo";
 import { modeloFichaCampo } from "@/lib/modelo-ficha-campo";
 import { ImportarCoordenadas } from "@/components/ImportarCoordenadas";
+import { SinaflorCsvExportacao } from "@/components/SinaflorCsvExportacao";
 
 export const Route = createFileRoute("/cortador")({
   staticData: { sitemap: false },
@@ -45,6 +46,7 @@ function CortadorPage() {
         {ativos.map((a) => <option key={a.numero} value={a.numero}>AUTEX {a.numero}{a.descricao ? ` · ${a.descricao}` : ""}</option>)}
       </select>
       {numero && <MapaExploracao key={numero} autex={numero} arvores={lista} encerrado={false} />}
+      {numero && <SinaflorCsvExportacao arvores={lista} toras={[]} autexFixa={numero} apenasAbatidas />}
       {naoAbatidas.length > 0 && <section className="rounded-xl border bg-card">
         <h2 className="border-b p-3 font-semibold">Não abatidas ({naoAbatidas.length})</h2>
         <div className="divide-y">{naoAbatidas.map((a) => <div key={a.id} className="flex justify-between gap-2 p-3 text-sm"><span>Árvore {a.numero} · {a.nome_vulgar}</span><span className="font-semibold text-destructive">{textoMotivo(a.nao_abatida_motivo)}</span></div>)}</div>
