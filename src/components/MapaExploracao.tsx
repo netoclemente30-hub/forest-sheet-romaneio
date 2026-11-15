@@ -27,7 +27,6 @@ import {
 } from "@/lib/exploracao-salvar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapaPdf } from "@/components/MapaPdf";
 import { GeoPdfMapa } from "@/components/GeoPdfMapa";
 import { arvoresProximas } from "@/lib/geopdf";
 
@@ -231,7 +230,6 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
         <div className="rounded-lg border bg-card p-2"><div className="text-xs text-muted-foreground">Percurso atual</div><div className="font-display text-xl font-bold">{Math.round(distanciaAtiva)} m</div></div>
       </div>
 
-      <MapaPdf autex={autex} encerrado={encerrado} />
       <GeoPdfMapa autex={autex} arvores={arvores} atual={atual} rastros={todosPontos} encerrado={encerrado} onArvore={abrirArvore} />
 
       {!encerrado && <section className="space-y-2" aria-label="Árvores próximas ao GPS">
