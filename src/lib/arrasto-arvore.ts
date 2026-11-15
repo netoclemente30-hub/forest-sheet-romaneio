@@ -23,8 +23,9 @@ export const arrastosArvoresQuery = (empresa: string, autex?: string) => ({
   networkMode: "always" as const,
   queryKey: ["arrastos-arvores", empresa, autex ?? "todas"],
   queryFn: () => comCache<ArrastoArvore>("arrastos-arvores:" + empresa + ":" + (autex ?? "todas"), async () => {
-    let q = supabase.from("arrastos_arvores").select("*").eq("empresa_id", empresa)
+    let q = supabase.from("arrastos_arvores").select("*")
       .order("capturado_em", { ascending: false });
+    if (empresa) q = q.eq("empresa_id", empresa);
     if (autex) q = q.eq("autex", autex);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
