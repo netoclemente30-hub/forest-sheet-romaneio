@@ -1,3 +1,4 @@
+import { pode } from "@/lib/funcoes";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +41,9 @@ export const Route = createFileRoute("/saldo")({
 
 function Saldo() {
   const toras = useQuery(torasQuery);
-  const { empresaId, session } = useAuth();
+  const { empresaId, session, papel } = useAuth();
+  const podeOperar = pode(papel, "serraria_operar");
+  const podeEditar = pode(papel, "usuarios_gerenciar");
   const [empresaOffline, setEmpresaOffline] = useState<{ usuario: string; empresa: string } | null>(null);
   const usuario = session?.user.id;
   useEffect(() => {
@@ -85,6 +88,7 @@ function Saldo() {
   const linhas = saldo.data ?? [];
   const torasEmpresa = useMemo(() => (toras.data ?? []).filter((t) => t.empresa_id === empresa), [toras.data, empresa]);
   const setLinhas = async (l: LinhaSaldo[]) => {
+    if (!podeOperar) return;
     if (!empresa) throw new Error("Aguarde carregar a empresa");
     qc.setQueryData(["saldo-linhas", empresa], l);
     try { localStorage.setItem(`saldo-linhas:${empresa}`, JSON.stringify(l)); } catch { /* cheio */ }
@@ -133,6 +137,7 @@ function Saldo() {
   useEffect(() => { setPagina(0); }, [buscaAdiada, status, impressao]);
 
   async function cadastrar() {
+    if (!podeOperar) return;
     const ini = Number(inicio);
     if (!Number.isSafeInteger(ini) || ini <= 0) { toast.error("Digite a plaqueta inicial"); return; }
     if (!navigator.onLine) { toast.error("Precisa de internet para cadastrar o saldo"); return; }
@@ -177,12 +182,12 @@ function Saldo() {
         <Button role="tab" aria-selected={vista === "aguardando"} size="sm" variant={vista === "aguardando" ? "default" : "ghost"} className="h-auto py-2 whitespace-normal" onClick={() => setVista("aguardando")}>Toras medidas no pátio · aguardando identificação</Button>
       </div>
       {vista === "aguardando" ? <TorasAguardando especies={[...linhas.map((l) => ({ especie: l.especie, nome_cientifico: l.nome_cientifico ?? null })), ...(toras.data ?? []).map((t) => ({ especie: t.especie ?? "", nome_cientifico: t.nome_cientifico }))]} /> : <>
-      <Button variant="outline" className="w-full h-12" onClick={() => setEncaixe(true)}><ScanSearch /> Encaixe de toras</Button>
-      <Sheet open={encaixe} onOpenChange={setEncaixe}>
+      {podeOperar && <Button variant="outline" className="w-full h-12" onClick={() => setEncaixe(true)}><ScanSearch /> Encaixe de toras</Button>}
+      <Sheet open={podeOperar && encaixe} onOpenChange={setEncaixe}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Encaixe de toras</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">
-            {filaOffline.carregando || !empresa || toras.isPending ? <p className="text-sm text-muted-foreground">Conferindo lançamentos neste aparelho…</p> : filaOffline.erro || toras.isError ? <p role="alert" className="text-sm text-destructive">Não foi possível conferir os lançamentos. Reabra esta página para tentar novamente.</p> : linhas.length ? <EncaixeToras linhas={linhasEncaixe} toras={toras.data ?? []} itens={filaOffline.itens} empresa={empresa} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
+            {filaOffline.carregando || !empresa || toras.isPending ? <p className="text-sm text-muted-foreground">Conferindo lançamentos neste aparelho…</p> : filaOffline.erro || toras.isError ? <p role="alert" className="text-sm text-destructive">Não foi possível conferir os lançamentos. Reabra esta página para tentar novamente.</p> : podeOperar && linhas.length ? <EncaixeToras linhas={linhasEncaixe} toras={toras.data ?? []} itens={filaOffline.itens} empresa={empresa} /> : <p className="text-sm text-muted-foreground">Nenhum saldo disponível. Escolha a planilha de saldo para começar.</p>}
           </div>
         </SheetContent>
       </Sheet>
@@ -190,31 +195,31 @@ function Saldo() {
         <div className="flex justify-between text-sm"><span>Toras do saldo a medir</span><b>{pendentes.length + fora}</b></div>
         {!linhas.length && !pendentes.length && <div className="text-xs text-muted-foreground">Escolha primeiro a planilha de saldo abaixo.</div>}
         {medidas.length > 0 && <div className="text-xs text-muted-foreground">{medidas.length} medidas agora</div>}
-        <Button className="w-full h-12" disabled={!pendentes.length && !linhas.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>
+        {podeOperar && <Button className="w-full h-12" disabled={!pendentes.length && !linhas.length} onClick={() => setMedir(true)}><Ruler /> Medir tora do saldo</Button>}
         {medidas.length > 0 && <Button asChild variant="secondary" className="w-full"><Link to="/etiquetas" search={{ p: medidas.join(",") }}><Printer /> Imprimir as {medidas.length} medidas agora</Link></Button>}
       </div>
       {saldo.isError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar o saldo desta empresa. Suas medidas não foram alteradas.</p>}
       <ExportarSaldoPendente lista={paraExportar} carregando={saldo.isPending || saldo.isError || toras.isFetching || toras.isPending || toras.isError || filaOffline.carregando || !!filaOffline.erro || !empresa} />
-      <Sheet open={medir} onOpenChange={setMedir}>
+      <Sheet open={podeOperar && medir} onOpenChange={setMedir}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Medir tora do saldo</SheetTitle></SheetHeader>
           <div className="p-4 pt-0 space-y-2">
             <p className="text-xs text-muted-foreground">Digite o nº da árvore e a seção, quando houver. Para AUTESP sem seção, deixe esse campo vazio.</p>
-            <ToraForm origem="serraria" toras={toras.data ?? []} arvores={arvores.data ?? []} saldo={linhas} onSaved={(p) => setMedidas((m) => m.includes(p) ? m : [...m, p])} />
+            {podeOperar && <ToraForm origem="serraria" toras={toras.data ?? []} arvores={arvores.data ?? []} saldo={linhas} onSaved={(p) => setMedidas((m) => m.includes(p) ? m : [...m, p])} />}
           </div>
         </SheetContent>
       </Sheet>
       <p className="text-sm text-muted-foreground">Saldo com AUTEX ou AUTESP, nome científico, espécie, árvore e volume; seção opcional.</p>
-      <label className="block">
+      {podeOperar && <label className="block">
         <Button asChild variant="outline" className="w-full"><span><Upload /> Escolher planilha de saldo</span></Button>
         <input type="file" accept=".xlsx,.xlsm,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && abrir(e.target.files[0])} />
-      </label>
+      </label>}
       {res.length > 0 && <>
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="rounded-lg bg-forest text-primary-foreground p-3"><b className="text-2xl">{ok.length}</b><div className="text-xs">em estoque · {fmtM3(ok.reduce((n, r) => n + Number(r.tora?.volume ?? 0), 0))} m³</div></div>
           <div className="rounded-lg bg-destructive text-destructive-foreground p-3"><b className="text-2xl">{fora}</b><div className="text-xs">fora de estoque</div></div>
         </div>
-        {fora > 0 && <div className="bg-card border rounded-xl p-3 space-y-2">
+        {podeOperar && fora > 0 && <div className="bg-card border rounded-xl p-3 space-y-2">
           <div className="text-sm">Cadastrar as {fora} toras fora de estoque, só com o volume do saldo, com plaquetas em sequência:</div>
           <div className="flex gap-2">
             <Input type="number" inputMode="numeric" placeholder="Plaqueta inicial" aria-label="Plaqueta inicial" value={inicio} onChange={(e) => setInicio(e.target.value)} />
@@ -230,10 +235,10 @@ function Saldo() {
             <Button key={k} size="sm" variant={status === k ? "default" : "outline"} onClick={() => setStatus(k)}>{l}</Button>
           ))}
         </div>
-        <Sheet open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
+        <Sheet open={podeEditar && !!edit} onOpenChange={(o) => !o && setEdit(null)}>
           <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
             <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
-            {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
+            {podeEditar && edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
           </SheetContent>
         </Sheet>
         <Input placeholder="Filtrar por nome, científico, árvore ou AUTEX" aria-label="Filtrar saldo" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-12" />
@@ -258,7 +263,7 @@ function Saldo() {
                 <div className="text-xs text-muted-foreground">{r.tora ? `Plaqueta ${r.tora.plaqueta} · ` : ""}Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"}</div>
                 <div className="text-xs text-muted-foreground">{fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³{!r.tora && <span className="font-semibold text-destructive"> · fora de estoque</span>}{r.tora && (r.tora.etiqueta_impressa_em ? <span className="font-semibold text-primary"> · etiqueta impressa</span> : <span> · etiqueta não impressa</span>)}</div>
               </div>
-              {r.tora && <div className="flex shrink-0 items-center gap-1">
+              {podeEditar && r.tora && <div className="flex shrink-0 items-center gap-1">
                 <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Editar plaqueta ${r.tora.plaqueta}`} onClick={() => setEdit(r.tora)}><Pencil className="h-4 w-4" /></Button>
                 <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir plaqueta ${r.tora.plaqueta}`} onClick={async () => { if (r.tora && await excluirTora(r.tora)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4" /></Button>
               </div>}

@@ -1,0 +1,53 @@
+name: Validar Gestor Florestal
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, fix/auditoria-multitenant-estoque-mapa-pdf]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Instalar dependências com lockfile
+        run: bun install --frozen-lockfile
+      - name: Verificar sintaxe das migrações PostgreSQL
+        run: |
+          python -m pip install --disable-pip-version-check pglast
+          python - <<'PY'
+          from pathlib import Path
+          from pglast import parse_sql
+          arquivos = sorted(Path("drizzle/migrations").glob("003[67]_*.sql"))
+          arquivos.extend(Path("docs/propostas") / nome for nome in [
+              "arrasto-de-toras.sql",
+              "funcoes-funcionarios.sql",
+              "controle-acesso-rls.sql",
+              "controle-acesso-rpcs.sql",
+          ])
+          if len(arquivos) != 6:
+              raise SystemExit(f"Esperados 6 arquivos SQL, encontrados {len(arquivos)}")
+          for arquivo in arquivos:
+              parse_sql(arquivo.read_text(encoding="utf-8"))
+              print(f"SQL sintaticamente válido (não aplicado): {arquivo}")
+          PY
+      - name: Testes automatizados
+        run: bun run test
+      - name: Análise estática (sem bloqueio por estilo legado)
+        run: |
+          bunx eslint . --rule "prettier/prettier: off"
+      # O TanStack Router gera routeTree.gen.ts durante o build; rodar antes
+      # do tsc permite validar rotas novas sem editar arquivo gerado no GitHub.
+      - name: Compilar aplicação e gerar rotas
+        run: bun run build
+      - name: Conferir tipos TypeScript
+        run: bunx tsc --noEmit --pretty false

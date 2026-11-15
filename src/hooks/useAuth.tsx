@@ -2,15 +2,25 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { lerEmpresaSalva, salvarEmpresaDoUsuario } from "@/lib/empresa";
+import { papelDoUsuario, funcaoValida, type FuncaoFuncionario } from "@/lib/funcoes";
 
 async function checarAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-  return !!data;
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  if (error) throw error;
+  return data === true;
 }
 
 async function checarSuperAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
-  return !!data;
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
+  if (error) throw error;
+  return data === true;
+}
+
+/** A função é sempre consultada no banco; metadados editáveis do usuário não autorizam ações. */
+async function checarFuncao(): Promise<FuncaoFuncionario | null> {
+  const { data, error } = await supabase.rpc("minha_funcao" as never);
+  if (error) return null; // Antes da ativação do banco: negar acesso operacional.
+  return funcaoValida(data) ? data : null;
 }
 
 async function checarEmpresa(): Promise<string | null> {
@@ -23,6 +33,7 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [funcao, setFuncao] = useState<FuncaoFuncionario | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissoesCarregando, setPermissoesCarregando] = useState(true);
@@ -36,6 +47,25 @@ export function useAuth() {
 
     function atualizar(id: string, atual: number) {
       const vigente = () => ativo && usuario === id && versao === atual;
+      setPermissoesCarregando(true);
+      setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setFuncao(null);
+      // Cópia por usuário apenas para trabalhar sem sinal. O servidor continua
+      // validando o cargo atual ao sincronizar; nunca autoriza pela cópia local.
+      if (!navigator.onLine) {
+        try {
+          const salva = JSON.parse(localStorage.getItem("permissoes-offline:" + id) ?? "null");
+          if (salva?.usuario === id) {
+            setIsAdmin(salva.admin === true);
+            setIsSuperAdmin(salva.superadmin === true);
+            setFuncao(funcaoValida(salva.funcao) ? salva.funcao : null);
+          }
+        } catch { /* sem cópia válida: negar */ }
+        setEmpresaId(lerEmpresaSalva(id));
+        setPermissoesCarregando(false);
+        return;
+      }
       // Empresa e permissões são independentes: uma consulta lenta de cargo
       // não pode impedir lançamentos de campo.
       void checarEmpresa().catch(() => null).then((empresa) => {
@@ -47,9 +77,9 @@ export function useAuth() {
           if (vigente()) atualizar(id, atual);
         }, 10000);
       });
-      void Promise.all([checarAdmin(id), checarSuperAdmin(id)])
-        .then(([a, sa]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); } })
-        .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); } })
+      void Promise.all([checarAdmin(id), checarSuperAdmin(id), checarFuncao()])
+        .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); try { localStorage.setItem("permissoes-offline:" + id, JSON.stringify({ usuario: id, admin: a, superadmin: sa, funcao: f })); } catch { /* armazenamento indisponível */ } } })
+        .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); } })
         .finally(() => { if (vigente()) setPermissoesCarregando(false); });
     }
 
@@ -59,7 +89,7 @@ export function useAuth() {
       clearTimeout(tentativa);
       const atual = ++versao;
       const id = s?.user.id ?? null;
-      if (id !== usuario) { setIsAdmin(false); setIsSuperAdmin(false); }
+      if (id !== usuario) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); }
       usuario = id;
       setSession(s);
       setLoading(false);
@@ -94,5 +124,6 @@ export function useAuth() {
       data.subscription.unsubscribe();
     };
   }, []);
-  return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId };
+  const papel = papelDoUsuario(isSuperAdmin, isAdmin, funcao);
+  return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId, funcao, papel };
 }

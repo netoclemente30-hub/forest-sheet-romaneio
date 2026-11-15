@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { torasQuery, arvoresQuery, romaneiosQuery, autexQuery } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
-import { Truck, Plus, Upload, PackageCheck, Factory, Send } from "lucide-react";
+import { Truck, Plus, PackageCheck, Factory, Send, TreePine, Scissors, CalendarDays, Tractor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { cargasSerradasQuery } from "@/lib/madeira-serrada";
 import { hojeLocal, movimentoDoDia } from "@/lib/nfe-txt";
+import { hojeExploracao, resumoExploracaoDiaria } from "@/lib/exploracao-diaria";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },
@@ -40,7 +42,18 @@ function Index() {
   const autexLista = useQuery(autexQuery);
   const encerradasPainel = new Set((autexLista.data ?? []).filter((a) => a.encerrado).map((a) => a.numero));
   const roms = useQuery(romaneiosQuery);
-  const { empresaId } = useAuth();
+  const { empresaId, isSuperAdmin } = useAuth();
+  const [dataExploracao, setDataExploracao] = useState(hojeExploracao);
+  const empresaPainel = getEmpresaAtiva() ?? (isSuperAdmin ? null : empresaId);
+  const exploracao = useMemo(
+    () => resumoExploracaoDiaria(
+      dataExploracao, arvores.data ?? [], toras.data ?? [], roms.data ?? [], empresaPainel,
+    ),
+    [dataExploracao, arvores.data, toras.data, roms.data, empresaPainel],
+  );
+  const carregandoExploracao = arvores.isLoading || toras.isLoading || roms.isLoading;
+  const erroExploracao = arvores.isError || toras.isError || roms.isError;
+  const arrastoHabilitado = (toras.data ?? []).some((t) => Object.prototype.hasOwnProperty.call(t, "arrastada_em"));
   const cargasSer = useQuery(cargasSerradasQuery(getEmpresaAtiva() ?? empresaId));
   const dia = movimentoDoDia(hojeLocal(), roms.data ?? [], toras.data ?? [], cargasSer.data ?? []);
   const s = useMemo(() => {
@@ -50,8 +63,6 @@ function Index() {
     return { total: t.length, vol: sum(t), carr: carregadas.length, volCarr: sum(carregadas), patio: t.length - carregadas.length, volPatio: sum(t) - sum(carregadas) };
   }, [toras.data]);
 
-  const vazio = !toras.isLoading && (toras.data?.length ?? 0) === 0;
-
   return (
     <div className="space-y-5">
       <header className="space-y-1">
@@ -60,13 +71,60 @@ function Index() {
           Acompanhe o manejo e a serraria da sua empresa: toras medidas e etiquetadas com QR Code, estoque no pátio, cargas expedidas e movimento do dia — tudo rastreado da floresta ao romaneio.
         </p>
       </header>
-      {vazio && (
-        <Link to="/importar" className="block rounded-xl border-2 border-dashed border-primary p-5 text-center">
-          <Upload className="mx-auto size-8 text-primary" />
-          <div className="font-semibold mt-2">Importar sua planilha</div>
-          <div className="text-sm text-muted-foreground">Carregue a BASE e os Cálculos de Inventário do Excel</div>
-        </Link>
-      )}
+      <section aria-label="Exploração diária" className="space-y-3 rounded-xl border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold uppercase">Exploração diária</h2>
+            <p className="text-xs text-muted-foreground">Abatimentos, traçamento e cargas de madeira em tora por dia.</p>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CalendarDays className="size-4" />
+            <span className="sr-only">Data da exploração</span>
+            <Input
+              aria-label="Data da exploração"
+              type="date"
+              value={dataExploracao}
+              max={hojeExploracao()}
+              onChange={(e) => setDataExploracao(e.target.value)}
+              className="h-10 w-[156px] bg-background"
+            />
+          </label>
+        </div>
+        {erroExploracao && (
+          <p role="alert" className="text-xs text-destructive">
+            Não foi possível atualizar todos os registros. Confira a conexão e a sincronização do aparelho.
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { icon: TreePine, label: "Árvores abatidas", valor: exploracao.abatidas, detalhe: "Abatidas no mapa", to: "/cortador" as const, indisponivel: false },
+            { icon: Scissors, label: "Toras traçadas", valor: exploracao.tracadas, detalhe: exploracao.arvoresTracadas + " árvores de origem", to: "/toras" as const, indisponivel: false },
+            { icon: Tractor, label: "Toras arrastadas", valor: exploracao.arrastadas, detalhe: arrastoHabilitado ? fmtM3(exploracao.volumeArrastado) + " m³ arrastados" : "Aguardando ativação no banco", to: "/cortador" as const, indisponivel: !arrastoHabilitado },
+            { icon: Truck, label: "Carregadas para serraria", valor: exploracao.carregadas, detalhe: exploracao.cargas + " romaneios do dia", to: "/historico" as const, indisponivel: false },
+          ].map(({ icon: Icon, label, valor, detalhe, to, indisponivel }) => (
+            <Link
+              to={to}
+              key={label}
+              className="flex items-start gap-3 rounded-lg border bg-background p-3 transition-colors hover:border-primary/60"
+              aria-label={label + ": " + (carregandoExploracao || erroExploracao ? "carregando" : indisponivel ? "não habilitado" : valor)}
+            >
+              <Icon className="mt-1 size-5 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold leading-tight">{label}</p>
+                <p className="font-display text-3xl font-bold tabular-nums">
+                  {carregandoExploracao || erroExploracao || indisponivel ? "—" : valor}
+                </p>
+                <p className="text-xs text-muted-foreground">{detalhe}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Abatidas: data do abate no GPS. Traçadas: data do lançamento da tora de manejo.
+          Arrastadas: data do arrasto concluído pelo tratorista. Carregadas: toras de manejo vinculadas a romaneios da data selecionada.
+          Os totais consideram os registros sincronizados e o horário de Rondônia.
+        </p>
+      </section>
       <div>
         <h2 className="text-sm font-bold uppercase text-muted-foreground mb-2">Hoje</h2>
         <div className="grid grid-cols-3 gap-2">

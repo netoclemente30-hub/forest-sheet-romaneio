@@ -32,13 +32,6 @@ export const Route = createFileRoute("/importar")({
 type Row = unknown[];
 const n = numeroInventario;
 
-async function chunks<T>(arr: T[], size: number, fn: (c: T[]) => Promise<void>, onProgress: (done: number) => void) {
-  for (let i = 0; i < arr.length; i += size) {
-    await fn(arr.slice(i, i + size));
-    onProgress(Math.min(i + size, arr.length));
-  }
-}
-
 function Importar() {
   const qc = useQueryClient();
   const { isAdmin, isSuperAdmin, loading, permissoesCarregando } = useAuth();
@@ -122,27 +115,22 @@ function Importar() {
 
       const av = [...arvores.values()];
       const autexes = [...new Set(av.map((a) => a.autex).filter(Boolean))];
-      if (autexes.length) {
-        const { error } = await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...empresaIdGravacao() })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
-        if (error) throw error;
-      }
-      setStatus(`Enviando ${av.length} árvores…`);
-      const emp = empresaIdGravacao();
-      await chunks(av, 500, async (c) => {
-        const { error } = await supabase.from("arvores").upsert(c.map((a) => {
-          const temCoordenadas = a.latitude !== null && a.longitude !== null;
-          const { latitude, longitude, ...inventario } = a;
-          return { ...inventario, ...emp, ...(temCoordenadas ? { latitude, longitude, localizado_em: new Date().toISOString() } : {}) };
-        }), { onConflict: "empresa_id,numero,autex" });
-        if (error) throw error;
-      }, (d) => setStatus(`Árvores: ${d}/${av.length}`));
-
       const tv = [...toras.values()];
-      await chunks(tv, 500, async (c) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await supabase.from("toras").upsert(c.map((t) => ({ ...t, ...emp })) as any, { onConflict: "empresa_id,plaqueta", ignoreDuplicates: true });
+      const empresaConfigurada = empresaIdGravacao().empresa_id;
+      let empresa = empresaConfigurada;
+      if (!empresa) {
+        const { data, error } = await supabase.rpc("minha_empresa");
         if (error) throw error;
-      }, (d) => setStatus(`Toras: ${d}/${tv.length}`));
+        empresa = data ?? undefined;
+      }
+      if (!empresa) throw new Error("Selecione uma empresa para a importação.");
+      setStatus("Validando a ficha e gravando todas as árvores e toras em uma transação…");
+      const { error } = await supabase.rpc("importar_ficha_manejo", {
+        _empresa: empresa,
+        _arvores: av as unknown as import("@/integrations/supabase/types").Json,
+        _toras: tv as unknown as import("@/integrations/supabase/types").Json,
+      });
+      if (error) throw new Error(error.message);
 
       await qc.invalidateQueries();
       setStatus(`Pronto! ${av.length} árvores e ${tv.length} toras importadas.${dup ? ` ${dup} plaqueta(s) repetida(s) ignorada(s).` : ""}`);

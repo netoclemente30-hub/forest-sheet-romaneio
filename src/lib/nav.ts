@@ -7,8 +7,9 @@ export type AbaSerrariaUrl = Exclude<AbaSerraria, "saldo">;
 export const MANEJO = [
   { to: "/base", label: "Base" },
   { to: "/toras", label: "Toras de manejo" },
+  { to: "/explanadas", label: "Explanadas" },
   { to: "/romaneio", label: "Romaneio de toras" },
-  { to: "/cortador", label: "Cortador / Mapa" },
+  { to: "/cortador", label: "Mapa" },
 ] as const;
 
 export const SERRARIA_ABAS: { aba: AbaSerraria; label: string }[] = [
@@ -25,7 +26,7 @@ export function abaSerrariaDoBusca(valor: unknown): AbaSerrariaUrl | undefined {
   return ABAS_SERRARIA_URL.find((a) => a === valor);
 }
 
-const MANEJO_PATHS = ["/cortador", "/base", "/toras", "/romaneio", "/historico", "/entrada", "/etiquetas", "/importar"];
+const MANEJO_PATHS = ["/cortador", "/base", "/toras", "/romaneio", "/historico", "/entrada", "/etiquetas", "/importar", "/explanadas"];
 const SERRARIA_PATHS = ["/serraria", "/saldo"];
 
 // Superfícies públicas: abrem sem login (QR da tora e apresentação do app).

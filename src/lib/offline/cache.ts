@@ -1,38 +1,44 @@
-// Cache local de leitura (IndexedDB) para o app abrir e consultar dados sem
-// internet. Sempre que uma consulta à nuvem funciona, o resultado é gravado
-// aqui; sem internet, lê-se daqui.
-
+// Cache offline protegido por identidade: nunca reutilizar a mesma chave entre
+// contas que compartilharam este aparelho ou entre diferentes empresas.
 import { idb } from "./db";
-import { getEmpresaAtiva } from "@/lib/empresa";
+import { getEmpresaAtiva, lerEmpresaSalva } from "@/lib/empresa";
+import { supabase } from "@/integrations/supabase/client";
 
-function chave(nome: string, empresa: string | null): string {
-  return `${empresa ?? "minha"}:${nome}`;
+async function chave(nome: string, empresa: string | null): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  const usuario = data.session?.user.id;
+  if (!usuario) return null;
+  const contexto = empresa ?? lerEmpresaSalva(usuario) ?? "sem-vinculo";
+  return usuario + ":" + contexto + ":" + nome;
 }
 
 export async function salvarCache(nome: string, dados: unknown, empresa = getEmpresaAtiva()): Promise<void> {
   try {
-    await idb.put("cache", { dados, salvoEm: Date.now() }, chave(nome, empresa));
+    const escopo = await chave(nome, empresa);
+    if (!escopo) return; // Nunca guardar dados autenticados em chave anônima.
+    await idb.put("cache", { dados, salvoEm: Date.now() }, escopo);
   } catch {
-    // cache é best-effort
+    // cache é best-effort; nunca interromper operações online
   }
 }
 
 export async function lerCache<T>(nome: string, empresa = getEmpresaAtiva()): Promise<T[] | null> {
   try {
-    const reg = await idb.get<{ dados: T[] }>("cache", chave(nome, empresa));
+    const escopo = await chave(nome, empresa);
+    if (!escopo) return null;
+    const reg = await idb.get<{ dados: T[] }>("cache", escopo);
     return reg?.dados ?? null;
   } catch {
     return null;
   }
 }
 
-// Executa a consulta; em sucesso grava no cache, em falha tenta o cache.
 export async function comCache<T>(nome: string, buscar: () => Promise<T[]>): Promise<T[]> {
   const empresa = getEmpresaAtiva();
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     const cache = await lerCache<T>(nome, empresa);
     if (cache) return cache;
-    console.warn("Sem internet e sem dados salvos para esta consulta; exibindo lista vazia.");
+    console.warn("Sem internet e sem dados autorizados em cache para esta conta.");
     return [];
   }
   try {

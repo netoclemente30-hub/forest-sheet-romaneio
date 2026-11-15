@@ -2,13 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Crosshair, MapPin, Play, Square, TreePine } from "lucide-react";
-import { arvoresQuery, rastrosQuery, type Arvore } from "@/lib/data";
+import { arvoresQuery, torasQuery, rastrosQuery, type Arvore } from "@/lib/data";
+import { ArrastoToras } from "@/components/ArrastoToras";
+import { situacaoArrasto } from "@/lib/arrasto";
 import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import {
   aceitarPontoRastro,
   comprimentoRastro,
   coordenadaValida,
+  distanciaMetros,
+  validarAbateProximo,
   mesclarRastros,
   pontoDaArvore,
   projetarMapa,
@@ -27,7 +32,6 @@ import {
 } from "@/lib/exploracao-salvar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapaPdf } from "@/components/MapaPdf";
 import { GeoPdfMapa } from "@/components/GeoPdfMapa";
 import { arvoresProximas } from "@/lib/geopdf";
 
@@ -39,9 +43,13 @@ function textoErroGps(codigo: number): string {
 
 export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; arvores: Arvore[]; encerrado: boolean }) {
   const qc = useQueryClient();
-  const { empresaId, session } = useAuth();
+  const { empresaId, session, papel } = useAuth();
+  const podeAbater = pode(papel, "mapa_abater");
+  const podeArrastar = pode(papel, "mapa_arrastar");
+  const podeRastrear = pode(papel, "mapa_rastrear");
   const empresa = getEmpresaAtiva() ?? empresaId;
   const rastros = useQuery({ ...rastrosQuery(autex), enabled: !!autex });
+  const toras = useQuery(torasQuery);
   const [atual, setAtual] = useState<Coordenada | null>(null);
   const [pontosAtivos, setPontosAtivos] = useState<PontoRastro[]>([]);
   const [sessaoId, setSessaoId] = useState("");
@@ -50,6 +58,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const [selecionada, setSelecionada] = useState("");
   const [editando, setEditando] = useState<Arvore | null>(null);
   const [posicaoEdicao, setPosicaoEdicao] = useState<Coordenada | null>(null);
+  const [gpsCapturadoNoLocal, setGpsCapturadoNoLocal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [capturando, setCapturando] = useState(false);
   const [raio, setRaio] = useState(50);
@@ -126,6 +135,16 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const todosPontos = useMemo(() => mesclarRastros<PontoRastro>(rastros.data ?? [], pontosAtivos), [rastros.data, pontosAtivos]);
   const distanciaAtiva = comprimentoRastro(pontosAtivos);
   const proximas = useMemo(() => arvoresProximas(arvores, atual, raio), [arvores, atual, raio]);
+  const proximasArrasto = useMemo(() => {
+    if (!empresa || !atual || (atual.precisao != null && atual.precisao > 100)) return [];
+    return arvores.flatMap((a) => {
+      if (!a.abatida_em || a.latitude == null || a.longitude == null) return [];
+      const pendentes = situacaoArrasto(a, empresa, toras.data ?? []).disponiveis.length;
+      if (!pendentes) return [];
+      const distancia = distanciaMetros(atual, { lat: Number(a.latitude), lng: Number(a.longitude) });
+      return distancia <= raio ? [{ arvore: a, distancia, pendentes }] : [];
+    }).sort((a, b) => a.distancia - b.distancia);
+  }, [arvores, atual, empresa, raio, toras.data]);
 
   const projecao = useMemo(() => {
     const pontos = [
@@ -146,6 +165,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }, [todosPontos, projecao]);
 
   function iniciarRastreio() {
+    if (!podeRastrear) { toast.error("Seu cargo não pode gravar rastros"); return; }
     if (!empresa) { toast.error("Aguarde carregar a empresa"); return; }
     if (!navigator.geolocation) { toast.error("Este aparelho não oferece GPS pelo navegador"); return; }
     setSessaoId(crypto.randomUUID());
@@ -156,7 +176,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }
 
   async function encerrarRastreio() {
-    if (!empresa || busy) return;
+    if (!podeRastrear || !empresa || busy) return;
     setRastreando(false);
     if (!pontosAtivos.length) {
       await guardarRastroAtivo(empresa, autex, []);
@@ -183,6 +203,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }
 
   function abrirArvore(a: Arvore, posicao?: Coordenada) {
+    setGpsCapturadoNoLocal(false);
     setEditando(a);
     setPosicaoEdicao(posicao ?? (a.latitude != null && a.longitude != null ? { lat: Number(a.latitude), lng: Number(a.longitude), precisao: a.gps_precisao == null ? null : Number(a.gps_precisao) } : null));
   }
@@ -193,6 +214,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setPosicaoEdicao({ lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy, capturado_em: new Date(p.timestamp).toISOString() });
+        setGpsCapturadoNoLocal(true);
         setCapturando(false);
       },
       (erro) => { setCapturando(false); toast.error(textoErroGps(erro.code)); },
@@ -201,9 +223,14 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }
 
   async function registrarArvore(abatida: boolean | null, motivo?: string | null) {
+    if (!podeAbater) { toast.error("Seu cargo não pode alterar a situação da árvore"); return; }
     if (!editando || !empresa || !posicaoEdicao || busy) return;
     if (motivo && !window.confirm(`Confirmar que a árvore ${editando.numero} NÃO foi abatida? Motivo: ${textoMotivo(motivo)}`)) return;
     if (!coordenadaValida(posicaoEdicao.lat, posicaoEdicao.lng)) { toast.error("Posição GPS inválida"); return; }
+    if (abatida === true) {
+      const mensagem = gpsCapturadoNoLocal ? validarAbateProximo(editando, posicaoEdicao) : "Capture o GPS no local antes de abater.";
+      if (mensagem) { toast.error(mensagem); return; }
+    }
     if (abatida === true && !window.confirm(`Confirmar que a árvore ${editando.numero} foi abatida nesta posição?`)) return;
     if (abatida === false && !window.confirm(`Desfazer o abatimento da árvore ${editando.numero}? A localização será mantida.`)) return;
     setBusy(true);
@@ -231,13 +258,32 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
         <div className="rounded-lg border bg-card p-2"><div className="text-xs text-muted-foreground">Percurso atual</div><div className="font-display text-xl font-bold">{Math.round(distanciaAtiva)} m</div></div>
       </div>
 
-      <MapaPdf autex={autex} encerrado={encerrado} />
-      <GeoPdfMapa autex={autex} arvores={arvores} atual={atual} rastros={todosPontos} encerrado={encerrado} onArvore={abrirArvore} />
+      <GeoPdfMapa podeVincular={podeAbater} autex={autex} arvores={arvores} atual={atual} rastros={todosPontos} encerrado={encerrado} onArvore={abrirArvore} />
 
       {!encerrado && <section className="space-y-2" aria-label="Árvores próximas ao GPS">
         <div className="flex items-center justify-between gap-2"><h2 className="font-semibold">Árvores próximas</h2><select aria-label="Distância das árvores próximas" value={raio} onChange={(e) => setRaio(Number(e.target.value))} className="h-9 rounded-md border bg-background px-2 text-sm">{[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n} m</option>)}</select></div>
         {!atual ? <p className="text-sm text-muted-foreground">Aguardando posição GPS.</p> : atual.precisao != null && atual.precisao > 100 ? <p className="text-sm text-destructive">GPS impreciso; aguarde melhorar o sinal.</p> : !proximas.length ? <p className="text-sm text-muted-foreground">Nenhuma árvore em pé com posição registrada a até {raio} m.</p> : <div className="divide-y">{proximas.slice(0, 10).map(({ arvore, distancia }) => <div key={arvore.id} className="flex items-center gap-2 py-2"><TreePine className="size-5 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="break-words text-sm font-semibold">Árvore {arvore.numero} · {arvore.nome_vulgar}</div><div className="text-xs text-muted-foreground">{Math.round(distancia)} m · Picada {arvore.picada ?? "—"}</div></div><Button size="sm" variant="outline" onClick={() => abrirArvore(arvore)}>Selecionar</Button></div>)}</div>}
       </section>}
+
+      {!encerrado && podeArrastar && proximasArrasto.length > 0 && (
+        <section className="space-y-2 rounded-xl border bg-card p-3" aria-label="Árvores próximas para arrasto">
+          <h2 className="font-semibold">🚜 Arrasto próximo · árvores abatidas</h2>
+          <p className="text-xs text-muted-foreground">Toras medidas que ainda precisam ser arrastadas. Toque na árvore para registrar o serviço.</p>
+          <div className="divide-y">
+            {proximasArrasto.slice(0, 10).map(({ arvore, distancia, pendentes }) => (
+              <div key={arvore.id} className="flex items-center gap-2 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm">Árvore {arvore.numero} · {arvore.nome_vulgar}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {pendentes} toras aguardando arrasto · {Math.round(distancia)} m de distância
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => abrirArvore(arvore)}>Arrasto</Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="overflow-hidden rounded-xl border bg-card">
         <div className="flex items-center justify-between gap-2 border-b p-3 text-xs text-muted-foreground">
@@ -267,9 +313,9 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
       </div>
 
       <div role="status" className="rounded-lg bg-secondary px-3 py-2 text-sm">{statusGps}</div>
-      {rastreando || pontosAtivos.length ? (
+      {podeRastrear && (rastreando || pontosAtivos.length) ? (
         <Button className="w-full" variant="secondary" disabled={busy} onClick={encerrarRastreio}><Square /> {busy ? "Salvando rastro…" : `Encerrar e salvar rastro (${pontosAtivos.length} pontos)`}</Button>
-      ) : !encerrado ? (
+      ) : !encerrado && podeRastrear ? (
         <Button className="w-full" onClick={iniciarRastreio}><Play /> Iniciar rastreio GPS</Button>
       ) : null}
       <p className="text-xs text-muted-foreground">Durante o rastreio, mantenha o aplicativo aberto e a tela ligada. O GPS continua funcionando sem sinal de celular.</p>
@@ -305,16 +351,20 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             <div className="rounded-lg bg-secondary p-3 text-sm">
               {posicaoEdicao ? <><div className="font-semibold">Posição para salvar</div><div>{posicaoEdicao.lat.toFixed(7)}, {posicaoEdicao.lng.toFixed(7)}</div><div className="text-xs text-muted-foreground">Precisão: {posicaoEdicao.precisao == null ? "não informada" : `${Math.round(posicaoEdicao.precisao)} m`}</div></> : "Esta árvore ainda não tem posição. Fique junto dela e capture o GPS."}
             </div>
-            {!encerrado && <>
+            {!encerrado && podeAbater && <>
               <Button variant="outline" className="w-full" disabled={capturando || busy} onClick={capturarPosicao}><Crosshair /> {capturando ? "Capturando GPS…" : posicaoEdicao ? "Atualizar com minha posição" : "Capturar minha posição"}</Button>
               <Button className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null)}><MapPin /> {busy ? "Salvando…" : "Salvar localização"}</Button>
-              {editando.abatida_em ? <Button variant="outline" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(false)}>Desfazer abatimento</Button> : <Button variant="destructive" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(true)}><TreePine /> Abater árvore</Button>}
+              {!editando.abatida_em && <p className="text-xs text-muted-foreground">Para abater, capture sua posição GPS atual e esteja a até 100 m da árvore cadastrada.</p>}
+              {editando.abatida_em ? <Button variant="outline" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(false)}>Desfazer abatimento</Button> : <Button variant="destructive" className="w-full" disabled={!gpsCapturadoNoLocal || !posicaoEdicao || busy} onClick={() => registrarArvore(true)}><TreePine /> Abater árvore</Button>}
               {!editando.abatida_em && <div className="space-y-2 rounded-lg border p-3">
                 <div className="text-sm font-semibold">Não abatida · declare o motivo</div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{MOTIVOS_NAO_ABATIDA.map((m) => <Button key={m.valor} variant={editando.nao_abatida_motivo === m.valor ? "default" : "outline"} disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, m.valor)}>{m.label}</Button>)}</div>
                 {editando.nao_abatida_motivo && <Button variant="ghost" size="sm" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, null)}>Remover motivo</Button>}
               </div>}
             </>}
+            {!encerrado && podeArrastar && editando.abatida_em && empresa && (
+              <ArrastoToras arvore={editando} empresa={empresa} toras={toras.data ?? []} encerrado={encerrado} />
+            )}
             {encerrado && <p className="text-sm text-muted-foreground">Manejo encerrado: o mapa e os registros ficam disponíveis para consulta.</p>}
           </div>}
         </DialogContent>

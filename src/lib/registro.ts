@@ -48,10 +48,12 @@ export async function capturarLog(acao: string, detalhe: string): Promise<LogCap
 }
 
 // Grava o registro na nuvem (usado online e pela sincronização da fila).
-export async function gravarRegistro(log: LogCapturado): Promise<void> {
-  const { operacao_id: _operacao, ...dados } = log;
-  const { error } = await supabase.from("registros").insert({ ...dados, ...empresaIdGravacao() });
-  if (error) console.warn("Falha ao gravar registro:", error.message);
+export async function gravarRegistro(log: LogCapturado, empresa?: string | null): Promise<void> {
+  const selecionada = empresa ?? empresaIdGravacao().empresa_id ?? null;
+  const { error } = await supabase.rpc("registrar_evento", {
+    _empresa: selecionada, _log: log as unknown as import("@/integrations/supabase/types").Json,
+  });
+  if (error) throw new Error("Falha ao gravar auditoria: " + error.message);
 }
 
 // Histórico de login: grava a entrada com o aparelho usado.

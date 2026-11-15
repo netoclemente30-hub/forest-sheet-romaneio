@@ -27,6 +27,30 @@ export function distanciaMetros(a: Pick<Coordenada, "lat" | "lng">, b: Pick<Coor
   return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+/** Segurança operacional: não registrar abate somente usando a coordenada
+ * antiga da árvore. Exige GPS capturado agora e proximidade à árvore do mapa.
+ * Árvore sem coordenada anterior pode ter sua posição registrada em campo.
+ */
+export function validarAbateProximo(
+  arvore: Pick<Arvore, "latitude" | "longitude">,
+  gps: Coordenada | null,
+  agora = Date.now(),
+): string | null {
+  if (!gps || !gps.capturado_em || !coordenadaValida(gps.lat, gps.lng))
+    return "Capture sua posição GPS no local antes de abater esta árvore.";
+  const instante = new Date(gps.capturado_em).getTime();
+  if (!Number.isFinite(instante) || Math.abs(agora - instante) > 120_000)
+    return "O GPS está antigo. Capture sua posição novamente no local.";
+  if (gps.precisao == null || !Number.isFinite(gps.precisao) || gps.precisao > 100)
+    return "Aguarde um GPS com precisão de até 100 m antes de confirmar o abate.";
+  if (arvore.latitude != null && arvore.longitude != null) {
+    const lat = Number(arvore.latitude), lng = Number(arvore.longitude);
+    if (coordenadaValida(lat, lng) && distanciaMetros(gps, { lat, lng }) > 100)
+      return "Você está a mais de 100 m da árvore cadastrada. Aproxime-se e capture o GPS novamente.";
+  }
+  return null;
+}
+
 export function comprimentoRastro(pontos: Pick<Coordenada, "lat" | "lng">[]): number {
   return pontos.slice(1).reduce((total, ponto, i) => total + distanciaMetros(pontos[i]!, ponto), 0);
 }

@@ -1,3 +1,4 @@
+import { pode } from "@/lib/funcoes";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, useEffect } from "react";
@@ -70,7 +71,8 @@ function Serraria() {
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
   const [modo, setModo] = useState<ModoMedida>("fisica");
   const [lim, setLim] = useState(100);
-  const { empresaId } = useAuth();
+  const { empresaId, papel } = useAuth();
+  const podeOperar = pode(papel, "serraria_operar");
   const empresa = getEmpresaAtiva() ?? empresaId;
   const pendentes = useFilaOffline();
   const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
@@ -106,7 +108,7 @@ function Serraria() {
   }
 
   async function serrar(desfazer = false, selecionadas: Tora[] = selecionadasVisiveis) {
-    if (!selecionadas.length) return;
+    if (!podeOperar || !selecionadas.length) return;
     if (selecionadas.some((t) => !toras.data?.some((x) => x.empresa_id === t.empresa_id && x.plaqueta === t.plaqueta))) { toast.error("Envie primeiro as medições pendentes antes de serrar estas toras"); return; }
     if (!desfazer && !confirm(`Dar baixa de ${selecionadas.length} toras como serradas?`)) return;
     const log = await capturarLog(desfazer ? "Toras voltaram ao pátio" : "Toras serradas", `${selecionadas.length} toras · plaquetas ${selecionadas.map((t) => t.plaqueta).slice(0, 10).join(", ")}${selecionadas.length > 10 ? "…" : ""}`);
@@ -164,12 +166,12 @@ function Serraria() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas" checked={lista.length > 0 && lista.every((t) => sel.includes(t.plaqueta))} onCheckedChange={(v) => setSel((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar todas</label>
-        {aba === "patio"
+        {podeOperar && (aba === "patio"
           ? <Button disabled={busy || !selecionadasVisiveis.length} onClick={() => serrar()}><Factory /> Serrar ({selecionadasVisiveis.length})</Button>
-          : <Button variant="outline" disabled={busy || !selecionadasVisiveis.length} onClick={() => serrar(true)}>Voltar ao pátio ({selecionadasVisiveis.length})</Button>}
+          : <Button variant="outline" disabled={busy || !selecionadasVisiveis.length} onClick={() => serrar(true)}>Voltar ao pátio ({selecionadasVisiveis.length})</Button>)}
       </div>
       {sel.length > 0 && <Button size="sm" variant="ghost" onClick={() => setSel([])}>Limpar seleção</Button>}
-      {aba==='serradas'&&<Button className="w-full h-auto whitespace-normal py-3" disabled={busy||!empresa||!selecionadasVisiveis.length} onClick={()=>{if(empresa){const grupos=gruposParaPacote(selecionadasVisiveis,empresa);if(grupos.length)setGruposPacote(grupos);else toast.error('Selecione toras serradas da empresa ativa');}}}>Gerar pacote a partir destas toras ({selecionadasVisiveis.length})</Button>}
+      {podeOperar&&aba==='serradas'&&<Button className="w-full h-auto whitespace-normal py-3" disabled={busy||!empresa||!selecionadasVisiveis.length} onClick={()=>{if(empresa){const grupos=gruposParaPacote(selecionadasVisiveis,empresa);if(grupos.length)setGruposPacote(grupos);else toast.error('Selecione toras serradas da empresa ativa');}}}>Gerar pacote a partir destas toras ({selecionadasVisiveis.length})</Button>}
       <div className="bg-card border rounded-xl divide-y">
         {lista.slice(0, lim).map((t) => (
           <label key={t.plaqueta} className="flex items-center gap-3 p-3 cursor-pointer">
@@ -213,13 +215,13 @@ function Serraria() {
               </dl>
               <CartaoMedidaComercial tora={aberta} />
             </div>
-            {!aberta.serrada_em && <Button disabled={busy} onClick={() => serrar(false, [aberta])}><Factory /> Serrar esta tora</Button>}
+            {podeOperar && !aberta.serrada_em && <Button disabled={busy} onClick={() => serrar(false, [aberta])}><Factory /> Serrar esta tora</Button>}
             <Button variant="outline" onClick={() => { setToraLida(null); setEtiqueta(""); setScan(true); }}><ScanLine /> Ler outra etiqueta</Button>
             <Button variant="ghost" onClick={() => setToraLida(null)}><X /> Fechar</Button>
           </>}
         </DialogContent>
       </Dialog>
-      {empresa&&gruposPacote.length>0&&<PacoteDeToras key={JSON.stringify(gruposPacote)} empresa={empresa} grupos={gruposPacote} onFechar={()=>setGruposPacote([])} onSalvo={()=>{setGruposPacote([]);setSel([]);irParaAba('madeira');}}/>}
+      {podeOperar&&empresa&&gruposPacote.length>0&&<PacoteDeToras key={JSON.stringify(gruposPacote)} empresa={empresa} grupos={gruposPacote} onFechar={()=>setGruposPacote([])} onSalvo={()=>{setGruposPacote([]);setSel([]);irParaAba('madeira');}}/>}
     </div>
   );
 }

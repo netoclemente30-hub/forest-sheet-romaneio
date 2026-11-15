@@ -48,7 +48,7 @@ export function analisarBase(rows: unknown[][]) {
   let invalidas = 0;
   let repetidas = 0;
   for (const r of rows) {
-    const marcacao = r.map((c) => String(c ?? "").match(/^\s*(?:picada|faixa|trilha)\s*[:\-]\s*(.+)$/i)).find(Boolean);
+    const marcacao = r.map((c) => String(c ?? "").match(/^\s*(?:picada|faixa|trilha)\s*[:-]\s*(.+)$/i)).find(Boolean);
     if (marcacao?.[1]) { picada = marcacao[1].trim(); continue; }
     const header: Partial<Record<Campo, number>> = {};
     r.forEach((cell, index) => { const campo = campoInventario(cell); if (campo) header[campo] = index; });

@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -52,6 +54,8 @@ type Filtro = "todas" | "nao" | "sim";
 const ROTULO_FILTRO: Record<Filtro, string> = { todas: "Todas", nao: "Não impressas", sim: "Impressas" };
 
 export function TorasAguardando({ especies }: { especies: { especie: string; nome_cientifico: string | null }[] }) {
+  const { papel } = useAuth();
+  const podeOperar = pode(papel, "serraria_operar");
   const qc = useQueryClient();
   const lista = useQuery(query);
   const [f, setF] = useState(vazio);
@@ -79,6 +83,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
   const vistas = filtro === "todas" ? itens : itens.filter((t) => filtro === "sim" ? t.etiqueta_impressa : !t.etiqueta_impressa);
 
   async function salvar() {
+    if (!podeOperar) return;
     if (!f.especie.trim()) { toast.error("Informe o nome da madeira"); return; }
     if (!vol) { toast.error("Preencha os 4 diâmetros e o comprimento"); return; }
     setBusy(true);
@@ -113,6 +118,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
   }
 
   async function excluir(t: ToraAguardando) {
+    if (!podeOperar) return;
     if (!confirm(`Excluir ${codigoAguardando(t.numero)} (${t.especie})?`)) return;
     if (!navigator.onLine) { toast.error("Precisa de internet para excluir"); return; }
     const { error } = await supabase.from("toras_aguardando").delete().eq("id", t.id);
@@ -123,7 +129,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
 
   /** Marca a impressão (ou volta a marcar como não impressa); offline vai junto com a fila. */
   async function marcar(ts: ToraAguardando[], imprimiu: boolean) {
-    if (!ts.length) return;
+    if (!podeOperar || !ts.length) return;
     try {
       const { offline } = await marcarAguardandoImpressa(ts, imprimiu);
       if (offline) toast.success(`${offline} tora${offline > 1 ? "s" : ""} marcada${offline > 1 ? "s" : ""} sem internet — será enviada quando conectar`);
@@ -149,7 +155,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
 
   return (
     <div className="space-y-4">
-      <div className="bg-card border rounded-xl p-3 space-y-3">
+      {podeOperar && <div className="bg-card border rounded-xl p-3 space-y-3">
         <p className="text-sm text-muted-foreground">Meça a tora e informe só o nome da madeira — sem árvore e sem seção. Ela recebe um código NI próprio e não entra no estoque nem no saldo.</p>
         <label className="text-xs font-semibold block">Nome da madeira
           <Input className="h-12" list="madeiras-aguardando" value={f.especie} aria-label="Nome da madeira" onChange={(e) => { const v = e.target.value; const e2 = nomes.find((n) => n.especie === v); setF({ ...f, especie: v, nome_cientifico: e2?.nome_cientifico ?? f.nome_cientifico }); }} />
@@ -166,7 +172,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
           <div className="rounded-lg bg-muted p-2"><div className="text-xs">Comercial</div><b>{fmtM3(vol.comercial?.volume ?? 0)} m³</b>{vol.comercial && <div className="text-xs">{vol.comercial.d1}×{vol.comercial.d2} cm · {fmtComprimentoComercial(vol.comercial.comprimento)} m</div>}</div>
         </div>}
         <Button className="w-full h-12" disabled={busy} onClick={salvar}>{busy ? "Salvando…" : "Salvar e gerar QR"}</Button>
-      </div>
+      </div>}
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-lg bg-card border p-2"><b className="text-xl">{itens.length}</b><div className="text-xs">toras</div><div className="text-xs text-warning font-semibold">{naoImpressas} não impressa{naoImpressas === 1 ? "" : "s"}</div></div>
@@ -217,6 +223,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
                 <button
                   type="button"
                   aria-pressed={t.etiqueta_impressa}
+                  disabled={!podeOperar}
                   onClick={() => marcar([t], !t.etiqueta_impressa)}
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${t.etiqueta_impressa ? "bg-success/15 text-success" : "border border-dashed text-muted-foreground"}`}
                 >
@@ -224,7 +231,7 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
                 </button>
                 <div className="flex gap-1">
                   <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`QR ${codigoAguardando(t.numero)}`} onClick={() => setQr(t)}><QrCode className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir ${codigoAguardando(t.numero)}`} onClick={() => excluir(t)}><Trash2 className="h-4 w-4" /></Button>
+                  {podeOperar && <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir ${codigoAguardando(t.numero)}`} onClick={() => excluir(t)}><Trash2 className="h-4 w-4" /></Button>}
                 </div>
               </div>
             </div>

@@ -556,6 +556,7 @@ export type Database = {
       }
       romaneios: {
         Row: {
+          operacao_id: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -571,6 +572,7 @@ export type Database = {
           total_volume: number
         }
         Insert: {
+          operacao_id?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -586,6 +588,7 @@ export type Database = {
           total_volume?: number
         }
         Update: {
+          operacao_id?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -694,6 +697,11 @@ export type Database = {
       }
       toras: {
         Row: {
+          arrastada_em: string | null
+          arrastada_por: string | null
+          arrasto_operacao_id: string | null
+          arrasto_lat: number | null
+          arrasto_lng: number | null
           arvore: number
           autex: string | null
           carregada: boolean
@@ -716,6 +724,11 @@ export type Database = {
           volume: number
         }
         Insert: {
+          arrastada_em?: string | null
+          arrastada_por?: string | null
+          arrasto_operacao_id?: string | null
+          arrasto_lat?: number | null
+          arrasto_lng?: number | null
           arvore: number
           autex?: string | null
           carregada?: boolean
@@ -738,6 +751,11 @@ export type Database = {
           volume?: number
         }
         Update: {
+          arrastada_em?: string | null
+          arrastada_por?: string | null
+          arrasto_operacao_id?: string | null
+          arrasto_lat?: number | null
+          arrasto_lng?: number | null
           arvore?: number
           autex?: string | null
           carregada?: boolean
@@ -913,6 +931,39 @@ export type Database = {
         }[]
       }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      registrar_arrasto_toras: {
+        Args: {
+          _empresa: string
+          _autex: string
+          _arvore: number
+          _plaquetas: number[]
+          _explanada: string
+          _lat: number
+          _lng: number
+          _precisao: number
+          _capturado_em: string
+          _operacao: string
+        }
+        Returns: number
+      }
+      importar_ficha_manejo: {
+        Args: { _empresa: string; _arvores: Json; _toras: Json }
+        Returns: Json
+      }
+      registrar_evento: {
+        Args: { _empresa: string | null; _log: Json }
+        Returns: string
+      }
+      salvar_romaneio_toras: {
+        Args: {
+          _empresa: string
+          _cab: Json
+          _plaquetas: number[]
+          _operacao: string
+          _log: Json
+        }
+        Returns: string
+      }
       registrar_operacao: {
         Args: {
           _alvos: Json

@@ -3,8 +3,11 @@ import type { Database } from "@/integrations/supabase/types";
 import { getEmpresaAtiva } from "./empresa";
 import { comCache } from "./offline/cache";
 
-/** publico_id só existe depois de sincronizada; toras projetadas offline não têm. */
-export type Tora = Omit<Database["public"]["Tables"]["toras"]["Row"], "publico_id"> & { publico_id?: string };
+/** Dados projetados offline podem preceder a migração 0038 de arrasto. */
+type ToraBanco = Database["public"]["Tables"]["toras"]["Row"];
+type CamposArrasto = Pick<ToraBanco, "arrastada_em" | "arrastada_por" | "arrasto_operacao_id" | "arrasto_lat" | "arrasto_lng">;
+export type Tora = Omit<ToraBanco, "publico_id" | keyof CamposArrasto> &
+  Partial<CamposArrasto> & { publico_id?: string };
 export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];
 export type Romaneio = Database["public"]["Tables"]["romaneios"]["Row"];
 export type RastroGPS = Database["public"]["Tables"]["rastros_gps"]["Row"];

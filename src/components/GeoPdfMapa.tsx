@@ -7,8 +7,8 @@ import { conversorMapa, renderizarGeoPdf, type MapaRenderizado } from "@/lib/geo
 import type { Coordenada, PontoRastro } from "@/lib/exploracao";
 import type { Arvore } from "@/lib/data";
 
-export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, onArvore }: {
-  autex: string; arvores: Arvore[]; atual: Coordenada | null; rastros: PontoRastro[]; encerrado: boolean;
+export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, podeVincular = false, onArvore }: {
+  autex: string; arvores: Arvore[]; atual: Coordenada | null; rastros: PontoRastro[]; encerrado: boolean; podeVincular?: boolean;
   onArvore: (arvore: Arvore, posicao?: Coordenada) => void;
 }) {
   const consulta = useQuery({ ...mapaPdfQuery(autex), enabled: !!autex });
@@ -75,7 +75,7 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, onArvore
         <svg ref={svg} viewBox={`0 0 ${mapa.largura} ${mapa.altura}`} width={`${zoom * 100}%`} className="block max-w-none" role="img" aria-label={`Planta georreferenciada da AUTEX ${autex}`} onClick={(e) => {
           const a = arvores.find((a) => a.id === vincular);
           const matrix = svg.current?.getScreenCTM();
-          if (!a || !matrix || encerrado) return;
+          if (!a || !matrix || encerrado || !podeVincular) return;
           const ponto = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
           onArvore(a, converter.gps(ponto.x, ponto.y));
           setVincular("");
@@ -90,7 +90,7 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, onArvore
         </svg>
       </div>
       <p role="status" className="text-xs text-muted-foreground">{atual ? noMapa ? "Sua posição está dentro da planta." : "Sua posição está fora desta planta." : "Inicie o GPS para mostrar sua posição."} · Mapa preparado neste aparelho.</p>
-      {!encerrado && <div className="space-y-2">
+      {!encerrado && podeVincular && <div className="space-y-2">
         <h3 className="text-sm font-semibold">Vincular árvore ao ponto do mapa</h3>
         <input type="search" aria-label="Buscar árvore para vincular no mapa" placeholder="Número ou espécie" value={busca} onChange={(e) => setBusca(e.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm" />
         <select aria-label="Árvore para vincular no GeoPDF" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={vincular} onChange={(e) => setVincular(e.target.value)}>

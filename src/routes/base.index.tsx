@@ -34,7 +34,8 @@ function BasePage() {
   const arvores = useQuery(arvoresQuery);
   const toras = useQuery(torasQuery);
   const autex = useQuery(autexQuery);
-  const { isAdmin } = useAuth();
+  const { isAdmin: adminEmpresa, isSuperAdmin } = useAuth();
+  const isAdmin = adminEmpresa || isSuperAdmin;
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("todas");
@@ -46,6 +47,7 @@ function BasePage() {
   const [busyArvore, setBusyArvore] = useState(false);
 
   function abrirEdicao(a: Arvore) {
+    if (!isAdmin) return;
     setForm({
       numero: String(a.numero), nome_vulgar: a.nome_vulgar, nome_cientifico: a.nome_cientifico ?? "",
       cap: a.cap != null ? String(a.cap) : "", dap: a.dap != null ? Number(a.dap).toFixed(1) : "",
@@ -58,6 +60,7 @@ function BasePage() {
   const num = (s: string) => { const n = Number(s.replace(",", ".")); return s.trim() && !isNaN(n) ? n : null; };
 
   async function salvarEdicao() {
+    if (!isAdmin) return;
     if (!editando) return;
     const numero = parseInt(form.numero, 10);
     if (!numero || !form.nome_vulgar.trim()) { toast.error("Número e espécie são obrigatórios"); return; }
@@ -75,6 +78,7 @@ function BasePage() {
   }
 
   async function excluirArvore(a: Arvore) {
+    if (!isAdmin) return;
     if (volExpl.has(chaveArvore(a.numero, a.autex))) {
       toast.error("Essa árvore já tem toras lançadas e não pode ser excluída. Se o manejo acabou, use Encerrar no manejo.");
       return;
@@ -91,6 +95,7 @@ function BasePage() {
   const encerradas = useMemo(() => new Set((autex.data ?? []).filter((a) => a.encerrado).map((a) => a.numero)), [autex.data]);
 
   async function alternarEncerrado(numero: string, encerrado: boolean) {
+    if (!isAdmin) return;
     setBusyAutex(numero);
     const { error } = await supabase.from("autex").update({ encerrado: !encerrado }).eq("numero", numero);
     setBusyAutex("");
@@ -100,6 +105,7 @@ function BasePage() {
   }
 
   async function excluirManejo(numero: string) {
+    if (!isAdmin) return;
     if ((toras.data ?? []).some((t) => t.autex === numero)) { toast.error("Este manejo tem toras lançadas e não pode ser excluído. Use Encerrar."); return; }
     const n = (arvores.data ?? []).filter((a) => a.autex === numero).length;
     if (!window.confirm(`Excluir o manejo ${numero} e suas ${n} árvores da Base? Essa ação não pode ser desfeita.`)) return;
@@ -221,7 +227,7 @@ function BasePage() {
         {!arvores.isLoading && lista.length === 0 && <div className="p-4 text-sm text-muted-foreground">Nenhuma árvore. Importe sua planilha pela tela inicial.</div>}
       </div>
       {lista.length > lim && <Button variant="outline" className="w-full" onClick={() => setLim(lim + 200)}>Mostrar mais</Button>}
-      <Dialog open={!!editando} onOpenChange={(o) => { if (!o) setEditando(null); }}>
+      <Dialog open={isAdmin && !!editando} onOpenChange={(o) => { if (!o) setEditando(null); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar árvore {editando?.numero}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
