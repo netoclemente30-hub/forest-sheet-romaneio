@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { capturarLog } from "@/lib/registro";
 import { useMemo, useState } from "react";
 import { RelatorioToras } from "@/components/RelatorioToras";
@@ -70,7 +71,10 @@ export function TorasList({ nova }: { nova?: boolean }) {
   }, [toras.data, q, filtro, dia, autex, ordem]);
 
   const tora = toras.data?.find((t) => t.plaqueta === qr);
-  const { isAdmin } = useAuth();
+  const { papel } = useAuth();
+  const administrador = papel === "admin_empresa" || papel === "superadmin";
+  const podeLancar = pode(papel, "toras_lancar");
+  const podeRelatorios = pode(papel, "relatorios");
   const qc = useQueryClient();
   const romaneadasSel = (toras.data ?? []).filter((t) => t.carregada && selecionadas.includes(t.plaqueta)).map((t) => t.plaqueta);
   const totais = totaisComerciais(lista);
@@ -95,7 +99,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-bold uppercase">Toras de manejo</h1>
-        <Button onClick={() => setOpen(true)}><Plus /> Lançar</Button>
+        {podeLancar && <Button onClick={() => setOpen(true)}><Plus /> Lançar</Button>}
       </div>
       {novas.length > 0 && (
         <Button asChild variant="secondary" className="w-full">
@@ -124,7 +128,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas as toras filtradas" checked={lista.length > 0 && lista.every((t) => selecionadas.includes(t.plaqueta))} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar filtradas</label>
         <Button asChild variant="secondary"><Link to="/etiquetas" search={{ p: selecionadas.join(",") }} aria-disabled={!selecionadas.length} onClick={(e) => { if (!selecionadas.length) e.preventDefault(); }}><Printer /> Etiquetas ({selecionadas.length})</Link></Button>
-        {isAdmin && romaneadasSel.length > 0 && <Button variant="destructive" size="sm" onClick={excluirRomaneadas}><Trash2 /> Excluir romaneadas ({romaneadasSel.length})</Button>}
+        {administrador && romaneadasSel.length > 0 && <Button variant="destructive" size="sm" onClick={excluirRomaneadas}><Trash2 /> Excluir romaneadas ({romaneadasSel.length})</Button>}
         {selecionadas.length > 0 && <Button variant="ghost" size="sm" onClick={() => setSelecionadas([])}>Limpar seleção</Button>}
       </div>
       <div className="bg-card border rounded-xl divide-y">
@@ -139,7 +143,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode className="h-4 w-4" /></Button>
-              {isAdmin && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
+              {administrador && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
               {isAdmin && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Excluir tora ${t.plaqueta}`} onClick={async () => { if (await excluirTora(t)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
             </div>
           </div>
