@@ -5,7 +5,7 @@ import { comCache } from "./offline/cache";
 
 /** Dados projetados offline podem preceder a migração 0038 de arrasto. */
 type ToraBanco = Database["public"]["Tables"]["toras"]["Row"];
-type CamposArrasto = Pick<ToraBanco, "arrastada_em" | "arrastada_por" | "arrasto_operacao_id" | "arrasto_lat" | "arrasto_lng">;
+type CamposArrasto = Pick<ToraBanco, "arrastada_em" | "arrastada_por" | "arrasto_explanada_id" | "arrasto_operacao_id" | "arrasto_lat" | "arrasto_lng">;
 export type Tora = Omit<ToraBanco, "publico_id" | keyof CamposArrasto> &
   Partial<CamposArrasto> & { publico_id?: string };
 export type Arvore = Database["public"]["Tables"]["arvores"]["Row"];

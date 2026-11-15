@@ -26,8 +26,8 @@ export function abaSerrariaDoBusca(valor: unknown): AbaSerrariaUrl | undefined {
   return ABAS_SERRARIA_URL.find((a) => a === valor);
 }
 
-const MANEJO_PATHS = ["/cortador", "/base", "/toras", "/romaneio", "/historico", "/entrada", "/etiquetas", "/importar", "/explanadas"];
-const SERRARIA_PATHS = ["/serraria", "/saldo"];
+const MANEJO_PATHS = ["/cortador", "/base", "/toras", "/romaneio", "/historico", "/etiquetas", "/importar", "/explanadas"];
+const SERRARIA_PATHS = ["/serraria", "/saldo", "/entrada"];
 
 // Superfícies públicas: abrem sem login (QR da tora e apresentação do app).
 const PUBLICAS = ["/apresentacao"];
@@ -36,6 +36,17 @@ const contem = (paths: readonly string[], p: string) => paths.some((m) => p === 
 
 export const emManejo = (p: string) => contem(MANEJO_PATHS, p);
 export const emSerraria = (p: string) => contem(SERRARIA_PATHS, p);
+
+/**
+ * Section shown for a path. The yard manager consults load history from the
+ * Sawmill, so /historico keeps the Sawmill context for that role.
+ */
+export function secaoDaRota(p: string, papel?: string): "manejo" | "serraria" | null {
+  if (papel === "gerente_patio" && contem(["/historico"], p)) return "serraria";
+  if (emSerraria(p)) return "serraria";
+  if (emManejo(p)) return "manejo";
+  return null;
+}
 
 /**
  * Rota aberta a quem não está logado. O QR da tora (/t/<id>) e a apresentação

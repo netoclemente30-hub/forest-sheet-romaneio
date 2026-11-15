@@ -69,7 +69,7 @@ export function rotaPermitida(papel: Papel, pathname: string): boolean {
   if (pathname === "/cortador" || pathname.startsWith("/cortador/")) return pode(papel, "mapa_ver");
   if (pathname === "/toras" || pathname.startsWith("/toras/")) return pode(papel, "toras_lancar") || papel === "gerente_escritorio";
   if (pathname === "/romaneio" || pathname.startsWith("/romaneio/") ||
-      pathname === "/historico" || pathname.startsWith("/historico/")) return pode(papel, "carga_criar") || papel === "gerente_escritorio";
+      pathname === "/historico" || pathname.startsWith("/historico/")) return pode(papel, "carga_criar") || papel === "gerente_patio" || papel === "gerente_escritorio";
   if (pathname === "/serraria" || pathname.startsWith("/serraria/") ||
       pathname === "/saldo") return pode(papel, "serraria_ver");
   if (pathname === "/entrada") return pode(papel, "serraria_operar") || papel === "gerente_escritorio";

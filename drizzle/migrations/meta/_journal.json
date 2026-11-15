@@ -253,6 +253,20 @@
       "when": 1794659844530,
       "tag": "0035_corrigir_publico_id_operacoes",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794774119574,
+      "tag": "0036_cargos_estrutura_seguranca",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794774265950,
+      "tag": "0037_cargos_rls_rpcs_arrasto",
+      "breakpoints": true
     }
   ]
 }

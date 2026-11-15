@@ -21,7 +21,7 @@ import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, X, AlertTriangle, Warehouse } from "lucide-react";
+import { Camera, X, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/romaneio")({
   staticData: { sitemap: false },
@@ -134,7 +134,6 @@ function RomaneioPage() {
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-3xl font-bold uppercase">Romaneio de carga</h1>
         <Link to="/historico" className="text-sm font-semibold text-primary underline">Ver romaneios emitidos</Link>
-        <Button asChild variant="secondary" size="sm"><Link to="/entrada"><Warehouse /> Entrada no pátio</Link></Button>
       </div>
       <datalist id="lista-caminhao">{cad.data?.veiculos.filter((v) => v.tipo === "caminhao").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
       <datalist id="lista-reboque">{cad.data?.veiculos.filter((v) => v.tipo === "reboque").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>

@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { RelatorioToras } from "@/components/RelatorioToras";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
-import { estoqueComFila } from "@/lib/tora-origem";
+import { estoqueComFila, romaneiosComFila } from "@/lib/tora-origem";
 import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
@@ -78,7 +78,7 @@ function Serraria() {
   const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
   useEffect(() => { setSel([]); }, [aba]);
 
-  const romPatio = useMemo(() => new Map((roms.data ?? []).filter((r) => r.recebido_em).map((r) => [r.id, r.patio ?? "Sem pátio"])), [roms.data]);
+  const romPatio = useMemo(() => new Map(romaneiosComFila(roms.data ?? [], pendentes.itens, empresa).filter((r) => r.recebido_em).map((r) => [r.id, r.patio ?? "Sem pátio"])), [roms.data, pendentes.itens, empresa]);
   const nomePatio = (t: (typeof estoque)[number]) => t.romaneio_id && romPatio.has(t.romaneio_id) ? romPatio.get(t.romaneio_id) : t.origem === "serraria" ? "Conferência de estoque" : null;
   const recebidas = useMemo(() => estoque.filter((t) => t.origem === "serraria" || (t.romaneio_id && romPatio.has(t.romaneio_id))), [estoque, romPatio]);
   const patios = useMemo(() => [...new Set([...romPatio.values(), ...(recebidas.some((t) => t.origem === "serraria" && !t.romaneio_id) ? ["Conferência de estoque"] : [])])].sort(), [romPatio, recebidas]);

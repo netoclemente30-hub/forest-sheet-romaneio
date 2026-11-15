@@ -15,6 +15,7 @@ import { Route as BaseRouteImport } from './routes/base'
 import { Route as CortadorRouteImport } from './routes/cortador'
 import { Route as EntradaRouteImport } from './routes/entrada'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
+import { Route as ExplanadasRouteImport } from './routes/explanadas'
 import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as RegistrosRouteImport } from './routes/registros'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
@@ -58,6 +59,11 @@ const EntradaRoute = EntradaRouteImport.update({
 const EtiquetasRoute = EtiquetasRouteImport.update({
   id: '/etiquetas',
   path: '/etiquetas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExplanadasRoute = ExplanadasRouteImport.update({
+  id: '/explanadas',
+  path: '/explanadas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportarRoute = ImportarRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/explanadas': typeof ExplanadasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/explanadas': typeof ExplanadasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
+  '/explanadas': typeof ExplanadasRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/cortador'
     | '/entrada'
     | '/etiquetas'
+    | '/explanadas'
     | '/importar'
     | '/registros'
     | '/relatorios'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/cortador'
     | '/entrada'
     | '/etiquetas'
+    | '/explanadas'
     | '/importar'
     | '/registros'
     | '/relatorios'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/cortador'
     | '/entrada'
     | '/etiquetas'
+    | '/explanadas'
     | '/importar'
     | '/registros'
     | '/relatorios'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   CortadorRoute: typeof CortadorRoute
   EntradaRoute: typeof EntradaRoute
   EtiquetasRoute: typeof EtiquetasRoute
+  ExplanadasRoute: typeof ExplanadasRoute
   ImportarRoute: typeof ImportarRoute
   RegistrosRoute: typeof RegistrosRoute
   RelatoriosRoute: typeof RelatoriosRoute
@@ -328,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/etiquetas'
       fullPath: '/etiquetas'
       preLoaderRoute: typeof EtiquetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explanadas': {
+      id: '/explanadas'
+      path: '/explanadas'
+      fullPath: '/explanadas'
+      preLoaderRoute: typeof ExplanadasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/importar': {
@@ -450,6 +470,7 @@ const rootRouteChildren: RootRouteChildren = {
   CortadorRoute: CortadorRoute,
   EntradaRoute: EntradaRoute,
   EtiquetasRoute: EtiquetasRoute,
+  ExplanadasRoute: ExplanadasRoute,
   ImportarRoute: ImportarRoute,
   RegistrosRoute: RegistrosRoute,
   RelatoriosRoute: RelatoriosRoute,

@@ -205,6 +205,76 @@ export type Database = {
         }
         Relationships: []
       }
+      explanadas: {
+        Row: {
+          autex: string
+          criado_em: string
+          criado_por: string | null
+          empresa_id: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          nome: string
+        }
+        Insert: {
+          autex: string
+          criado_em?: string
+          criado_por?: string | null
+          empresa_id: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome: string
+        }
+        Update: {
+          autex?: string
+          criado_em?: string
+          criado_por?: string | null
+          empresa_id?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explanadas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funcoes_funcionarios: {
+        Row: {
+          atualizado_em: string
+          empresa_id: string
+          funcao: string
+          user_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          empresa_id: string
+          funcao: string
+          user_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          empresa_id?: string
+          funcao?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcoes_funcionarios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itens_pacote_serrado: {
         Row: {
           distribuicao_pecas: Json
@@ -556,7 +626,6 @@ export type Database = {
       }
       romaneios: {
         Row: {
-          operacao_id: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -565,6 +634,7 @@ export type Database = {
           id: string
           julieta: string | null
           motorista: string | null
+          operacao_id: string | null
           patio: string | null
           placa: string | null
           qtd_toras: number
@@ -572,7 +642,6 @@ export type Database = {
           total_volume: number
         }
         Insert: {
-          operacao_id?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -581,6 +650,7 @@ export type Database = {
           id?: string
           julieta?: string | null
           motorista?: string | null
+          operacao_id?: string | null
           patio?: string | null
           placa?: string | null
           qtd_toras?: number
@@ -588,7 +658,6 @@ export type Database = {
           total_volume?: number
         }
         Update: {
-          operacao_id?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -597,6 +666,7 @@ export type Database = {
           id?: string
           julieta?: string | null
           motorista?: string | null
+          operacao_id?: string | null
           patio?: string | null
           placa?: string | null
           qtd_toras?: number
@@ -699,9 +769,10 @@ export type Database = {
         Row: {
           arrastada_em: string | null
           arrastada_por: string | null
-          arrasto_operacao_id: string | null
+          arrasto_explanada_id: string | null
           arrasto_lat: number | null
           arrasto_lng: number | null
+          arrasto_operacao_id: string | null
           arvore: number
           autex: string | null
           carregada: boolean
@@ -726,9 +797,10 @@ export type Database = {
         Insert: {
           arrastada_em?: string | null
           arrastada_por?: string | null
-          arrasto_operacao_id?: string | null
+          arrasto_explanada_id?: string | null
           arrasto_lat?: number | null
           arrasto_lng?: number | null
+          arrasto_operacao_id?: string | null
           arvore: number
           autex?: string | null
           carregada?: boolean
@@ -753,9 +825,10 @@ export type Database = {
         Update: {
           arrastada_em?: string | null
           arrastada_por?: string | null
-          arrasto_operacao_id?: string | null
+          arrasto_explanada_id?: string | null
           arrasto_lat?: number | null
           arrasto_lng?: number | null
+          arrasto_operacao_id?: string | null
           arvore?: number
           autex?: string | null
           carregada?: boolean
@@ -779,6 +852,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "toras_arrasto_explanada_empresa_autex_fkey"
+            columns: ["empresa_id", "autex", "arrasto_explanada_id"]
+            isOneToOne: false
+            referencedRelation: "explanadas"
+            referencedColumns: ["empresa_id", "autex", "id"]
+          },
+          {
             foreignKeyName: "toras_autex_fkey"
             columns: ["empresa_id", "autex"]
             isOneToOne: false
@@ -791,6 +871,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toras_romaneio_empresa_fkey"
+            columns: ["empresa_id", "romaneio_id"]
+            isOneToOne: false
+            referencedRelation: "romaneios"
+            referencedColumns: ["empresa_id", "id"]
           },
           {
             foreignKeyName: "toras_romaneio_id_fkey"
@@ -914,12 +1001,20 @@ export type Database = {
         Args: { _empresa: string; _id: string; _log: Json }
         Returns: undefined
       }
+      excluir_romaneio_toras: {
+        Args: { _empresa: string; _id: string; _log: Json }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      importar_ficha_manejo: {
+        Args: { _arvores: Json; _empresa: string; _toras: Json }
+        Returns: Json
       }
       minha_empresa: { Args: never; Returns: string }
       minha_empresa_situacao: {
@@ -930,38 +1025,29 @@ export type Database = {
           toras: number
         }[]
       }
+      minha_funcao: { Args: never; Returns: string }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      pode_funcao: {
+        Args: { _acao: string; _empresa: string }
+        Returns: boolean
+      }
       registrar_arrasto_toras: {
         Args: {
-          _empresa: string
-          _autex: string
           _arvore: number
-          _plaquetas: number[]
+          _autex: string
+          _capturado_em: string
+          _empresa: string
           _explanada: string
           _lat: number
           _lng: number
-          _precisao: number
-          _capturado_em: string
           _operacao: string
+          _plaquetas: number[]
+          _precisao: number
         }
         Returns: number
       }
-      importar_ficha_manejo: {
-        Args: { _empresa: string; _arvores: Json; _toras: Json }
-        Returns: Json
-      }
       registrar_evento: {
-        Args: { _empresa: string | null; _log: Json }
-        Returns: string
-      }
-      salvar_romaneio_toras: {
-        Args: {
-          _empresa: string
-          _cab: Json
-          _plaquetas: number[]
-          _operacao: string
-          _log: Json
-        }
+        Args: { _empresa: string; _log: Json }
         Returns: string
       }
       registrar_operacao: {
@@ -996,6 +1082,16 @@ export type Database = {
           _id: string
           _itens: Json
           _log: Json
+        }
+        Returns: string
+      }
+      salvar_romaneio_toras: {
+        Args: {
+          _cab: Json
+          _empresa: string
+          _log: Json
+          _operacao: string
+          _plaquetas: number[]
         }
         Returns: string
       }
