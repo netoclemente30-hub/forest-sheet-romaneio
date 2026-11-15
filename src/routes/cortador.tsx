@@ -11,6 +11,7 @@ import { modeloFichaCampo } from "@/lib/modelo-ficha-campo";
 import { ImportarCoordenadas } from "@/components/ImportarCoordenadas";
 
 export const Route = createFileRoute("/cortador")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Cortador / Mapa — Manejo Florestal" },

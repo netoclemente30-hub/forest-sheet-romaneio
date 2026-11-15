@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Pencil, Trash2, FileUp, Map as MapIcon, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/base/")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

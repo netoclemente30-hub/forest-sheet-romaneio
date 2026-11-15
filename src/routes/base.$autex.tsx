@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { fmtM3 } from "@/lib/volume";
 
 export const Route = createFileRoute("/base/$autex")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

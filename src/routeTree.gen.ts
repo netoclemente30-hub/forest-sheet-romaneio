@@ -21,6 +21,7 @@ import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as RomaneioRouteImport } from './routes/romaneio'
 import { Route as SaldoRouteImport } from './routes/saldo'
 import { Route as SerrariaRouteImport } from './routes/serraria'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TorasRouteImport } from './routes/toras'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as BaseIndexRouteImport } from './routes/base.index'
@@ -89,6 +90,11 @@ const SerrariaRoute = SerrariaRouteImport.update({
   path: '/serraria',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TorasRoute = TorasRouteImport.update({
   id: '/toras',
   path: '/toras',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/romaneio': typeof RomaneioRoute
   '/saldo': typeof SaldoRoute
   '/serraria': typeof SerrariaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/toras': typeof TorasRoute
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/romaneio': typeof RomaneioRoute
   '/saldo': typeof SaldoRoute
   '/serraria': typeof SerrariaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/toras': typeof TorasRoute
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/romaneio': typeof RomaneioRoute
   '/saldo': typeof SaldoRoute
   '/serraria': typeof SerrariaRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/toras': typeof TorasRoute
   '/usuarios': typeof UsuariosRoute
   '/base/$autex': typeof BaseAutexRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/romaneio'
     | '/saldo'
     | '/serraria'
+    | '/sitemap.xml'
     | '/toras'
     | '/usuarios'
     | '/base/$autex'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/romaneio'
     | '/saldo'
     | '/serraria'
+    | '/sitemap.xml'
     | '/toras'
     | '/usuarios'
     | '/base/$autex'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/romaneio'
     | '/saldo'
     | '/serraria'
+    | '/sitemap.xml'
     | '/toras'
     | '/usuarios'
     | '/base/$autex'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   RomaneioRoute: typeof RomaneioRoute
   SaldoRoute: typeof SaldoRoute
   SerrariaRoute: typeof SerrariaRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TorasRoute: typeof TorasRoute
   UsuariosRoute: typeof UsuariosRoute
   HistoricoIdRoute: typeof HistoricoIdRoute
@@ -359,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SerrariaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/toras': {
       id: '/toras'
       path: '/toras'
@@ -436,6 +456,7 @@ const rootRouteChildren: RootRouteChildren = {
   RomaneioRoute: RomaneioRoute,
   SaldoRoute: SaldoRoute,
   SerrariaRoute: SerrariaRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TorasRoute: TorasRoute,
   UsuariosRoute: UsuariosRoute,
   HistoricoIdRoute: HistoricoIdRoute,

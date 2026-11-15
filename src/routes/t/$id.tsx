@@ -8,6 +8,7 @@ import { medidaComercial, fmtComprimentoComercial } from "@/lib/medida-comercial
 import { EscolherAparencia } from "@/components/Aparencia";
 
 export const Route = createFileRoute("/t/$id")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Rastreio de tora · Gestor Florestal" },

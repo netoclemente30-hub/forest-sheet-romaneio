@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { TAMANHOS_PADRAO, gerarEtiquetasPdf, ordenarEtiquetasPorLancamento, tamanhoValido, type TamanhoEtiqueta } from "@/lib/etiqueta-pdf";
 
 export const Route = createFileRoute("/etiquetas")({
+  staticData: { sitemap: false },
   validateSearch: (s: Record<string, unknown>) => ({ p: typeof s["p"] === "string" ? s["p"] : String(s["p"] ?? "") }),
   head: () => ({
     meta: [

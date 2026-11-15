@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { FileSpreadsheet, Download } from "lucide-react";
 
 export const Route = createFileRoute("/importar")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },

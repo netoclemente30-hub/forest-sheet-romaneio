@@ -24,6 +24,7 @@ import { ExportarSaldoPendente } from "@/components/ExportarSaldoPendente";
 import { saldoNaoMedido } from "@/lib/saldo-pendentes";
 
 export const Route = createFileRoute("/saldo")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
