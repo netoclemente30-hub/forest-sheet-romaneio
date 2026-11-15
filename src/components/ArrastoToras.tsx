@@ -85,10 +85,9 @@ export function ArrastoToras({
       };
       const erro = validarPosicaoArrasto(arvore, gps);
       if (erro) throw new Error(erro);
-      const confirmacao = "Confirmar ARR ASTO CONCLUÍDO de " + selecionadas.length +
+      const confirmacao = "Confirmar arrasto concluído de " + selecionadas.length +
         " tora(s) da árvore " + arvore.numero + "?\n\n" +
-        "Registre somente depois que as toras tiverem sido arrastadas. " +
-        "A data, o operador e o GPS serão guardados.".replace("ARR ASTO", "ARRASTO");
+        "Confirme o serviço junto à árvore. A data, o operador e o GPS serão guardados.";
       if (!window.confirm(confirmacao)) return;
 
       const resultado = await registrarArrasto({
@@ -128,7 +127,7 @@ export function ArrastoToras({
           <p>Arrastadas</p><b className="text-lg">{status.arrastadas.length}</b>
         </div>
         <div className="rounded-md border bg-background p-2">
-          <p>Pendentes</p><b className="text-lg">{status.disponiveis.length}</b>
+          <p>A arrastar</p><b className="text-lg">{disponiveis.length}</b>
         </div>
       </div>
       {!!pendentesFila.length && (
