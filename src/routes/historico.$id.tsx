@@ -16,6 +16,7 @@ import { qrRomaneio } from "@/lib/tora-qr";
 import { FileDown, Trash2, Share2 } from "lucide-react";
 import { NfeWhatsapp } from "@/components/NfeWhatsapp";
 import { itensDeToras } from "@/lib/nfe-txt";
+import { compartilharArquivoExato } from "@/lib/arquivo";
 
 // Ordem alfabética por espécie, depois árvore e secção (A antes de B).
 export function ordenarRomaneio(itens: Tora[]): Tora[] {
@@ -98,24 +99,16 @@ async function gerarPdf(r: Romaneio, itens: Tora[]) {
   doc.save(nomePdf(r));
 }
 
-// Compartilha o PDF (no celular abre a lista de apps, incluindo WhatsApp).
-// Se o navegador não souber compartilhar arquivos, abre o WhatsApp com o resumo em texto.
+// Compartilha o PDF REAL. Sem Web Share com arquivos, baixa o PDF para anexação manual.
 async function compartilharPdf(r: Romaneio, itens: Tora[]) {
   const doc = await montarPdf(r, itens);
-  const arquivo = new File([doc.output("blob")], nomePdf(r), { type: "application/pdf" });
-  if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [arquivo] })) {
-    try {
-      await navigator.share({ files: [arquivo], title: `Romaneio ${r.placa ?? ""}` });
-      return;
-    } catch (e) {
-      if ((e as Error).name === "AbortError") return; // usuário cancelou
-    }
+  const resultado = await compartilharArquivoExato({
+    blob: doc.output("blob"),
+    nome: nomePdf(r),
+  });
+  if (resultado === "baixado") {
+    toast.info("PDF baixado. Abra o WhatsApp e anexe o arquivo na conversa.");
   }
-  const resumo = resumoPorEspecie(itens)
-    .map((e) => `• ${e.especie}: ${e.qtd} toras · ${fmtM3(e.volume)} m³`)
-    .join("\n");
-  const texto = `ROMANEIO DE CARGA\nPlaca: ${r.placa ?? "–"} · Reboque: ${r.julieta ?? "–"}\nData: ${dataBR(r.data)} · Motorista: ${r.motorista ?? "–"}\n${itens.length} toras · ${fmtM3(Number(r.total_volume))} m³\n\n${resumo}`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
 }
 
 function Detalhe() {
@@ -165,7 +158,7 @@ function Detalhe() {
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
-        <Button variant="secondary" className="flex-1 h-12" onClick={() => compartilharPdf(r, itens)}><Share2 /> Enviar PDF</Button>
+        <Button variant="secondary" className="flex-1 h-12" onClick={() => void compartilharPdf(r, itens).catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao gerar PDF"))}><Share2 /> Enviar PDF</Button>
         {podeExcluir && <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>}
       </div>
       <NfeWhatsapp titulo="ROMANEIO DE TORAS" nomeArquivo={`nfe-romaneio-${(r.placa || "sem-placa").replace(/\W/g, "")}-${r.data}`} dados={{ numero: `${r.placa || "SEM-PLACA"}-${r.data.replace(/-/g, "")}`, data: r.data, natureza: "REMESSA DE MADEIRA EM TORA", motorista: r.motorista ? { nome: r.motorista, cpf: r.cpf ?? "" } : null, placa: r.placa, reboque: r.julieta, itens: itensDeToras(itens) }} />
