@@ -9,6 +9,7 @@ import {
   aceitarPontoRastro,
   comprimentoRastro,
   coordenadaValida,
+  validarAbateProximo,
   mesclarRastros,
   pontoDaArvore,
   projetarMapa,
@@ -49,6 +50,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   const [selecionada, setSelecionada] = useState("");
   const [editando, setEditando] = useState<Arvore | null>(null);
   const [posicaoEdicao, setPosicaoEdicao] = useState<Coordenada | null>(null);
+  const [gpsCapturadoNoLocal, setGpsCapturadoNoLocal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [capturando, setCapturando] = useState(false);
   const [raio, setRaio] = useState(50);
@@ -182,6 +184,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }
 
   function abrirArvore(a: Arvore, posicao?: Coordenada) {
+    setGpsCapturadoNoLocal(false);
     setEditando(a);
     setPosicaoEdicao(posicao ?? (a.latitude != null && a.longitude != null ? { lat: Number(a.latitude), lng: Number(a.longitude), precisao: a.gps_precisao == null ? null : Number(a.gps_precisao) } : null));
   }
@@ -192,6 +195,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
     navigator.geolocation.getCurrentPosition(
       (p) => {
         setPosicaoEdicao({ lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy, capturado_em: new Date(p.timestamp).toISOString() });
+        setGpsCapturadoNoLocal(true);
         setCapturando(false);
       },
       (erro) => { setCapturando(false); toast.error(textoErroGps(erro.code)); },
@@ -203,6 +207,10 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
     if (!editando || !empresa || !posicaoEdicao || busy) return;
     if (motivo && !window.confirm(`Confirmar que a árvore ${editando.numero} NÃO foi abatida? Motivo: ${textoMotivo(motivo)}`)) return;
     if (!coordenadaValida(posicaoEdicao.lat, posicaoEdicao.lng)) { toast.error("Posição GPS inválida"); return; }
+    if (abatida === true) {
+      const mensagem = gpsCapturadoNoLocal ? validarAbateProximo(editando, posicaoEdicao) : "Capture o GPS no local antes de abater.";
+      if (mensagem) { toast.error(mensagem); return; }
+    }
     if (abatida === true && !window.confirm(`Confirmar que a árvore ${editando.numero} foi abatida nesta posição?`)) return;
     if (abatida === false && !window.confirm(`Desfazer o abatimento da árvore ${editando.numero}? A localização será mantida.`)) return;
     setBusy(true);
@@ -306,7 +314,8 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             {!encerrado && <>
               <Button variant="outline" className="w-full" disabled={capturando || busy} onClick={capturarPosicao}><Crosshair /> {capturando ? "Capturando GPS…" : posicaoEdicao ? "Atualizar com minha posição" : "Capturar minha posição"}</Button>
               <Button className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null)}><MapPin /> {busy ? "Salvando…" : "Salvar localização"}</Button>
-              {editando.abatida_em ? <Button variant="outline" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(false)}>Desfazer abatimento</Button> : <Button variant="destructive" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(true)}><TreePine /> Abater árvore</Button>}
+              {!editando.abatida_em && <p className="text-xs text-muted-foreground">Para abater, capture sua posição GPS atual e esteja a até 100 m da árvore cadastrada.</p>}
+              {editando.abatida_em ? <Button variant="outline" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(false)}>Desfazer abatimento</Button> : <Button variant="destructive" className="w-full" disabled={!gpsCapturadoNoLocal || !posicaoEdicao || busy} onClick={() => registrarArvore(true)}><TreePine /> Abater árvore</Button>}
               {!editando.abatida_em && <div className="space-y-2 rounded-lg border p-3">
                 <div className="text-sm font-semibold">Não abatida · declare o motivo</div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">{MOTIVOS_NAO_ABATIDA.map((m) => <Button key={m.valor} variant={editando.nao_abatida_motivo === m.valor ? "default" : "outline"} disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, m.valor)}>{m.label}</Button>)}</div>
