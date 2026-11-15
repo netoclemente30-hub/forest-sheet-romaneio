@@ -88,9 +88,8 @@ export async function exportarPdf(toras: Tora[], titulo: string, medida: MedidaR
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   autoTable(doc, { startY: (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8, head: [["AUTEX", "Qtd toras", comercial ? "Volume comercial m³" : "Volume m³"]], body: dados.porAutex.map((r) => [r.autex, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
-  autoTable(doc, { startY: (doc as any).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", comercial ? "Volume comercial m³" : "Volume m³"]], body: dados.porEspecie.map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
+  autoTable(doc, { startY: (doc as typeof doc & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8, head: [["Espécie", "Nome científico", "Qtd toras", comercial ? "Volume comercial m³" : "Volume m³"]], body: dados.porEspecie.map((r) => [r.especie, r.cientifico, String(r.qtd), fmtM3(r.volume)]), styles: { fontSize: 9 }, headStyles: { fillColor: [46, 84, 56] } });
   return { blob: doc.output("blob"), nome: `${nome()}${comercial ? "_comercial" : ""}.pdf` };
 }
 
