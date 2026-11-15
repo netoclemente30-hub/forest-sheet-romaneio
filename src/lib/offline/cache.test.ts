@@ -57,10 +57,10 @@ describe("isolamento de contas no cache", () => {
     const get = vi.spyOn(idb, "get").mockResolvedValue(undefined);
     idUsuario = "usuario-a";
     await comCache("toras", vi.fn());
-    expect(get).toHaveBeenCalledWith("cache", "usuario-a:minha:toras");
+    expect(get).toHaveBeenCalledWith("cache", "usuario-a:sem-vinculo:toras");
     idUsuario = "usuario-b";
     await comCache("toras", vi.fn());
-    expect(get).toHaveBeenCalledWith("cache", "usuario-b:minha:toras");
+    expect(get).toHaveBeenCalledWith("cache", "usuario-b:sem-vinculo:toras");
   });
   it("sem sessão não consulta dados privados salvos", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
