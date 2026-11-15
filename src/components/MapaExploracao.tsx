@@ -6,6 +6,7 @@ import { arvoresQuery, torasQuery, rastrosQuery, type Arvore } from "@/lib/data"
 import { ArrastoToras } from "@/components/ArrastoToras";
 import { situacaoArrasto } from "@/lib/arrasto";
 import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import {
   aceitarPontoRastro,
@@ -42,7 +43,10 @@ function textoErroGps(codigo: number): string {
 
 export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; arvores: Arvore[]; encerrado: boolean }) {
   const qc = useQueryClient();
-  const { empresaId, session } = useAuth();
+  const { empresaId, session, papel } = useAuth();
+  const podeAbater = pode(papel, "mapa_abater");
+  const podeArrastar = pode(papel, "mapa_arrastar");
+  const podeRastrear = pode(papel, "mapa_rastrear");
   const empresa = getEmpresaAtiva() ?? empresaId;
   const rastros = useQuery({ ...rastrosQuery(autex), enabled: !!autex });
   const toras = useQuery(torasQuery);
@@ -161,6 +165,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }, [todosPontos, projecao]);
 
   function iniciarRastreio() {
+    if (!podeRastrear) { toast.error("Seu cargo não pode gravar rastros"); return; }
     if (!empresa) { toast.error("Aguarde carregar a empresa"); return; }
     if (!navigator.geolocation) { toast.error("Este aparelho não oferece GPS pelo navegador"); return; }
     setSessaoId(crypto.randomUUID());
@@ -171,7 +176,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }
 
   async function encerrarRastreio() {
-    if (!empresa || busy) return;
+    if (!podeRastrear || !empresa || busy) return;
     setRastreando(false);
     if (!pontosAtivos.length) {
       await guardarRastroAtivo(empresa, autex, []);
@@ -218,6 +223,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
   }
 
   async function registrarArvore(abatida: boolean | null, motivo?: string | null) {
+    if (!podeAbater) { toast.error("Seu cargo não pode alterar a situação da árvore"); return; }
     if (!editando || !empresa || !posicaoEdicao || busy) return;
     if (motivo && !window.confirm(`Confirmar que a árvore ${editando.numero} NÃO foi abatida? Motivo: ${textoMotivo(motivo)}`)) return;
     if (!coordenadaValida(posicaoEdicao.lat, posicaoEdicao.lng)) { toast.error("Posição GPS inválida"); return; }
@@ -259,7 +265,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
         {!atual ? <p className="text-sm text-muted-foreground">Aguardando posição GPS.</p> : atual.precisao != null && atual.precisao > 100 ? <p className="text-sm text-destructive">GPS impreciso; aguarde melhorar o sinal.</p> : !proximas.length ? <p className="text-sm text-muted-foreground">Nenhuma árvore em pé com posição registrada a até {raio} m.</p> : <div className="divide-y">{proximas.slice(0, 10).map(({ arvore, distancia }) => <div key={arvore.id} className="flex items-center gap-2 py-2"><TreePine className="size-5 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="break-words text-sm font-semibold">Árvore {arvore.numero} · {arvore.nome_vulgar}</div><div className="text-xs text-muted-foreground">{Math.round(distancia)} m · Picada {arvore.picada ?? "—"}</div></div><Button size="sm" variant="outline" onClick={() => abrirArvore(arvore)}>Selecionar</Button></div>)}</div>}
       </section>}
 
-      {!encerrado && proximasArrasto.length > 0 && (
+      {!encerrado && podeArrastar && proximasArrasto.length > 0 && (
         <section className="space-y-2 rounded-xl border bg-card p-3" aria-label="Árvores próximas para arrasto">
           <h2 className="font-semibold">🚜 Arrasto próximo · árvores abatidas</h2>
           <p className="text-xs text-muted-foreground">Toras medidas que ainda precisam ser arrastadas. Toque na árvore para registrar o serviço.</p>
@@ -307,9 +313,9 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
       </div>
 
       <div role="status" className="rounded-lg bg-secondary px-3 py-2 text-sm">{statusGps}</div>
-      {rastreando || pontosAtivos.length ? (
+      {podeRastrear && (rastreando || pontosAtivos.length) ? (
         <Button className="w-full" variant="secondary" disabled={busy} onClick={encerrarRastreio}><Square /> {busy ? "Salvando rastro…" : `Encerrar e salvar rastro (${pontosAtivos.length} pontos)`}</Button>
-      ) : !encerrado ? (
+      ) : !encerrado && podeRastrear ? (
         <Button className="w-full" onClick={iniciarRastreio}><Play /> Iniciar rastreio GPS</Button>
       ) : null}
       <p className="text-xs text-muted-foreground">Durante o rastreio, mantenha o aplicativo aberto e a tela ligada. O GPS continua funcionando sem sinal de celular.</p>
@@ -345,7 +351,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
             <div className="rounded-lg bg-secondary p-3 text-sm">
               {posicaoEdicao ? <><div className="font-semibold">Posição para salvar</div><div>{posicaoEdicao.lat.toFixed(7)}, {posicaoEdicao.lng.toFixed(7)}</div><div className="text-xs text-muted-foreground">Precisão: {posicaoEdicao.precisao == null ? "não informada" : `${Math.round(posicaoEdicao.precisao)} m`}</div></> : "Esta árvore ainda não tem posição. Fique junto dela e capture o GPS."}
             </div>
-            {!encerrado && <>
+            {!encerrado && podeAbater && <>
               <Button variant="outline" className="w-full" disabled={capturando || busy} onClick={capturarPosicao}><Crosshair /> {capturando ? "Capturando GPS…" : posicaoEdicao ? "Atualizar com minha posição" : "Capturar minha posição"}</Button>
               <Button className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null)}><MapPin /> {busy ? "Salvando…" : "Salvar localização"}</Button>
               {!editando.abatida_em && <p className="text-xs text-muted-foreground">Para abater, capture sua posição GPS atual e esteja a até 100 m da árvore cadastrada.</p>}
@@ -356,7 +362,7 @@ export function MapaExploracao({ autex, arvores, encerrado }: { autex: string; a
                 {editando.nao_abatida_motivo && <Button variant="ghost" size="sm" className="w-full" disabled={!posicaoEdicao || busy} onClick={() => registrarArvore(null, null)}>Remover motivo</Button>}
               </div>}
             </>}
-            {!encerrado && editando.abatida_em && empresa && (
+            {!encerrado && podeArrastar && editando.abatida_em && empresa && (
               <ArrastoToras arvore={editando} empresa={empresa} toras={toras.data ?? []} encerrado={encerrado} />
             )}
             {encerrado && <p className="text-sm text-muted-foreground">Manejo encerrado: o mapa e os registros ficam disponíveis para consulta.</p>}
