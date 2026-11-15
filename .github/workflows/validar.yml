@@ -2,10 +2,7 @@ name: Validar Gestor Florestal
 
 on:
   push:
-    branches:
-      - main
-      - 'fix/**'
-      - 'feat/**'
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
