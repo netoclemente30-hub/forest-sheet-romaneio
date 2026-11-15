@@ -2,6 +2,7 @@
 // permitir testes em memória; no app usa IndexedDB (db.ts).
 
 import { idb } from "./db";
+import { supabase } from "@/integrations/supabase/client";
 import type { LogCapturado } from "@/lib/registro";
 import type { CabPacote, BitolaSerrada } from '@/lib/madeira-serrada';
 import type { PontoRastro } from '@/lib/exploracao';
@@ -39,6 +40,8 @@ export interface ItemFila {
   id: string;
   criadoEm: number;
   op: Op;
+  /** Responsável pelo lançamento offline (separa contas no mesmo aparelho). */
+  usuario_id?: string;
   erro?: string;
 }
 
@@ -124,13 +127,51 @@ function avisar() {
   ouvintes.forEach((fn) => fn());
 }
 
+// Os lançamentos antigos não têm usuario_id. Recuperar somente quando o e-mail
+// capturado na época do lançamento coincide com a conta autenticada agora.
+// Nenhum lançamento antigo é apagado automaticamente.
+type IdentidadeFila = { id: string; email: string | null };
+
+async function identidadeFila(): Promise<IdentidadeFila> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.user.id) throw new Error("Entre na sua conta antes de acessar a fila offline");
+  return {
+    id: data.session.user.id,
+    email: data.session.user.email?.trim().toLowerCase() ?? null,
+  };
+}
+
+export function pertenceAoUsuario(item: ItemFila, usuario: IdentidadeFila): boolean {
+  if (item.usuario_id) return item.usuario_id === usuario.id;
+  const antigoEmail = "log" in item.op ? item.op.log?.user_email?.trim().toLowerCase() : null;
+  return Boolean(usuario.email && antigoEmail && usuario.email === antigoEmail);
+}
+
 let filaApp: Fila | null = null;
 export function fila(): Fila {
   if (!filaApp) {
     const store: FilaStore = {
-      all: () => idb.getAll<ItemFila>("fila"),
-      put: (item) => idb.put("fila", item),
-      del: (id) => idb.del("fila", id),
+      all: async () => {
+        const usuario = await identidadeFila();
+        const itens = await idb.getAll<ItemFila>("fila");
+        return itens.filter((item) => pertenceAoUsuario(item, usuario));
+      },
+      put: async (item) => {
+        const usuario = await identidadeFila();
+        // Um item nunca pode ser reatribuído para outra conta, nem por atualização.
+        if (item.usuario_id && item.usuario_id !== usuario.id) {
+          throw new Error("Operação offline pertencente a outra conta");
+        }
+        await idb.put("fila", { ...item, usuario_id: usuario.id });
+      },
+      del: async (id) => {
+        const usuario = await identidadeFila();
+        const item = await idb.get<ItemFila>("fila", id);
+        if (!item || !pertenceAoUsuario(item, usuario)) {
+          throw new Error("Operação offline não pertence à conta atual");
+        }
+        await idb.del("fila", id);
+      },
     };
     filaApp = criarFila(store, avisar);
   }
