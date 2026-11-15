@@ -18,7 +18,7 @@ export function linhasPDF(pages: TextoPDF[][]): unknown[][] {
     for (const line of lines) {
       line.sort((a, b) => a.x - b.x);
       const texto = line.map((i) => i.str).join(" ");
-      if (/^\s*(?:picada|faixa|trilha)\s*[:\-]/i.test(texto)) { rows.push([texto]); continue; }
+      if (/^\s*(?:picada|faixa|trilha)\s*[:-]/i.test(texto)) { rows.push([texto]); continue; }
       const found = line.flatMap((i) => { const campo = campoInventario(i.str); return campo ? [{ campo, x: i.x + i.width / 2 }] : []; });
       if (found.length >= 2) {
         header = [...header.filter((a) => !found.some((b) => b.campo === a.campo)), ...found];
