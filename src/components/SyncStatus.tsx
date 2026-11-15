@@ -69,8 +69,10 @@ export function SyncStatus() {
     const desassinar = assinarFila(() => void atualizar());
     window.addEventListener("online", tentarSync);
     window.addEventListener("offline", atualizar);
+    const intervalo = window.setInterval(() => { if (estaOnline()) void tentarSync(); }, 30000);
     void tentarSync();
     return () => {
+      window.clearInterval(intervalo);
       desassinar();
       window.removeEventListener("online", tentarSync);
       window.removeEventListener("offline", atualizar);

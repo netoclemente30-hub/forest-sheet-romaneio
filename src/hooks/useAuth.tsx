@@ -51,6 +51,21 @@ export function useAuth() {
       setIsAdmin(false);
       setIsSuperAdmin(false);
       setFuncao(null);
+      // Cópia por usuário apenas para trabalhar sem sinal. O servidor continua
+      // validando o cargo atual ao sincronizar; nunca autoriza pela cópia local.
+      if (!navigator.onLine) {
+        try {
+          const salva = JSON.parse(localStorage.getItem("permissoes-offline:" + id) ?? "null");
+          if (salva?.usuario === id) {
+            setIsAdmin(salva.admin === true);
+            setIsSuperAdmin(salva.superadmin === true);
+            setFuncao(funcaoValida(salva.funcao) ? salva.funcao : null);
+          }
+        } catch { /* sem cópia válida: negar */ }
+        setEmpresaId(lerEmpresaSalva(id));
+        setPermissoesCarregando(false);
+        return;
+      }
       // Empresa e permissões são independentes: uma consulta lenta de cargo
       // não pode impedir lançamentos de campo.
       void checarEmpresa().catch(() => null).then((empresa) => {
@@ -63,7 +78,7 @@ export function useAuth() {
         }, 10000);
       });
       void Promise.all([checarAdmin(id), checarSuperAdmin(id), checarFuncao()])
-        .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); } })
+        .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); try { localStorage.setItem("permissoes-offline:" + id, JSON.stringify({ usuario: id, admin: a, superadmin: sa, funcao: f })); } catch { /* armazenamento indisponível */ } } })
         .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); } })
         .finally(() => { if (vigente()) setPermissoesCarregando(false); });
     }

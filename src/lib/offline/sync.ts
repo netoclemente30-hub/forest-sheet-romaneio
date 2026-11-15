@@ -99,13 +99,15 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
     }
     case "romaneio_recebido": {
       const emp = op.empresa_id ? { empresa_id: op.empresa_id } : {};
-      await supabase
+      const { error: patioError } = await supabase
         .from("patios")
         .upsert({ nome: op.patio, ...emp } as never, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
+      if (patioError) throw new Error(patioError.message);
       const { error } = await supabase
         .from("romaneios")
         .update({ recebido_em: new Date().toISOString(), patio: op.patio } as never)
-        .eq("id", op.id);
+        .eq("id", op.id)
+        .eq("empresa_id", op.empresa_id ?? "");
       if (error) throw new Error(error.message);
       return;
     }
@@ -113,7 +115,8 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
       const { error } = await supabase
         .from("toras")
         .update({ serrada_em: op.desfazer ? null : new Date().toISOString() } as never)
-        .in("plaqueta", op.plaquetas);
+        .in("plaqueta", op.plaquetas)
+        .eq("empresa_id", op.empresa_id ?? "");
       if (error) throw new Error(error.message);
       return;
     }
@@ -172,7 +175,7 @@ export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         // Falha de rede: para e tenta de novo quando a internet voltar.
-        if (!estaOnline() || /fetch|network|failed to fetch/i.test(msg)) break;
+        if (!estaOnline() || /fetch|network|failed to fetch|timeout|timed out|connection|load failed|abort/i.test(msg)) break;
         await f.marcarErro(item.id, msg);
         erros++;
       }
