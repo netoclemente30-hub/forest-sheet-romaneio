@@ -68,3 +68,11 @@
 - [x] Empresa: situação pendente/demonstração/ativa/inativa, cadastro público com nome+CNPJ, limite 50 toras na demonstração
 - [x] Aviso ao Neto de novos cadastros antes de liberar (painel Usuários)
 - [x] Neto define admin ou operador
+
+## Entrega 15/11/2026 — cargos, entrada no pátio e reversão de arrasto (não publicada)
+- [x] Entrada no pátio na Serraria; QR confere toras e empresa; recebimento offline sem duplicar
+- [x] Cargos/RLS/RPCs/arrasto aplicados (migrações 0036, 0037) e testados com rollback
+- [x] Reversão de arrasto restaura todos os campos de arrasto/explanada (0038); snapshot incompleto ou explanada removida são recusados
+- [x] 294 testes em 54 arquivos, verificação de tipos sem erros
+- [ ] Publicar — aguardando revisão do Neto
+- [ ] Atribuir cargos aos 5 usuários sem função — aguardando o Neto informar as funções
