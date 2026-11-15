@@ -10,6 +10,14 @@ USING (
   OR public.has_role(auth.uid(),'superadmin')
 );
 
+-- A política FOR ALL legada permitiria que administradores comuns continuassem
+-- lendo outras empresas, apesar da nova política de leitura específica.
+DROP POLICY IF EXISTS "admin gerencia empresas" ON public.empresas;
+CREATE POLICY "somente superadmin gerencia empresas" ON public.empresas
+FOR ALL TO authenticated
+USING (public.has_role(auth.uid(),'superadmin'))
+WITH CHECK (public.has_role(auth.uid(),'superadmin'));
+
 DROP POLICY IF EXISTS "usuario le a propria empresa" ON public.empresas;
 CREATE POLICY "usuario le a propria empresa" ON public.empresas
 FOR SELECT TO authenticated
@@ -232,5 +240,4 @@ BEGIN
   END IF;
   PERFORM set_config('app.registro_contexto',coalesce(anterior_contexto,''),true);
   RETURN rid;
-END $function$
-
+END $function$;
