@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { toraDuplicada } from "./tora-duplicidade";
+import { secaoParaLancamento, toraDuplicada } from "./tora-duplicidade";
+
+it("lança AUTESP com secção vazia como null, sem inventar A", () => {
+  expect(secaoParaLancamento("")).toBeNull();
+  expect(secaoParaLancamento("   ")).toBeNull();
+  expect(secaoParaLancamento(null)).toBeNull();
+});
+it("preserva a secção informada no lançamento", () => {
+  expect(secaoParaLancamento(" b ")).toBe("B");
+});
 
 const tora = { plaqueta: 5009, arvore: 1861, secao: "B", autex: "AUTEX-2011.2.2026.10587", empresa_id: "rj" };
 it("impede duplicar AUTESP sem seção e mantém outras autorizações separadas", () => {

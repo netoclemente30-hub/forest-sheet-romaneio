@@ -7,6 +7,7 @@ export type IdentidadeTora = {
 };
 
 const secaoNormalizada = (s: string | null) => (s ?? "").trim().toUpperCase();
+export const secaoParaLancamento = (secao: string | null): string | null => secaoNormalizada(secao) || null;
 const autexNormalizada = (s: string | null) => (s ?? "").trim().toUpperCase().replace(/^AUTEX[\s:-]*/, "");
 
 export function toraDuplicada<T extends IdentidadeTora>(toras: T[], alvo: Omit<IdentidadeTora, "plaqueta">, ignorarPlaqueta?: number): T | undefined {
