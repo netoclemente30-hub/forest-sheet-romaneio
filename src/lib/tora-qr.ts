@@ -5,6 +5,18 @@ export const URL_PUBLICA = "https://gestorflorestal.com.br";
 
 type IdentidadeQr = { plaqueta: number; arvore?: number; secao?: string; autex?: string };
 
+/**
+ * Plaqueta é única SOMENTE dentro de uma empresa. Nunca escolha a primeira
+ * ocorrência global (RJ e MADENORTE podem ter ambas a plaqueta 2).
+ */
+export function selecionarToraParaQr<T extends Pick<Tora, "empresa_id" | "plaqueta">>(
+  toras: readonly T[], empresa: string | null | undefined, plaqueta: number,
+): T | null {
+  if (!empresa || !Number.isSafeInteger(plaqueta) || plaqueta <= 0) return null;
+  return toras.find((t) => t.empresa_id === empresa && t.plaqueta === plaqueta) ?? null;
+}
+
+
 /** Etiqueta com página pública quando a tora já tem código público (sincronizada); senão, o JSON interno. */
 export function qrTora(t: Tora & { publico_id?: string | null }) {
   if (t.publico_id) {
