@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { capturarLog } from "@/lib/registro";
 import type { Romaneio, Tora } from "@/lib/data";
-import { fmtM3 } from "@/lib/volume";
+import { fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { TextoMedidaComercial } from "@/components/MedidaComercial";
 import { fmtComprimentoComercial, medidaComercial, totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
@@ -154,7 +154,7 @@ function Detalhe() {
         <div className="text-sm opacity-90">Reboque {r.julieta || "–"} · {r.motorista} {r.cpf && `· CPF ${r.cpf}`}</div>
         <div className="mt-2 font-display text-4xl font-bold">{fmtM3(Number(r.total_volume))} m³</div>
         <div className="text-sm opacity-80">{r.qtd_toras} toras · volume físico</div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span><span>Diferença: <b>{totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</b></span></div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span><span>Diferença: <b>{fmtM3Sinal(totais.diferenca)} m³</b></span></div>
       </div>
       <div className="flex gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>

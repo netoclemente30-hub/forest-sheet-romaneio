@@ -1,6 +1,6 @@
 import type { MedidasTora } from "@/lib/medida-comercial";
 import { fmtComprimentoComercial, medidaComercial } from "@/lib/medida-comercial";
-import { fmtM3 } from "@/lib/volume";
+import { fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { Button } from "@/components/ui/button";
 
 export type ModoMedida = "fisica" | "comercial";
@@ -37,7 +37,7 @@ export function CartaoMedidaComercial({ tora }: { tora: MedidasTora }) {
           <span>Comercial: <b>{fmtM3(comercial.volume)} m³</b></span>
           <span>Físico: <b>{fmtM3(fisico)} m³</b></span>
         </div>
-        <div className="text-sm font-semibold">Diferença: {comercial.volume - fisico >= 0 ? "+" : ""}{fmtM3(comercial.volume - fisico)} m³</div>
+        <div className="text-sm font-semibold">Diferença: {fmtM3Sinal(comercial.volume - fisico)} m³</div>
       </> : <div className="text-sm text-muted-foreground">Informe as quatro medidas de diâmetro e o comprimento para calcular.</div>}
     </div>
   );

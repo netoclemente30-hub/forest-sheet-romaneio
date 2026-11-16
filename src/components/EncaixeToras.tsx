@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CAMPOS_ENCAIXE, encaixarToras, nomesCientificosEncaixe, volumeEncaixe, type MedidasEncaixe } from "@/lib/encaixe";
 import type { LinhaSaldo } from "@/lib/saldo";
-import { fmtM3 } from "@/lib/volume";
+import { fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { RotateCcw } from "lucide-react";
 import { Check, Printer } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -106,7 +106,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
           <div className="font-semibold">Árvore {linha.arvore} · Secção {linha.secao || "—"}</div>
           <div className="text-sm break-words">AUTEX: {linha.autex || "Não informada"}</div>
           <div className="text-sm italic text-muted-foreground break-words">{linha.nome_cientifico}</div>
-          <div className="text-sm text-muted-foreground">Diferença (saldo − medido): {diferenca > 0 ? "+" : ""}{fmtM3(diferenca)} m³</div>
+          <div className="text-sm text-muted-foreground">Diferença (saldo − medido): {fmtM3Sinal(diferenca, false)} m³</div>
           <Button variant="outline" className="w-full h-11" disabled={!linha.autex.trim()} onClick={() => { setEscolhida(linha); setSalva(null); }}><Check /> Escolher árvore {linha.arvore} · {linha.secao || "Sem secção"}</Button>
         </li>)}
       </ol>

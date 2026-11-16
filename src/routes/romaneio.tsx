@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
-import { fmtM3 } from "@/lib/volume";
+import { fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { TextoMedidaComercial } from "@/components/MedidaComercial";
 import { totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
@@ -195,7 +195,7 @@ function RomaneioPage() {
           </div>
           <div className="flex flex-wrap justify-between gap-2 text-sm">
             <span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span>
-            <span>Diferença: <b>{totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</b></span>
+            <span>Diferença: <b>{fmtM3Sinal(totais.diferenca)} m³</b></span>
           </div>
         </div>
       </div>
