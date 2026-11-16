@@ -10,7 +10,7 @@ export class ErroConsultaTora extends Error {
 }
 
 const TEMPO_LIMITE_MS = 12000;
-const UUID = /^[\\da-f]{8}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * A consulta do QR é pública: não pode depender do refresh de sessão nem do
@@ -36,7 +36,7 @@ export async function consultarFichaPublicaTora(
   const tempo = setTimeout(() => ctrl.abort(), options.timeoutMs ?? TEMPO_LIMITE_MS);
   try {
     const resp = await (options.fetcher ?? fetch)(
-      url.replace(/\\/+$/, "") + "/rest/v1/rpc/tora_publica",
+      url.replace(/[/]+$/, "") + "/rest/v1/rpc/tora_publica",
       {
         method: "POST",
         mode: "cors",
