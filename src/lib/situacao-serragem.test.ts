@@ -45,6 +45,6 @@ describe("QR no pátio da serraria e consulta de serragem", () => {
 
   it("não acessa tora da RJ com QR da MADENORTE e não cruza plaquetas", () => {
     const codigo = qrTora(tora);
-    expect(() => resolverQrSerragem(codigo, [tora], "rj-madeiras")).toThrow("não encontrada");
+    expect(() => resolverQrSerragem(codigo, [tora], "rj-madeiras")).toThrow("outra empresa");
   });
 });
