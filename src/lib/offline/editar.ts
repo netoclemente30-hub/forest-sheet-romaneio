@@ -27,7 +27,7 @@ export function camposDaFila(op: Op): CampoFila[] {
     case "romaneio_recebido": return [{ chave: "patio", rotulo: "Pátio" }];
     case "toras_serradas": return [{ chave: "plaquetas", rotulo: "Plaquetas (separadas por vírgula)" }];
     case "arvore_gps": return [{ chave: "latitude", rotulo: "Latitude", mode: "decimal" }, { chave: "longitude", rotulo: "Longitude", mode: "decimal" }, { chave: "gps_precisao", rotulo: "Precisão GPS (m)", mode: "decimal" }];
-    case "rastro_salvar": case "arrasto_arvore": case "arrasto_toras": case "aguardando_insert": case "aguardando_impressa": return [];
+    case "rastro_salvar": case "arrasto_arvore": case "transferencia_explanada": case "arrasto_toras": case "aguardando_insert": case "aguardando_impressa": return [];
     case "romaneio_salvar": return [
       { chave: "placa", rotulo: "Placa do caminhão" }, { chave: "julieta", rotulo: "Placa do reboque" },
       { chave: "motorista", rotulo: "Motorista" }, { chave: "cpf", rotulo: "CPF" }, { chave: "data", rotulo: "Data" },
@@ -45,7 +45,7 @@ export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
   if (op.tipo === "romaneio_salvar") return { ...op.cab };
   if (op.tipo === "romaneio_recebido") return { patio: op.patio };
   if (op.tipo === "arvore_gps") return { latitude: String(op.dados.latitude), longitude: String(op.dados.longitude), gps_precisao: String(op.dados.gps_precisao ?? "") };
-  if (op.tipo === "rastro_salvar" || op.tipo === "arrasto_arvore" || op.tipo === "arrasto_toras" || op.tipo === "aguardando_insert" || op.tipo === "aguardando_impressa") return {};
+  if (op.tipo === "rastro_salvar" || op.tipo === "arrasto_arvore" || op.tipo === "transferencia_explanada" || op.tipo === "arrasto_toras" || op.tipo === "aguardando_insert" || op.tipo === "aguardando_impressa") return {};
   if (op.tipo === "tora_delete") return { plaqueta: String(op.plaqueta) };
   return { plaquetas: op.plaquetas.join(", ") };
 }
