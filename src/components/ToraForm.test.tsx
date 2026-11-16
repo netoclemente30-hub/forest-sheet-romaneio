@@ -19,7 +19,7 @@ const existente = { ...linha, plaqueta: 5009, empresa_id: "rj", comprimento: 6, 
 function preencher(toras: Tora[]) {
   render(<QueryClientProvider client={new QueryClient()}><ToraForm toras={toras} arvores={[]} saldo={[linha]} onSaved={vi.fn()} /></QueryClientProvider>);
   fireEvent.change(screen.getByLabelText("Nº árvore"), { target: { value: "1861" } });
-  fireEvent.change(screen.getByLabelText("Seção (opcional)"), { target: { value: "b" } });
+  fireEvent.change(screen.getByLabelText("Secção (opcional)"), { target: { value: "b" } });
   for (const label of ["D. Topo 1 (cm)", "D. Topo 2 (cm)", "D. Pé 1 (cm)", "D. Pé 2 (cm)", "Comprimento (m)"]) {
     fireEvent.change(screen.getByLabelText(label), { target: { value: "50" } });
   }
