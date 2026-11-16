@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { TouchEvent as ReactTouchEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Crosshair, LoaderCircle, Map as MapIcon, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,10 @@ import { conversorMapa, renderizarGeoPdf, type MapaRenderizado } from "@/lib/geo
 import type { Coordenada, PontoRastro } from "@/lib/exploracao";
 import type { Arvore } from "@/lib/data";
 
-export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, podeVincular = false, onArvore }: {
+export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, podeVincular = false, onArvore, telaCheia = false }: {
   autex: string; arvores: Arvore[]; atual: Coordenada | null; rastros: PontoRastro[]; encerrado: boolean; podeVincular?: boolean;
   onArvore: (arvore: Arvore, posicao?: Coordenada) => void;
+  telaCheia?: boolean;
 }) {
   const consulta = useQuery({ ...mapaPdfQuery(autex), enabled: !!autex });
   const arquivo = consulta.data?.[0];
@@ -23,6 +25,7 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, podeVinc
   const container = useRef<HTMLDivElement>(null);
   const svg = useRef<SVGSVGElement>(null);
   const versao = useRef(0);
+  const gestoZoom = useRef<{ distancia: number; zoom: number } | null>(null);
   useEffect(() => { versao.current++; setMapa(null); setConverter(null); setErro(""); setBusy(false); }, [arquivo?.id, arquivo?.atualizado_em]);
   async function carregar() {
     if (!arquivo || busy) return;
@@ -51,6 +54,22 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, podeVinc
     const [x, y] = converter.tela(p);
     percursos.set(grupo, [...(percursos.get(grupo) ?? []), `${x},${y}`]);
   }
+  // Ao usar dois dedos no GeoPDF, ampliamos a planta sem depender da internet.
+  // Um dedo continua fazendo o deslocamento nativo do contêiner.
+  function iniciarPinça(e: ReactTouchEvent<HTMLDivElement>) {
+    if (e.touches.length !== 2) return;
+    const [a, b] = [e.touches[0], e.touches[1]];
+    if (!a || !b) return;
+    gestoZoom.current = { distancia: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), zoom };
+  }
+  function moverPinça(e: ReactTouchEvent<HTMLDivElement>) {
+    if (e.touches.length !== 2 || !gestoZoom.current) return;
+    e.preventDefault();
+    const [a, b] = [e.touches[0], e.touches[1]];
+    if (!a || !b) return;
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    setZoom(Math.max(1, Math.min(12, gestoZoom.current.zoom * dist / gestoZoom.current.distancia)));
+  }
   function centralizar() {
     if (!posicao || !mapa || !container.current || !svg.current) return;
     const escala = svg.current.getBoundingClientRect().width / mapa.largura;
@@ -69,9 +88,11 @@ export function GeoPdfMapa({ autex, arvores, atual, rastros, encerrado, podeVinc
         <span className="text-sm">{zoom}×</span>
         <Button size="icon" variant="outline" aria-label="Ampliar mapa" title="Ampliar mapa" disabled={zoom >= 12} onClick={() => setZoom((z) => Math.min(12, z + 1))}><Plus /></Button>
         <Button size="icon" variant="outline" aria-label="Centralizar minha posição" title="Centralizar minha posição" disabled={!noMapa} onClick={centralizar}><Crosshair /></Button>
-        <span className="ml-auto text-xs text-muted-foreground">Página {mapa.geo.pagina}</span>
+        <span className="ml-auto text-xs text-muted-foreground">Página {mapa.geo.pagina} · pinça para zoom</span>
       </div>
-      <div ref={container} className="h-[440px] overflow-auto border bg-background sm:h-[560px]">
+      <div ref={container} onTouchStart={iniciarPinça} onTouchMove={moverPinça}
+        onTouchEnd={() => { gestoZoom.current = null; }}
+        className={(telaCheia ? "h-[calc(100dvh-330px)] min-h-[190px]" : "h-[440px] sm:h-[560px]") + " overflow-auto border bg-background"}>
         <svg ref={svg} viewBox={`0 0 ${mapa.largura} ${mapa.altura}`} width={`${zoom * 100}%`} className="block max-w-none" role="img" aria-label={`Planta georreferenciada da AUTEX ${autex}`} onClick={(e) => {
           const a = arvores.find((a) => a.id === vincular);
           const matrix = svg.current?.getScreenCTM();
