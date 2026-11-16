@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type React from "react";
 import { CheckCircle2, Factory, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, TreePine, Truck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { consultarFichaPublicaTora } from "@/lib/consulta-tora-publica";
+import type { FichaToraPublica } from "@/lib/consulta-tora-publica";
 import { medidaComercial, fmtComprimentoComercial } from "@/lib/medida-comercial";
 import { dataHoraSerragem, situacaoSerragem } from "@/lib/situacao-serragem";
 import { EscolherAparencia } from "@/components/Aparencia";
@@ -34,12 +34,12 @@ function ToraPublica() {
   const q = useQuery({
     queryKey: ["tora-publica", id],
     refetchOnMount: "always",
-    queryFn: async () => {
-      if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-      const { data, error } = await supabase.rpc("tora_publica", { _id: id });
-      if (error) throw error;
-      return data?.[0] ?? null;
-    },
+    refetchOnWindowFocus: false,
+    retry: false,
+    // Não fica pausada indefinidamente se o navegador externo do WhatsApp
+    // reportar estar offline. A função falha com mensagem clara e botão de retry.
+    networkMode: "always",
+    queryFn: () => consultarFichaPublicaTora(id),
   });
   const t = q.data;
   return (
@@ -52,8 +52,19 @@ function ToraPublica() {
         </div>
       </header>
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-4">
-        {q.isLoading && <p className="py-10 text-center text-muted-foreground">Carregando tora…</p>}
-        {q.isError && <p className="rounded-lg border border-destructive p-4 text-destructive">Não foi possível consultar agora. Tente novamente em instantes.</p>}
+        {q.isLoading && <p role="status" className="py-10 text-center text-muted-foreground">Consultando a tora…</p>}
+        {q.isError && (
+          <div role="alert" className="space-y-3 rounded-lg border border-destructive p-4">
+            <p className="font-semibold">Não foi possível abrir a ficha da tora.</p>
+            <p className="text-sm text-muted-foreground">
+              {q.error instanceof Error ? q.error.message : "Verifique a conexão e tente novamente."}
+            </p>
+            <button type="button" onClick={() => void q.refetch()}
+              className="w-full rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground">
+              Tentar novamente
+            </button>
+          </div>
+        )}
         {!q.isLoading && !q.isError && !t && <p className="rounded-lg border p-6 text-center text-muted-foreground">Tora não encontrada. Confira o QR Code da etiqueta.</p>}
         {t && <Detalhes t={t} />}
         <p className="pt-2 text-center text-xs text-muted-foreground"><b>Sistema de Gestão Florestal · <Link to="/apresentacao" className="underline">Gestor Florestal</Link></b><br />Documento gerado automaticamente via QR Code</p>
@@ -62,7 +73,7 @@ function ToraPublica() {
   );
 }
 
-type Publica = Database["public"]["Functions"]["tora_publica"]["Returns"][number];
+type Publica = FichaToraPublica;
 
 function Detalhes({ t }: { t: Publica }) {
   const c = medidaComercial(t);
