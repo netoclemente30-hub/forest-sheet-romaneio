@@ -14,6 +14,21 @@ export function estaOnline(): boolean {
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
 export async function executarOp(op: Op, operacao?: string): Promise<void> {
+  if (op.tipo === "transferencia_explanada") {
+    // RPC do banco valida cargo, empresa, AUTEX, estoque, concorrência e auditoria.
+    // Cast local porque o schema da Lovable atualiza os tipos gerados separadamente.
+    const { error } = await supabase.rpc("transferir_tora_explanada" as never, {
+      _empresa: op.empresa_id,
+      _autex: op.autex,
+      _plaqueta: op.plaqueta,
+      _origem: op.origem_id,
+      _destino: op.destino_id,
+      _operacao: op.log.operacao_id ?? operacao ?? "",
+      _log: op.log,
+    } as never);
+    if (error) throw new Error(error.message);
+    return; // A RPC registra a auditoria na mesma transação.
+  }
   if (op.tipo === "arrasto_arvore") {
     const { error } = await supabase.rpc("registrar_arrasto_arvore", {
       _empresa: op.empresa_id,
