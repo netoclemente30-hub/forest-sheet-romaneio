@@ -1,3 +1,4 @@
+import { textoIdentificacaoSaldo } from "@/components/IdentificacaoSaldo";
 import { pode } from "@/lib/funcoes";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -260,7 +261,7 @@ function Saldo() {
               <div className="min-w-0 flex-1">
                 <div className="font-semibold leading-snug">{r.linha.especie || "Sem nome"}</div>
                 {r.linha.nome_cientifico && <div className="text-xs italic text-muted-foreground">{r.linha.nome_cientifico}</div>}
-                <div className="text-xs text-muted-foreground">{r.tora ? `Plaqueta ${r.tora.plaqueta} · ` : ""}Árv. {r.linha.arvore} · Sec. {r.linha.secao || "–"} · AUTEX {r.linha.autex || "—"}</div>
+                <div className="text-xs text-muted-foreground">{textoIdentificacaoSaldo(r.tora?.plaqueta, r.linha)}</div>
                 <div className="text-xs text-muted-foreground">{fmtM3(Number(r.tora?.volume ?? r.linha.volume ?? 0))} m³{!r.tora && <span className="font-semibold text-destructive"> · fora de estoque</span>}{r.tora && (r.tora.etiqueta_impressa_em ? <span className="font-semibold text-primary"> · etiqueta impressa</span> : <span> · etiqueta não impressa</span>)}</div>
               </div>
               {podeEditar && r.tora && <div className="flex shrink-0 items-center gap-1">
