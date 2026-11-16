@@ -64,7 +64,7 @@ function ToraPublica() {
               Tentar novamente
             </button>
           </div>
-        )
+        )}
         {!q.isLoading && !q.isError && !t && <p className="rounded-lg border p-6 text-center text-muted-foreground">Tora não encontrada. Confira o QR Code da etiqueta.</p>}
         {t && <Detalhes t={t} />}
         <p className="pt-2 text-center text-xs text-muted-foreground"><b>Sistema de Gestão Florestal · <Link to="/apresentacao" className="underline">Gestor Florestal</Link></b><br />Documento gerado automaticamente via QR Code</p>
