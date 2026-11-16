@@ -3,7 +3,19 @@ import type { Tora } from "./data";
 /** Endereço oficial: etiquetas impressas no preview também abrem a página pública definitiva. */
 export const URL_PUBLICA = "https://gestorflorestal.com.br";
 
-type IdentidadeQr = { plaqueta: number; arvore?: number; secao?: string; autex?: string };
+type IdentidadeQr = { plaqueta: number; arvore?: number; secao?: string; autex?: string; empresa_id?: string | undefined; publico_id?: string | undefined };
+
+/**
+ * Plaqueta é única SOMENTE dentro de uma empresa. Nunca escolha a primeira
+ * ocorrência global (RJ e MADENORTE podem ter ambas a plaqueta 2).
+ */
+export function selecionarToraParaQr<T extends Pick<Tora, "empresa_id" | "plaqueta">>(
+  toras: readonly T[], empresa: string | null | undefined, plaqueta: number,
+): T | null {
+  if (!empresa || !Number.isSafeInteger(plaqueta) || plaqueta <= 0) return null;
+  return toras.find((t) => t.empresa_id === empresa && t.plaqueta === plaqueta) ?? null;
+}
+
 
 /** Etiqueta com página pública quando a tora já tem código público (sincronizada); senão, o JSON interno. */
 export function qrTora(t: Tora & { publico_id?: string | null }) {
@@ -11,9 +23,10 @@ export function qrTora(t: Tora & { publico_id?: string | null }) {
     const q = new URLSearchParams({ p: String(t.plaqueta), a: String(t.arvore) });
     if (t.secao) q.set("s", t.secao);
     if (t.autex) q.set("x", t.autex);
+    if (t.empresa_id) q.set("e", t.empresa_id);
     return `${URL_PUBLICA}/t/${t.publico_id}?${q}`;
   }
-  return JSON.stringify({ tipo: "tora", versao: 1, plaqueta: t.plaqueta, arvore: t.arvore, especie: t.especie, nome_cientifico: t.nome_cientifico, autex: t.autex, secao: t.secao, d_topo1: t.d_topo1, d_topo2: t.d_topo2, d_pe1: t.d_pe1, d_pe2: t.d_pe2, comprimento: t.comprimento, volume: Number(t.volume) });
+  return JSON.stringify({ tipo: "tora", versao: 1, empresa_id: t.empresa_id, plaqueta: t.plaqueta, arvore: t.arvore, especie: t.especie, nome_cientifico: t.nome_cientifico, autex: t.autex, secao: t.secao, d_topo1: t.d_topo1, d_topo2: t.d_topo2, d_pe1: t.d_pe1, d_pe2: t.d_pe2, comprimento: t.comprimento, volume: Number(t.volume) });
 }
 
 /** Lê a identidade impressa: plaqueta pura, JSON v1 ou link público. */
@@ -27,13 +40,13 @@ export function identidadeDoQr(raw: string): IdentidadeQr | null {
       if (!/^\/t\/[0-9a-f-]{36}\/?$/i.test(u.pathname)) return null;
       const p = Number(u.searchParams.get("p")); const a = Number(u.searchParams.get("a"));
       if (!ok(p) || !Number.isSafeInteger(a)) return null;
-      return { plaqueta: p, arvore: a, secao: u.searchParams.get("s") ?? "", autex: u.searchParams.get("x") ?? "" };
+      return { plaqueta: p, arvore: a, secao: u.searchParams.get("s") ?? "", autex: u.searchParams.get("x") ?? "", empresa_id: u.searchParams.get("e") ?? undefined, publico_id: u.pathname.split("/")[2] };
     } catch { return null; }
   }
   try {
     const d = JSON.parse(text);
     if (d?.tipo !== "tora" || d.versao !== 1 || !ok(d.plaqueta)) return null;
-    return { plaqueta: d.plaqueta, arvore: d.arvore, secao: d.secao ?? "", autex: d.autex ?? "" };
+    return { plaqueta: d.plaqueta, arvore: d.arvore, secao: d.secao ?? "", autex: d.autex ?? "", empresa_id: typeof d.empresa_id === "string" ? d.empresa_id : undefined };
   } catch { return null; }
 }
 

@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
+import { empresaDaOperacao } from "@/lib/cadastros-empresa";
+import { selecionarToraParaQr } from "@/lib/tora-qr";
 import { torasEtiquetasOffline } from "@/lib/encaixe-salvar";
 import { Input } from "@/components/ui/input";
 import { TAMANHOS_PADRAO, gerarEtiquetasPdf, ordenarEtiquetasPorLancamento, tamanhoValido, type TamanhoEtiqueta } from "@/lib/etiqueta-pdf";
@@ -35,18 +37,18 @@ function Etiquetas() {
   const router = useRouter();
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
-  const { empresaId, session, papel } = useAuth();
+  const { empresaId, isSuperAdmin, papel } = useAuth();
   const pendentes = useFilaOffline();
-  const [empresaSalva, setEmpresaSalva] = useState<string | null>(null);
-  useEffect(() => {
-    if (!session?.user.id) return;
-    try { setEmpresaSalva(localStorage.getItem(`encaixe-empresa:${session.user.id}`)); } catch { /* sem cópia local */ }
-  }, [session?.user.id]);
-  const empresa = getEmpresaAtiva() ?? empresaId ?? empresaSalva;
+  const empresa = empresaDaOperacao(isSuperAdmin, empresaId, getEmpresaAtiva());
   const locais = torasEtiquetasOffline(pendentes.itens, empresa);
-  const disponiveis = [...(toras.data ?? []).filter((t) => !empresa || t.empresa_id === empresa), ...locais];
+  const disponiveis = empresa
+    ? [...(toras.data ?? []).filter((t) => t.empresa_id === empresa), ...locais.filter((t) => t.empresa_id === empresa)]
+    : [];
   const lista = [...new Set(p.split(",").map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
-  const selecionadas = ordenarEtiquetasPorLancamento(lista.flatMap((pl) => { const t = disponiveis.find((x) => x.plaqueta === pl); return t ? [t] : []; }));
+  const selecionadas = ordenarEtiquetasPorLancamento(lista.flatMap((pl) => {
+    const t = selecionarToraParaQr(disponiveis, empresa, pl);
+    return t ? [t] : [];
+  }));
   const [tam, setTam] = useState<TamanhoEtiqueta>({ largura: 100, altura: 70 });
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -55,6 +57,7 @@ function Etiquetas() {
   }, []);
   function escolher(t: TamanhoEtiqueta) { setTam(t); if (tamanhoValido(t)) localStorage.setItem("etiqueta-tamanho", JSON.stringify(t)); }
   async function gerar(salvar = false) {
+    if (!empresa) { toast.error("Selecione a empresa antes de gerar etiquetas QR"); return; }
     if (!tamanhoValido(tam)) { toast.error("Informe largura e altura entre 25 e 300 mm"); return; }
     setBusy(true);
     try {
@@ -85,6 +88,8 @@ function Etiquetas() {
   return (
     <div>
       <div className="no-print space-y-3 mb-4">
+        {!empresa && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">Selecione a empresa no topo antes de gerar etiquetas; plaquetas podem se repetir em empresas diferentes.</p>}
+        {empresa && lista.length > 0 && selecionadas.length !== lista.length && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">Uma ou mais plaquetas não foram encontradas na empresa selecionada. Nenhuma etiqueta de outra empresa será utilizada.</p>}
         <Button variant="outline" onClick={() => router.history.back()}><ArrowLeft /> Voltar</Button>
         <div className="rounded-xl border bg-card p-3 space-y-2">
           <p className="font-semibold">Tamanho da etiqueta (mm)</p>
@@ -102,8 +107,8 @@ function Etiquetas() {
           </div>
           <p className="text-xs text-muted-foreground">Gera um PDF com uma etiqueta por página, no tamanho exato. Na impressão, use "Tamanho real / 100%".</p>
         </div>
-        <Button disabled={!selecionadas.length || toras.isLoading || busy} className="w-full h-12" onClick={() => gerar()}><Printer /> {busy ? "Gerando…" : `Gerar PDF de ${selecionadas.length} etiqueta(s)`}</Button>
-        <Button variant="outline" disabled={!selecionadas.length || toras.isLoading || busy} className="w-full h-12" onClick={() => gerar(true)}><Download /> Salvar PDF no aparelho</Button>
+        <Button disabled={!empresa || !selecionadas.length || selecionadas.length !== lista.length || toras.isLoading || busy} className="w-full h-12" onClick={() => gerar()}><Printer /> {busy ? "Gerando…" : `Gerar PDF de ${selecionadas.length} etiqueta(s)`}</Button>
+        <Button variant="outline" disabled={!empresa || !selecionadas.length || selecionadas.length !== lista.length || toras.isLoading || busy} className="w-full h-12" onClick={() => gerar(true)}><Download /> Salvar PDF no aparelho</Button>
         {pdfUrl && <a href={pdfUrl} target="_blank" rel="noopener" className="block text-center underline font-semibold py-2">Abrir PDF</a>}
       </div>
       {toras.isLoading && <p>Carregando etiquetas…</p>}

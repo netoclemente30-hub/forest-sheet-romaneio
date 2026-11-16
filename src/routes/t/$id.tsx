@@ -92,6 +92,7 @@ function Detalhes({ t }: { t: Publica }) {
       <section className="rounded-2xl bg-forest px-4 py-8 text-center text-forest-foreground shadow-lg">
         <QrCode className="mx-auto h-8 w-8 opacity-50" />
         <p className="mt-1 text-[11px] uppercase tracking-[0.2em] opacity-80">Gestor Florestal · Rastreio de tora</p>
+        <p className="mt-3 rounded-md border border-forest-foreground/40 bg-forest-foreground/10 px-3 py-2 text-base font-bold uppercase">Empresa: {t.empresa_nome}</p>
         <h1 className="mt-1 font-display text-4xl font-bold">Tora Nº {t.plaqueta}</h1>
         <div className="mt-4 space-y-3 border-y border-forest-foreground/30 py-4">
           <div><p className="text-xs uppercase opacity-80">AUTEX</p><p className="break-words text-base font-semibold">{t.autex || "—"}</p></div>

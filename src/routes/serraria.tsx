@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { fmtM3 } from "@/lib/volume";
 import { CartaoMedidaComercial, SeletorMedida, TextoMedidaComercial, type ModoMedida } from "@/components/MedidaComercial";
 import { totaisComerciais, volumeComercial } from "@/lib/medida-comercial";
-import { qrTora, selecionarToras } from "@/lib/tora-qr";
+import { qrTora, selecionarToraParaQr, selecionarToras } from "@/lib/tora-qr";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog } from "@/lib/registro";
@@ -26,6 +26,7 @@ import { estoqueComFila, romaneiosComFila } from "@/lib/tora-origem";
 import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
+import { empresaDaOperacao } from "@/lib/cadastros-empresa";
 import { Warehouse, Factory, ScanLine, X, QrCode, Printer, ExternalLink } from "lucide-react";
 import { MadeiraSerrada } from "@/components/MadeiraSerrada";
 import { SerrariaAbas } from "@/components/SerrariaAbas";
@@ -74,14 +75,21 @@ function Serraria() {
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
   const [modo, setModo] = useState<ModoMedida>("fisica");
   const [lim, setLim] = useState(100);
-  const { empresaId, papel } = useAuth();
+  const { empresaId, papel, isSuperAdmin } = useAuth();
   const podeOperar = pode(papel, "serraria_operar");
-  const empresa = getEmpresaAtiva() ?? empresaId;
+  const empresa = empresaDaOperacao(isSuperAdmin, empresaId, getEmpresaAtiva());
   const pendentes = useFilaOffline();
-  const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
+  const estoque = useMemo(() => empresa
+    ? estoqueComFila((toras.data ?? []).filter((t) => t.empresa_id === empresa), pendentes.itens, empresa)
+        .filter((t) => t.empresa_id === empresa)
+    : [], [toras.data, pendentes.itens, empresa]);
   useEffect(() => { setSel([]); }, [aba]);
 
-  const romPatio = useMemo(() => new Map(romaneiosComFila(roms.data ?? [], pendentes.itens, empresa).filter((r) => r.recebido_em).map((r) => [r.id, r.patio ?? "Sem pátio"])), [roms.data, pendentes.itens, empresa]);
+  const romPatio = useMemo(() => new Map(empresa
+    ? romaneiosComFila((roms.data ?? []).filter((r) => r.empresa_id === empresa), pendentes.itens, empresa)
+        .filter((r) => r.empresa_id === empresa && r.recebido_em)
+        .map((r) => [r.id, r.patio ?? "Sem pátio"])
+    : []), [roms.data, pendentes.itens, empresa]);
   const nomePatio = (t: (typeof estoque)[number]) => t.romaneio_id && romPatio.has(t.romaneio_id) ? romPatio.get(t.romaneio_id) : t.origem === "serraria" ? "Conferência de estoque" : null;
   const recebidas = useMemo(() => estoque.filter((t) => t.origem === "serraria" || (t.romaneio_id && romPatio.has(t.romaneio_id))), [estoque, romPatio]);
   const patios = useMemo(() => [...new Set([...romPatio.values(), ...(recebidas.some((t) => t.origem === "serraria" && !t.romaneio_id) ? ["Conferência de estoque"] : [])])].sort(), [romPatio, recebidas]);
@@ -95,7 +103,7 @@ function Serraria() {
   }, [recebidas, aba, patio, q, romPatio, dia, autex, ordem]);
   const selecionadasVisiveis = lista.filter((t) => sel.includes(t.plaqueta));
   const aberta = recebidas.find((t) => t.empresa_id === empresa && t.plaqueta === toraLida);
-  const toraQr = recebidas.find((t) => t.empresa_id === empresa && t.plaqueta === qrPlaqueta);
+  const toraQr = selecionarToraParaQr(recebidas, empresa, qrPlaqueta ?? 0);
 
   function abrirEtiqueta(raw: string) {
     try {
@@ -243,7 +251,7 @@ function Serraria() {
         <DialogContent className="max-w-xs">
           <DialogHeader>
             <DialogTitle>QR code · plaqueta {toraQr?.plaqueta ?? qrPlaqueta}</DialogTitle>
-            <DialogDescription>Rastreabilidade da tora no pátio da serraria</DialogDescription>
+            <DialogDescription>Rastreabilidade da tora no pátio da serraria · plaqueta vinculada à empresa selecionada</DialogDescription>
           </DialogHeader>
           {toraQr ? (
             <div className="flex flex-col items-center gap-3">
