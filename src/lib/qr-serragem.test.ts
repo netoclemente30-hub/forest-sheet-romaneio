@@ -18,13 +18,25 @@ describe("etiqueta na serragem", () => {
   it("recusa uma etiqueta de identidade anterior", () => {
     expect(() => resolverQrSerragem(qrTora(tora), [{ ...tora, arvore: 350 }], "RJ")).toThrow("identidade atual");
   });
+  it("não confunde duas empresas com a plaqueta 2 e UUID distintos", () => {
+    const rj = { ...tora, plaqueta: 2, empresa_id: "rj", arvore: 3189,
+      secao: "A", especie: "Angelim", publico_id: "4be6b922-b689-473c-bc6f-00a89de5cc69" };
+    const madenorte = { ...tora, plaqueta: 2, empresa_id: "madenorte", arvore: 394,
+      secao: "B", especie: "Abiurana", publico_id: "7c24b195-d5ad-4c40-ba53-ccf7f8bc05de" };
+    expect(resolverQrSerragem(qrTora(madenorte), [rj, madenorte], "madenorte")).toBe(madenorte);
+    expect(() => resolverQrSerragem(qrTora(rj), [rj, madenorte], "madenorte")).toThrow("outra empresa");
+    const urlSemEmpresa = qrTora(rj).replace("&e=rj", "");
+    expect(() => resolverQrSerragem(urlSemEmpresa, [rj, madenorte], "madenorte")).toThrow("outra tora ou empresa");
+    expect(() => resolverQrSerragem(qrTora(madenorte), [rj, madenorte], "rj")).toThrow("outra empresa");
+  });
+
   it("recusa QR de romaneio", () => {
     expect(() => resolverQrSerragem('{"tipo":"romaneio","versao":1,"plaqueta":50}', [tora], "RJ")).toThrow("Etiqueta inválida");
   });
   it("etiqueta com link público abre a tora no leitor interno e confere a identidade", () => {
     const pub = { ...tora, publico_id: "11111111-2222-3333-4444-555555555555" } as Tora;
     const raw = qrTora(pub);
-    expect(raw).toBe("https://gestorflorestal.com.br/t/11111111-2222-3333-4444-555555555555?p=50&a=349&s=A&x=AUTEX-1");
+    expect(raw).toBe("https://gestorflorestal.com.br/t/11111111-2222-3333-4444-555555555555?p=50&a=349&s=A&x=AUTEX-1&e=RJ");
     expect(resolverQrSerragem(raw, [pub], "RJ")).toBe(pub);
     expect(() => resolverQrSerragem(raw, [{ ...pub, arvore: 350 }], "RJ")).toThrow("identidade atual");
   });
