@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Arvore, Tora } from "@/lib/data";
-import { volumeTora, fmtM3 } from "@/lib/volume";
+import { volumeTora, fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { fila } from "@/lib/offline/fila";
@@ -166,7 +166,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
           <div>{linhaSaldo.especie}{linhaSaldo.nome_cientifico && <i> · {linhaSaldo.nome_cientifico}</i>}</div>
           <div className="text-xs">{linhaSaldo.autex}</div>
           <div className="flex justify-between pt-1"><span>Saldo: <b>{fmtM3(linhaSaldo.volume ?? 0)} m³</b></span><span>Medido: <b>{fmtM3(vol)} m³</b></span></div>
-          {vol > 0 && <div className={vol - (linhaSaldo.volume ?? 0) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {vol - (linhaSaldo.volume ?? 0) >= 0 ? "+" : ""}{fmtM3(vol - (linhaSaldo.volume ?? 0))} m³</div>}
+          {vol > 0 && <div className={vol - (linhaSaldo.volume ?? 0) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {fmtM3Sinal(vol - (linhaSaldo.volume ?? 0))} m³</div>}
         </div>
       )}
       {f.arvore && saldo.length > 0 && !doSaldoTodas.length && !linhasSaldo.length && <div className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">Árvore {f.arvore}{secAtual ? `-${secAtual}` : " sem seção"} não está no saldo</div>}
@@ -176,7 +176,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
           <div>{doSaldo.especie}{doSaldo.nome_cientifico && <i> · {doSaldo.nome_cientifico}</i>}</div>
           <div className="text-xs">AUTEX {doSaldo.autex ?? "—"}</div>
           <div className="flex justify-between pt-1"><span>Saldo: <b>{fmtM3(Number(doSaldo.volume))} m³</b></span><span>Medido: <b>{fmtM3(vol)} m³</b></span></div>
-          {vol > 0 && <div className={vol - Number(doSaldo.volume) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {vol - Number(doSaldo.volume) >= 0 ? "+" : ""}{fmtM3(vol - Number(doSaldo.volume))} m³</div>}
+          {vol > 0 && <div className={vol - Number(doSaldo.volume) >= 0 ? "text-success font-semibold" : "text-destructive font-semibold"}>Diferença: {fmtM3Sinal(vol - Number(doSaldo.volume))} m³</div>}
         </div>
       )}
       <div className={`text-sm rounded-md px-3 py-2 ${especie ? "bg-secondary" : "bg-muted text-muted-foreground"}`}>

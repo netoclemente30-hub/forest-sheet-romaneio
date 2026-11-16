@@ -21,3 +21,7 @@ export function volumeTora(t: {
 
 export const fmtM3 = (v: number) =>
   v.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+
+/** Sinal e número num único texto: um "+" condicional separado vira nó de texto
+ * que o tradutor do navegador substitui, e o React quebra ao inseri-lo/removê-lo. */
+export const fmtM3Sinal = (v: number, zeroPositivo = true) => `${v > 0 || (zeroPositivo && v === 0) ? "+" : ""}${fmtM3(v)}`;

@@ -10,7 +10,7 @@ import { SinaflorCsvExportacao } from "@/components/SinaflorCsvExportacao";
 import { torasDeManejo } from "@/lib/tora-origem";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
-import { fmtM3 } from "@/lib/volume";
+import { fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { SeletorMedida, TextoMedidaComercial, type ModoMedida } from "@/components/MedidaComercial";
 import { totaisComerciais, volumeComercial } from "@/lib/medida-comercial";
 import { ToraForm } from "@/components/ToraForm";
@@ -123,7 +123,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       <SinaflorCsvExportacao arvores={arvores.data ?? []} toras={toras.data ?? []} />
       <div className="rounded-lg bg-secondary p-3 space-y-1 text-sm">
         <div className="flex justify-between gap-2"><span>{lista.length} toras · {modo === "comercial" ? "comercial" : "físico"}</span><b>{fmtM3(modo === "comercial" ? totais.comercial : totais.fisico)} m³</b></div>
-        <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {totais.diferenca >= 0 ? "+" : ""}{fmtM3(totais.diferenca)} m³</span></div>
+        <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {fmtM3Sinal(totais.diferenca)} m³</span></div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Selecionar todas as toras filtradas" checked={lista.length > 0 && lista.every((t) => selecionadas.includes(t.plaqueta))} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, lista.map((t) => t.plaqueta), v === true))} />Selecionar filtradas</label>

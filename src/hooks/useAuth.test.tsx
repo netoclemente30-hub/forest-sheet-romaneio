@@ -92,8 +92,9 @@ describe("revogação de permissões", () => {
     await waitFor(() => expect(result.current.papel).toBe("cortador"));
     mocks.rpc.mockRejectedValue(new Error("Falha de rede"));
     act(() => window.dispatchEvent(new Event("online")));
-    await waitFor(() => expect(result.current.permissoesCarregando).toBe(false));
-    expect(result.current.papel).toBe("sem_funcao");
+    // A rechecagem não volta a "carregando" (a tela não é desmontada); o cargo cai ao falhar.
+    await waitFor(() => expect(result.current.papel).toBe("sem_funcao"));
+    expect(result.current.permissoesCarregando).toBe(false);
   });
   it("não aceita resposta de cargo administrativo acompanhada de erro", async () => {
     mocks.rpc.mockImplementation((nome: string) => Promise.resolve({
