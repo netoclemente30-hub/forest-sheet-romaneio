@@ -26,8 +26,13 @@ export async function consultarFichaPublicaTora(
     throw new ErroConsultaTora("Sem conexão com a internet. Ative a rede e tente novamente.");
   }
 
-  const url = import.meta.env['VITE_SUPABASE_URL'];
-  const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
+  // No SSR da Lovable, a URL do banco pode ser interna à infraestrutura.
+  // No navegador só a URL pública e a chave publicável são utilizadas.
+  const noServidor = typeof window === "undefined" && typeof process !== "undefined";
+  const url = (noServidor ? process.env['SUPABASE_URL'] : undefined)
+    || import.meta.env['VITE_SUPABASE_URL'];
+  const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY']
+    || (noServidor ? process.env['SUPABASE_PUBLISHABLE_KEY'] : undefined);
   if (!url || !key) {
     throw new ErroConsultaTora("Consulta temporariamente indisponível. Tente novamente mais tarde.");
   }
