@@ -5,27 +5,35 @@ const t = (plaqueta: number, especie: string, volume: number) => ({ plaqueta, es
 const lista = [t(5, "Ipê", 1), t(12, "Angelim", 3), t(8, "Cumaru", 2)];
 const medidaExemplo = { ...t(1, "Ipê", 1.685), arvore: 349, secao: "A", autex: "AUTEX-1", d_topo1: 52, d_topo2: 54, d_pe1: 56, d_pe2: 58, comprimento: 6.6 } as Tora;
 describe("medidas do PDF de toras", () => {
+  it.each(["fisica", "comercial"] as const)("PDF %s inclui Nome científico e não tem Situação", (medida) => {
+    const dados = dadosPdfToras([{ ...medidaExemplo, nome_cientifico: "Handroanthus serratifolius (Vahl) S.O.Grose", carregada: true }], medida);
+    expect(dados.head[4]).toBe("Nome científico");
+    expect(dados.head).not.toContain("Situação");
+    expect(dados.body[0]?.[4]).toBe("Handroanthus serratifolius (Vahl) S.O.Grose");
+    expect(dados.body[0]).not.toContain("Carregada");
+    expect(dados.body[0]?.length).toBe(dados.head.length);
+  });
   it("comercial exporta a ponta menor 52×54, comprimento 6,5 e volume 1,4340", () => {
     const dados = dadosPdfToras([medidaExemplo], "comercial");
-    expect(dados.body[0]?.slice(4, 8)).toEqual(["52", "54", "6,5", "1,4340"]);
+    expect(dados.body[0]?.slice(5, 9)).toEqual(["52", "54", "6,5", "1,4340"]);
     expect(medidaExemplo.comprimento).toBe(6.6);
     expect(medidaExemplo.volume).toBe(1.685);
   });
   it.each([[6.9, "6,5"], [6.1, "6,0"]])("comercial arredonda %s para %s no relatório", (comprimento, esperado) => {
-    expect(dadosPdfToras([{ ...medidaExemplo, comprimento }], "comercial").body[0]?.[6]).toBe(esperado);
+    expect(dadosPdfToras([{ ...medidaExemplo, comprimento }], "comercial").body[0]?.[7]).toBe(esperado);
   });
   it("totais comercial, AUTEX e espécie somam somente volumes comerciais", () => {
     const dados = dadosPdfToras([medidaExemplo, { ...medidaExemplo, plaqueta: 2 }], "comercial");
     expect(dados.total).toBeCloseTo(2.868, 4);
-    expect(dados.foot[7]).toBe("2,8680");
+    expect(dados.foot[8]).toBe("2,8680");
     expect(dados.porAutex[0]?.volume).toBeCloseTo(2.868, 4);
     expect(dados.porEspecie[0]?.volume).toBeCloseTo(2.868, 4);
   });
   it("físico mantém quatro diâmetros, comprimento original e totais físicos", () => {
     const dados = dadosPdfToras([medidaExemplo]);
-    expect(dados.body[0]?.slice(4, 10)).toEqual(["52", "54", "56", "58", "6.6", "1,6850"]);
+    expect(dados.body[0]?.slice(5, 11)).toEqual(["52", "54", "56", "58", "6.6", "1,6850"]);
     expect(dados.total).toBe(1.685);
-    expect(dados.foot[9]).toBe("1,6850");
+    expect(dados.foot[10]).toBe("1,6850");
     expect(dados.porAutex[0]?.volume).toBe(1.685);
     expect(dados.porEspecie[0]?.volume).toBe(1.685);
   });
