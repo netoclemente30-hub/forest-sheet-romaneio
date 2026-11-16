@@ -6,7 +6,7 @@ import type { LogCapturado } from "./registro";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { rpc } }));
-const log: LogCapturado = { acao: "Encaixe confirmado", criado_em: "2026-11-16T14:43:00Z", user_email: null, lat: null, lng: null, operacao_id: "operacao-estavel" };
+const log: LogCapturado = { acao: "Encaixe confirmado", detalhe: "Identidade escolhida", criado_em: "2026-11-16T14:43:00Z", user_email: null, lat: null, lng: null, operacao_id: "operacao-estavel" };
 const linha = { arvore: 48, secao: "", autex: "AUTESP-2011.E.2026.00115", especie: "Abiurana", nome_cientifico: "Pouteria macrophylla", volume: 2 };
 const medidas = { d_topo1: "73", d_topo2: "68", d_pe1: "67", d_pe2: "62", comprimento: "7,6" };
 const permitidos = ["plaqueta", "arvore", "secao", "especie", "nome_cientifico", "autex", "volume", "d_topo1", "d_topo2", "d_pe1", "d_pe2", "comprimento", "origem", "carregada", "empresa_id"];
