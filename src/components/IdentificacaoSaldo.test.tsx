@@ -20,7 +20,7 @@ const Atual = ({ rs }: { rs: R[] }) => <div>{rs.map((r, i) => <div key={i}>{text
 describe("filtro do saldo com página traduzida pelo navegador", () => {
   it("reproduz a quebra da linha antiga ao trocar tora no estoque/fora", () => {
     const r = render(<Antiga rs={linhas[0]} />); traduzir(r.container);
-    let erro: unknown; try { r.rerender(<Antiga rs={linhas[1]} />); } catch (e) { erro = e; } const msgs = erro instanceof AggregateError ? erro.errors.map(String).join(" | ") : String(erro); console.log("ERRO", msgs); expect(msgs).toMatch(/NotFoundError/);
+    let erro: unknown; try { r.rerender(<Antiga rs={linhas[1]} />); } catch (e) { erro = e; } const msgs = erro instanceof AggregateError ? erro.errors.map(String).join(" | ") : String(erro); expect(msgs).toMatch(/NotFoundError/);
   });
   it("linha atual sobrevive a filtros, lista vazia e volta", () => {
     const r = render(<Atual rs={linhas[0]} />); traduzir(r.container);
