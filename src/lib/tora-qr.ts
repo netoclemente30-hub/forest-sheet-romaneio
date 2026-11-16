@@ -3,7 +3,7 @@ import type { Tora } from "./data";
 /** Endereço oficial: etiquetas impressas no preview também abrem a página pública definitiva. */
 export const URL_PUBLICA = "https://gestorflorestal.com.br";
 
-type IdentidadeQr = { plaqueta: number; arvore?: number; secao?: string; autex?: string; empresa_id?: string; publico_id?: string };
+type IdentidadeQr = { plaqueta: number; arvore?: number; secao?: string; autex?: string; empresa_id?: string | undefined; publico_id?: string | undefined };
 
 /**
  * Plaqueta é única SOMENTE dentro de uma empresa. Nunca escolha a primeira
