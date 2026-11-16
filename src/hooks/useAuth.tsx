@@ -47,10 +47,8 @@ export function useAuth() {
 
     function atualizar(id: string, atual: number) {
       const vigente = () => ativo && usuario === id && versao === atual;
-      setPermissoesCarregando(true);
-      setIsAdmin(false);
-      setIsSuperAdmin(false);
-      setFuncao(null);
+      // Rechecagens (reconexão) mantêm as permissões atuais na tela até o
+      // servidor responder, para não desmontar a página nem perder formulários.
       // Cópia por usuário apenas para trabalhar sem sinal. O servidor continua
       // validando o cargo atual ao sincronizar; nunca autoriza pela cópia local.
       if (!navigator.onLine) {
@@ -68,15 +66,17 @@ export function useAuth() {
       }
       // Empresa e permissões são independentes: uma consulta lenta de cargo
       // não pode impedir lançamentos de campo.
-      void checarEmpresa().catch(() => null).then((empresa) => {
+      const buscarEmpresa = () => void checarEmpresa().catch(() => null).then((empresa) => {
         if (!vigente()) return;
         const salva = empresa ?? lerEmpresaSalva(id);
         if (empresa) salvarEmpresaDoUsuario(id, empresa);
         setEmpresaId(salva);
+        // Só a empresa é consultada de novo; permissões e tela ficam intactas.
         if (!salva) tentativa = setTimeout(() => {
-          if (vigente()) atualizar(id, atual);
+          if (vigente()) buscarEmpresa();
         }, 10000);
       });
+      buscarEmpresa();
       void Promise.all([checarAdmin(id), checarSuperAdmin(id), checarFuncao()])
         .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); try { localStorage.setItem("permissoes-offline:" + id, JSON.stringify({ usuario: id, admin: a, superadmin: sa, funcao: f })); } catch { /* armazenamento indisponível */ } } })
         .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); } })
@@ -89,12 +89,15 @@ export function useAuth() {
       clearTimeout(tentativa);
       const atual = ++versao;
       const id = s?.user.id ?? null;
-      if (id !== usuario) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); }
+      const trocouUsuario = id !== usuario;
+      if (trocouUsuario) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); }
       usuario = id;
       setSession(s);
       setLoading(false);
-      setEmpresaId(lerEmpresaSalva(id));
-      setPermissoesCarregando(Boolean(id));
+      if (trocouUsuario) {
+        setEmpresaId(lerEmpresaSalva(id));
+        setPermissoesCarregando(Boolean(id));
+      }
       if (id) {
         // O aviso de autenticação mantém o lock da sessão até retornar.
         // Adiar as consultas evita que esperem pelo próprio aviso de login.
