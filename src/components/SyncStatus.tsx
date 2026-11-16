@@ -21,6 +21,7 @@ function descrever(op: Op): string {
     case "arvore_gps": return `Árvore localizada · AUTEX ${op.autex}`;
     case "arrasto_toras": return `Arrasto da árvore ${op.arvore} · ${op.plaquetas.length} toras`;
     case "arrasto_arvore": return `Arrasto da árvore ${op.arvore} · AUTEX ${op.autex}`;
+    case "transferencia_explanada": return `Transferência da tora ${op.plaqueta} · AUTEX ${op.autex}`;
     case "aguardando_insert": return `Tora não identificada NI-${String(op.dados["numero"] ?? "?")}`;
     case "aguardando_impressa": return `Etiqueta de tora não identificada · ${op.imprimiu ? "impressa" : "não impressa"}`;
     case "rastro_salvar": return `Rastreio GPS · AUTEX ${op.autex} · ${op.pontos.length} pontos`;
@@ -134,7 +135,7 @@ export function SyncStatus() {
                 <div className="text-sm text-destructive break-words">{explicar(i.erro ?? "")}</div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={sync} onClick={() => tentarDeNovo(i.id)}><RefreshCw /> Tentar de novo</Button>
-                  {i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
+                  {i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
                   <Button size="sm" variant="destructive" disabled={sync} onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
                 </div>
               </div>
