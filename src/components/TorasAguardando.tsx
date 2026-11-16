@@ -3,14 +3,14 @@ import { pode } from "@/lib/funcoes";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { QrCode, Trash2, Printer, FileSpreadsheet, FileText, Download, BadgeCheck, PrinterX } from "lucide-react";
+import { QrCode, Trash2, Printer, FileSpreadsheet, FileText, Download, BadgeCheck, PrinterX, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "@/lib/empresa";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { fmtM3 } from "@/lib/volume";
 import { fmtComprimentoComercial } from "@/lib/medida-comercial";
 import { codigoAguardando, proximoNumeroAguardando, qrAguardando, volumesAguardando, type ToraAguardando, type MedidasAguardando } from "@/lib/toras-aguardando";
-import { marcarAguardandoImpressa } from "@/lib/toras-aguardando-salvar";
+import { marcarAguardandoImpressa, editarAguardando } from "@/lib/toras-aguardando-salvar";
 import { TAMANHOS_PADRAO } from "@/lib/etiqueta-pdf";
 import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
 import { excelAguardando, pdfAguardando } from "@/lib/toras-aguardando";
@@ -30,8 +30,12 @@ const query = {
       return (data ?? []).map(norma);
     });
     const ids = new Set(salvas.map((t) => t.id));
-    const pendentes = (await fila().listar().catch(() => [])).flatMap(({ op }) => op.tipo === "aguardando_insert" && !ids.has(String(op.dados["id"])) ? [norma(op.dados)] : []);
-    return [...pendentes, ...salvas].sort((a, b) => b.numero - a.numero);
+    const itensFila = await fila().listar().catch(() => []);
+    const edicoes = new Map<string, Record<string, unknown>>();
+    for (const { op } of itensFila) if (op.tipo === "aguardando_update") edicoes.set(op.id, { ...edicoes.get(op.id), ...op.dados });
+    const comEdicoes = salvas.map((t) => edicoes.has(t.id) ? norma({ ...t, ...edicoes.get(t.id) }) : t);
+    const pendentes = itensFila.flatMap(({ op }) => op.tipo === "aguardando_insert" && !ids.has(String(op.dados["id"])) ? [norma(op.dados)] : []);
+    return [...pendentes, ...comEdicoes].sort((a, b) => b.numero - a.numero);
   },
 };
 
@@ -56,6 +60,10 @@ const ROTULO_FILTRO: Record<Filtro, string> = { todas: "Todas", nao: "Não impre
 export function TorasAguardando({ especies }: { especies: { especie: string; nome_cientifico: string | null }[] }) {
   const { papel } = useAuth();
   const podeOperar = pode(papel, "serraria_operar");
+  // Mesma regra do botão Editar da lista de toras (administrador).
+  const podeEditar = podeOperar && (papel === "admin_empresa" || papel === "superadmin");
+  const [ed, setEd] = useState<ToraAguardando | null>(null);
+  const [fe, setFe] = useState(vazio);
   const qc = useQueryClient();
   const lista = useQuery(query);
   const [f, setF] = useState(vazio);
@@ -114,6 +122,28 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
       await qc.invalidateQueries({ queryKey: query.queryKey });
       setQr(salvo);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); }
+    finally { setBusy(false); }
+  }
+
+  function abrirEdicao(t: ToraAguardando) {
+    setFe({ especie: t.especie, nome_cientifico: t.nome_cientifico ?? "", d_topo1: String(t.d_topo1), d_topo2: String(t.d_topo2), d_pe1: String(t.d_pe1), d_pe2: String(t.d_pe2), comprimento: String(t.comprimento) });
+    setEd(t);
+  }
+  const medidasEd = { d_topo1: num(fe.d_topo1), d_topo2: num(fe.d_topo2), d_pe1: num(fe.d_pe1), d_pe2: num(fe.d_pe2), comprimento: num(fe.comprimento) };
+  const volEd = volumesAguardando(medidasEd);
+  async function salvarEdicao() {
+    if (!ed || !podeEditar) return;
+    if (!fe.especie.trim()) { toast.error("Informe o nome da madeira"); return; }
+    if (!volEd) { toast.error("Preencha os 4 diâmetros e o comprimento"); return; }
+    setBusy(true);
+    try {
+      const dados = { especie: fe.especie.trim(), nome_cientifico: fe.nome_cientifico.trim() || null, ...(medidasEd as MedidasAguardando), volume: Number(volEd.fisico.toFixed(4)) };
+      const detalhe = `${codigoAguardando(ed.numero)} · ${ed.especie} → ${dados.especie} · físico ${fmtM3(ed.volume)} → ${fmtM3(dados.volume)} m³`;
+      const { offline } = await editarAguardando(ed, dados, detalhe);
+      toast.success(offline ? `${codigoAguardando(ed.numero)} editada sem internet — será enviada quando conectar` : `${codigoAguardando(ed.numero)} atualizada`);
+      setEd(null);
+      await qc.invalidateQueries({ queryKey: query.queryKey });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível editar"); }
     finally { setBusy(false); }
   }
 
@@ -231,12 +261,34 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
                 </button>
                 <div className="flex gap-1">
                   <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`QR ${codigoAguardando(t.numero)}`} onClick={() => setQr(t)}><QrCode className="h-4 w-4" /></Button>
+                  {podeEditar && <Button size="icon" variant="outline" className="h-8 w-8" aria-label={`Editar ${codigoAguardando(t.numero)}`} onClick={() => abrirEdicao(t)}><Pencil className="h-4 w-4" /></Button>}
                   {podeOperar && <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" aria-label={`Excluir ${codigoAguardando(t.numero)}`} onClick={() => excluir(t)}><Trash2 className="h-4 w-4" /></Button>}
                 </div>
               </div>
             </div>
           </div>); })}
       </div>
+
+      <Dialog open={!!ed} onOpenChange={(o) => !o && setEd(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar {ed && codigoAguardando(ed.numero)}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold block">Nome da madeira
+              <Input className="h-12" list="madeiras-aguardando" value={fe.especie} aria-label="Editar nome da madeira" onChange={(e) => setFe({ ...fe, especie: e.target.value })} />
+            </label>
+            {(([["nome_cientifico", "Nome científico (opcional)"], ["d_topo1", "DF1 topo (cm)"], ["d_topo2", "DF2 topo (cm)"], ["d_pe1", "DF3 pé (cm)"], ["d_pe2", "DF4 pé (cm)"], ["comprimento", "Comprimento (m)"]]) as [keyof typeof vazio, string][]).map(([k, l]) => (
+              <label key={k} className="text-xs font-semibold block">{l}
+                <Input className="h-11" inputMode={k === "nome_cientifico" ? "text" : "decimal"} value={fe[k]} aria-label={`Editar ${l}`} onChange={(e) => setFe({ ...fe, [k]: e.target.value })} />
+              </label>
+            ))}
+            {volEd && <p className="text-sm">Físico <b>{fmtM3(volEd.fisico)} m³</b> · Comercial <b>{fmtM3(volEd.comercial?.volume ?? 0)} m³</b></p>}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => setEd(null)} disabled={busy}>Cancelar</Button>
+              <Button onClick={salvarEdicao} disabled={busy}>{busy ? "Salvando…" : "Salvar"}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!qr} onOpenChange={(o) => !o && setQr(null)}>
         <DialogContent>

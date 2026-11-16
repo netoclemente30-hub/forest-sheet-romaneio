@@ -84,3 +84,49 @@ export async function marcarAguardandoImpressa(
   }
   return { offline: restantes.length };
 }
+
+/** Campos editáveis de uma tora não identificada (identidade, número e empresa ficam). */
+export type EdicaoAguardando = Pick<ToraAguardando, "especie" | "nome_cientifico" | "d_topo1" | "d_topo2" | "d_pe1" | "d_pe2" | "comprimento" | "volume">;
+
+export type EditarAguardandoDeps = Pick<MarcaImpressaDeps, "listarFila" | "online" | "capturar" | "gravarLog" | "reescrever" | "enfileirar"> & {
+  atualizar: (t: AlvoImpressa, dados: EdicaoAguardando) => Promise<void>;
+};
+
+function depsEditar(): EditarAguardandoDeps {
+  const { gravar: _g, ...base } = depsApp();
+  return {
+    ...base,
+    atualizar: async (t, dados) => {
+      const { error } = await supabase.from("toras_aguardando").update(dados as never).eq("id", t.id).eq("empresa_id", t.empresa_id);
+      if (error) throw new Error(error.message);
+    },
+  };
+}
+
+/**
+ * Edita medidas/espécie mantendo id, empresa e número NI. Lançamento ainda na
+ * fila é corrigido no próprio item (sem criar outro); online grava direto;
+ * offline enfileira a edição com a auditoria do momento.
+ */
+export async function editarAguardando(
+  t: AlvoImpressa,
+  dados: EdicaoAguardando,
+  detalhe: string,
+  deps: EditarAguardandoDeps = depsEditar(),
+): Promise<{ offline: boolean }> {
+  const acaoEd = "Tora não identificada editada";
+  for (const item of await deps.listarFila().catch(() => [] as ItemFila[])) {
+    const op = item.op;
+    if (op.tipo === "aguardando_insert" && String(op.dados["id"] ?? "") === t.id) {
+      await deps.reescrever(item.id, { ...op, dados: { ...op.dados, ...dados } });
+      return { offline: true };
+    }
+  }
+  if (deps.online()) {
+    await deps.atualizar(t, dados);
+    await deps.gravarLog(await deps.capturar(acaoEd, detalhe));
+    return { offline: false };
+  }
+  await deps.enfileirar({ tipo: "aguardando_update", id: t.id, empresa_id: t.empresa_id, dados: { ...dados, numero: t.numero }, log: await deps.capturar(acaoEd, detalhe) });
+  return { offline: true };
+}

@@ -67,6 +67,7 @@ export type Op =
       log: LogCapturado;
     }
   | { tipo: "aguardando_insert"; dados: Record<string, unknown>; log: LogCapturado }
+  | { tipo: "aguardando_update"; id: string; empresa_id: string; dados: Record<string, unknown>; log: LogCapturado }
   | { tipo: "aguardando_impressa"; id: string; empresa_id: string; imprimiu: boolean; log: LogCapturado }
   | { tipo: "rastro_salvar"; empresa_id: string; autex: string; pontos: PontoRastro[]; log: LogCapturado };
 

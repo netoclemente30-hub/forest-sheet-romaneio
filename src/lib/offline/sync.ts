@@ -170,6 +170,12 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
       if (error) throw new Error(error.code === "23505" ? `Código NI-${op.dados["numero"]} já usado em outro aparelho` : error.message);
       return;
     }
+    case "aguardando_update": {
+      // Same id + company; replay of identical values is harmless (idempotent).
+      const { error } = await supabase.from("toras_aguardando").update(op.dados as never).eq("id", op.id).eq("empresa_id", op.empresa_id);
+      if (error) throw new Error(error.message);
+      return;
+    }
     case "aguardando_impressa": {
       const { error } = await supabase
         .from("toras_aguardando")
