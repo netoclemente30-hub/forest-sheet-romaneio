@@ -86,12 +86,14 @@ BEGIN
 
   contexto_anterior := current_setting('app.registro_contexto',true);
   PERFORM set_config('app.registro_contexto',registro_novo::text,true);
+  PERFORM set_config('app.explanada_transferencia',_operacao::text,true);
   UPDATE public.toras SET arrasto_explanada_id=_destino
   WHERE empresa_id=_empresa AND autex=_autex AND plaqueta=_plaqueta
     AND arrasto_explanada_id=_origem
     AND origem='manejo' AND arrastada_em IS NOT NULL
     AND NOT carregada AND romaneio_id IS NULL AND serrada_em IS NULL;
   IF NOT FOUND THEN RAISE EXCEPTION 'Transferência não foi concluída'; END IF;
+  PERFORM set_config('app.explanada_transferencia','',true);
   PERFORM set_config('app.registro_contexto',COALESCE(contexto_anterior,''),true);
   RETURN registro_novo;
 END $$;
@@ -102,3 +104,32 @@ REVOKE ALL ON FUNCTION public.transferir_tora_explanada(
 GRANT EXECUTE ON FUNCTION public.transferir_tora_explanada(
   uuid,text,integer,uuid,uuid,uuid,jsonb
 ) TO authenticated;
+
+
+-- Exige a operação auditada para alterar uma tora que JÁ está vinculada
+-- a uma explanada. Não interfere no primeiro arrasto (origem NULL -> pátio).
+CREATE OR REPLACE FUNCTION public.exigir_transferencia_explanada_auditada()
+RETURNS trigger LANGUAGE plpgsql
+SECURITY DEFINER SET search_path=''
+AS $$
+DECLARE id_operacao text;
+BEGIN
+  IF OLD.arrasto_explanada_id IS NOT NULL
+    AND NEW.arrasto_explanada_id IS DISTINCT FROM OLD.arrasto_explanada_id
+  THEN
+    id_operacao:=current_setting('app.explanada_transferencia',true);
+    IF id_operacao IS NULL OR id_operacao='' OR NOT EXISTS (
+      SELECT 1 FROM public.registros r
+      WHERE r.operacao_id=id_operacao::uuid AND r.empresa_id=OLD.empresa_id
+      AND r.user_id=auth.uid() AND r.acao='Transferência entre explanadas'
+    ) THEN
+      RAISE EXCEPTION 'Transferência entre explanadas exige registro auditado';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS exigir_transferencia_explanada_auditada ON public.toras;
+CREATE TRIGGER exigir_transferencia_explanada_auditada
+BEFORE UPDATE OF arrasto_explanada_id ON public.toras
+FOR EACH ROW EXECUTE FUNCTION public.exigir_transferencia_explanada_auditada();
