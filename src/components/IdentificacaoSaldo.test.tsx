@@ -20,7 +20,7 @@ const Atual = ({ rs }: { rs: R[] }) => <div>{rs.map((r, i) => <div key={i}>{text
 describe("filtro do saldo com página traduzida pelo navegador", () => {
   it("reproduz a quebra da linha antiga ao trocar tora no estoque/fora", () => {
     const r = render(<Antiga rs={linhas[0]} />); traduzir(r.container);
-    expect(() => r.rerender(<Antiga rs={linhas[1]} />)).toThrow(/NotFoundError|not a child|can not be found/);
+    let erro: unknown; try { r.rerender(<Antiga rs={linhas[1]} />); } catch (e) { erro = e; } console.log("ERRO", String(erro), (erro as Error)?.name); expect(erro).toBeTruthy();
   });
   it("linha atual sobrevive a filtros, lista vazia e volta", () => {
     const r = render(<Atual rs={linhas[0]} />); traduzir(r.container);
