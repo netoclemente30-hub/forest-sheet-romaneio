@@ -46,7 +46,10 @@ export function MapaGpsZoom({
   }
   function onPointerDown(e: ReactPointerEvent<SVGSVGElement>) {
     if (!e.isPrimary && e.pointerType === "mouse") return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Não capture clique na marcação: no Android isso redirecionaria o click
+    // da árvore para o SVG e impediria abrir a ficha do operador.
+    if (!(e.target instanceof Element && e.target.closest("[data-arvore-mapa]")))
+      e.currentTarget.setPointerCapture(e.pointerId);
     dedos.current.set(e.pointerId, {
       x: e.clientX, y: e.clientY, clientX: e.clientX, clientY: e.clientY,
     });
@@ -129,7 +132,7 @@ export function MapaGpsZoom({
           <polyline key={i} points={pontos} fill="none" stroke="var(--color-accent)" strokeWidth="5"
             strokeLinecap="round" strokeLinejoin="round" />)}
         {arvores.map(({ arvore, x, y }) =>
-          <g key={arvore.id} role="button" tabIndex={0}
+          <g key={arvore.id} data-arvore-mapa="true" role="button" tabIndex={0}
             aria-label={"Árvore " + arvore.numero + ", " + arvore.nome_vulgar +
               (arvore.abatida_em ? ", abatida" : "")}
             className="cursor-pointer"
