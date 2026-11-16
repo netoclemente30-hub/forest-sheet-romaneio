@@ -5,9 +5,15 @@ export function resolverQrSerragem(raw: string, toras: Tora[], empresa: string |
   const id = identidadeDoQr(raw);
   const plaqueta = id?.plaqueta;
   if (!plaqueta) throw new Error("Etiqueta inválida. Leia o QR de uma tora.");
-  if (!empresa) throw new Error("Aguarde carregar a empresa.");
+  if (!empresa) throw new Error("Selecione uma empresa antes de ler o QR.");
+  if (id.empresa_id && id.empresa_id !== empresa)
+    throw new Error("Este QR pertence a outra empresa. Confira o pátio e a etiqueta.");
   const tora = toras.find((t) => t.empresa_id === empresa && t.plaqueta === plaqueta);
   if (!tora) throw new Error(`Plaqueta ${plaqueta} não encontrada nesta empresa. Confira a etiqueta ou atualize os dados.`);
+  // Número da plaqueta se repete entre empresas; a UUID pública NÃO.
+  // Uma etiqueta da RJ nunca pode ser aceita como a plaqueta 2 da MADENORTE.
+  if (id.publico_id && id.publico_id !== tora.publico_id)
+    throw new Error("Este QR é de outra tora ou empresa. Confira o identificador público da etiqueta.");
   // Etiquetas completas não podem abrir uma identidade diferente após reutilização da plaqueta.
   if (id && id.arvore !== undefined) {
     const etiqueta = id;
