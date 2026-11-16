@@ -17,6 +17,7 @@ describe("navegação offline gerada", () => {
   });
   it("não armazena OAuth, APIs, dados externos nem requisições comuns", () => {
     expect(navegacaoOffline(request("/~oauth/callback"))).toBe(false);
+    expect(navegacaoOffline(request("/t/a5ef9bc0-9739-4d88-81fc-1ff25cf7df6a"))).toBe(false);
     expect(navegacaoOffline(request("/~oauth", "cors", true))).toBe(false);
     expect(navegacaoOffline(request("/api/private", "cors", true))).toBe(false);
     expect(navegacaoOffline(request("https://example.com/toras"))).toBe(false);
@@ -26,5 +27,6 @@ describe("navegação offline gerada", () => {
     const callback = new Function(`return (${navegacaoOffline.toString()})`)() as typeof navegacaoOffline;
     expect(callback(request("/toras", "cors", true))).toBe(true);
     expect(callback(request("/~oauth"))).toBe(false);
+    expect(callback(request("/t/a5ef9bc0-9739-4d88-81fc-1ff25cf7df6a"))).toBe(false);
   });
 });

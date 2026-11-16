@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import type React from "react";
 import { CheckCircle2, Factory, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, TreePine, Truck } from "lucide-react";
 import { consultarFichaPublicaTora } from "@/lib/consulta-tora-publica";
@@ -21,6 +20,21 @@ export const Route = createFileRoute("/t/$id")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  // Gera a ficha ainda no SSR. Mesmo se a hidratação do WhatsApp/Android não
+  // acontecer, o HTML já contém os dados ou um erro legível.
+  loader: async ({ params }) => {
+    try {
+      return {
+        tora: await consultarFichaPublicaTora(params.id),
+        erro: null as string | null,
+      };
+    } catch (e) {
+      return {
+        tora: null,
+        erro: e instanceof Error ? e.message : "Falha na consulta pública.",
+      };
+    }
+  },
   component: ToraPublica,
 });
 
@@ -31,17 +45,8 @@ const data = (v: string | null | undefined) => (v ? new Date(v.length === 10 ? `
 
 function ToraPublica() {
   const { id } = Route.useParams();
-  const q = useQuery({
-    queryKey: ["tora-publica", id],
-    refetchOnMount: "always",
-    refetchOnWindowFocus: false,
-    retry: false,
-    // Não fica pausada indefinidamente se o navegador externo do WhatsApp
-    // reportar estar offline. A função falha com mensagem clara e botão de retry.
-    networkMode: "always",
-    queryFn: () => consultarFichaPublicaTora(id),
-  });
-  const t = q.data;
+  const { tora, erro } = Route.useLoaderData();
+  const t = tora;
   return (
     <main className="min-h-screen bg-background pb-10">
       <header className="border-b bg-card px-4 py-4">
@@ -52,20 +57,17 @@ function ToraPublica() {
         </div>
       </header>
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-4">
-        {q.isLoading && <p role="status" className="py-10 text-center text-muted-foreground">Consultando a tora…</p>}
-        {q.isError && (
+        {erro && (
           <div role="alert" className="space-y-3 rounded-lg border border-destructive p-4">
             <p className="font-semibold">Não foi possível abrir a ficha da tora.</p>
-            <p className="text-sm text-muted-foreground">
-              {q.error instanceof Error ? q.error.message : "Verifique a conexão e tente novamente."}
-            </p>
-            <button type="button" onClick={() => void q.refetch()}
-              className="w-full rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground">
+            <p className="text-sm text-muted-foreground">{erro}</p>
+            <a href={`/t/${encodeURIComponent(id)}?tentar=1`}
+              className="block w-full rounded-md bg-primary px-4 py-3 text-center font-semibold text-primary-foreground">
               Tentar novamente
-            </button>
+            </a>
           </div>
         )}
-        {!q.isLoading && !q.isError && !t && <p className="rounded-lg border p-6 text-center text-muted-foreground">Tora não encontrada. Confira o QR Code da etiqueta.</p>}
+        {!erro && !t && <p className="rounded-lg border p-6 text-center text-muted-foreground">Tora não encontrada. Confira o QR Code da etiqueta.</p>}
         {t && <Detalhes t={t} />}
         <p className="pt-2 text-center text-xs text-muted-foreground"><b>Sistema de Gestão Florestal · <Link to="/apresentacao" className="underline">Gestor Florestal</Link></b><br />Documento gerado automaticamente via QR Code</p>
       </div>
