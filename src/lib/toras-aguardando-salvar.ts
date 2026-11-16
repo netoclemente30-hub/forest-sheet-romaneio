@@ -119,7 +119,6 @@ export async function editarAguardando(
     const op = item.op;
     if (op.tipo === "aguardando_insert" && String(op.dados["id"] ?? "") === t.id) {
       await deps.reescrever(item.id, { ...op, dados: { ...op.dados, ...dados } });
-      await deps.enfileirar({ tipo: "aguardando_update", id: t.id, empresa_id: t.empresa_id, dados: { ...dados, numero: t.numero }, log: await deps.capturar(acaoEd, detalhe) }).catch(() => undefined);
       return { offline: true };
     }
   }

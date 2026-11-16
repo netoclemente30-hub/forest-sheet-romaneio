@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { marcarAguardandoImpressa, type MarcaImpressaDeps } from "./toras-aguardando-salvar";
+import { marcarAguardandoImpressa, editarAguardando, type MarcaImpressaDeps } from "./toras-aguardando-salvar";
 import type { ItemFila, Op } from "./offline/fila";
 
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
@@ -74,5 +74,41 @@ describe("marcar etiqueta de tora não identificada", () => {
     expect(r).toEqual({ offline: 0 });
     expect(d.listarFila).not.toHaveBeenCalled();
     expect(d.enfileirar).not.toHaveBeenCalled();
+  });
+});
+
+describe("editar tora não identificada", () => {
+  const novos = { especie: "Cumaru", nome_cientifico: "Dipteryx odorata", d_topo1: 50, d_topo2: 48, d_pe1: 60, d_pe2: 58, comprimento: 5, volume: 1.15 };
+  const dEd = () => { const { gravar: _g, ...b } = deps(); return { ...b, atualizar: vi.fn().mockResolvedValue(undefined) }; };
+
+  it("online: atualiza pelo id e empresa, registra auditoria e não enfileira", async () => {
+    const d = dEd(); d.online = vi.fn().mockReturnValue(true);
+    expect(await editarAguardando(tora, novos, "NI-3", d)).toEqual({ offline: false });
+    expect(d.atualizar).toHaveBeenCalledWith(tora, novos);
+    expect(d.gravarLog).toHaveBeenCalledTimes(1);
+    expect(d.enfileirar).not.toHaveBeenCalled();
+  });
+
+  it("lançamento ainda na fila: corrige o próprio item mantendo id, número, empresa e log", async () => {
+    const d = dEd();
+    const item = inserir({ id: "t1", empresa_id: "RJ", numero: 3, especie: "Ipê", etiqueta_impressa: true });
+    d.listarFila = vi.fn().mockResolvedValue([item]);
+    await editarAguardando(tora, novos, "NI-3", d);
+    expect(d.reescrever).toHaveBeenCalledWith("f1", { ...item.op, dados: { id: "t1", empresa_id: "RJ", numero: 3, etiqueta_impressa: true, ...novos } });
+    expect(d.enfileirar).not.toHaveBeenCalled();
+    expect(d.atualizar).not.toHaveBeenCalled();
+  });
+
+  it("offline e já enviada: enfileira uma edição com id e empresa, sem novo lançamento", async () => {
+    const d = dEd();
+    expect(await editarAguardando(tora, novos, "NI-3", d)).toEqual({ offline: true });
+    expect(d.enfileirar).toHaveBeenCalledTimes(1);
+    expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: "aguardando_update", id: "t1", empresa_id: "RJ", dados: { ...novos, numero: 3 } }));
+  });
+
+  it("falha online não grava auditoria nem fila", async () => {
+    const d = dEd(); d.online = vi.fn().mockReturnValue(true); d.atualizar = vi.fn().mockRejectedValue(new Error("RLS"));
+    await expect(editarAguardando(tora, novos, "NI-3", d)).rejects.toThrow("RLS");
+    expect(d.gravarLog).not.toHaveBeenCalled(); expect(d.enfileirar).not.toHaveBeenCalled();
   });
 });
