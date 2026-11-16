@@ -57,6 +57,15 @@ export type Op =
       capturado_em: string;
       log: LogCapturado;
     }
+  | {
+      tipo: "transferencia_explanada";
+      empresa_id: string;
+      autex: string;
+      plaqueta: number;
+      origem_id: string;
+      destino_id: string;
+      log: LogCapturado;
+    }
   | { tipo: "aguardando_insert"; dados: Record<string, unknown>; log: LogCapturado }
   | { tipo: "aguardando_impressa"; id: string; empresa_id: string; imprimiu: boolean; log: LogCapturado }
   | { tipo: "rastro_salvar"; empresa_id: string; autex: string; pontos: PontoRastro[]; log: LogCapturado };
