@@ -26,8 +26,8 @@ export async function consultarFichaPublicaTora(
     throw new ErroConsultaTora("Sem conexão com a internet. Ative a rede e tente novamente.");
   }
 
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const url = import.meta.env['VITE_SUPABASE_URL'];
+  const key = import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
   if (!url || !key) {
     throw new ErroConsultaTora("Consulta temporariamente indisponível. Tente novamente mais tarde.");
   }
