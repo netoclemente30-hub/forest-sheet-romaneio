@@ -24,7 +24,9 @@ describe("consulta pública da tora sem login", () => {
     const tora = await consultarFichaPublicaTora(id, { fetcher });
     expect(tora?.plaqueta).toBe(1);
     expect(tora?.serrada_em).toBe("2026-11-16T12:39:00Z");
-    const [url, opts] = fetcher.mock.calls[0];
+    const args = fetcher.mock.calls[0];
+    expect(args).toBeDefined();
+    const [url, opts] = args!;
     expect(url).toBe("https://teste.supabase.co/rest/v1/rpc/tora_publica");
     expect(opts.method).toBe("POST");
     expect(opts.credentials).toBe("omit");
