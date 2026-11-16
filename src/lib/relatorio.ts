@@ -52,18 +52,18 @@ export function dadosPdfToras(toras: Tora[], medida: MedidaRelatorio = "fisica")
   const medidas = toras.map((t) => medidaComercial(t));
   const volumes = toras.map((t, i) => comercial ? medidas[i]?.volume ?? 0 : Number(t.volume));
   const total = volumes.reduce((soma, volume) => soma + volume, 0);
-  const cols = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12];
+  const cols = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const head = comercial
-    ? ["Plaqueta", "Árvore", "Seção", "Espécie", "D1 comercial (cm)", "D2 comercial (cm)", "Comprimento comercial (m)", "Volume comercial (m³)", "AUTEX", "Situação"]
+    ? ["Plaqueta", "Árvore", "Seção", "Espécie", "Nome científico", "D1 comercial (cm)", "D2 comercial (cm)", "Comprimento comercial (m)", "Volume comercial (m³)", "AUTEX"]
     : cols.map((i) => HEAD[i] ?? "");
   const body = toras.map((t, i) => {
     const m = medidas[i];
-    if (comercial) return [t.plaqueta, t.arvore, t.secao ?? "", t.especie ?? "", m?.d1 ?? "—", m?.d2 ?? "—", m ? fmtComprimentoComercial(m.comprimento) : "—", m ? fmtM3(m.volume) : "—", t.autex ?? "", t.carregada ? "Carregada" : "No pátio"].map(String);
+    if (comercial) return [t.plaqueta, t.arvore, t.secao ?? "", t.especie ?? "", t.nome_cientifico ?? "", m?.d1 ?? "—", m?.d2 ?? "—", m ? fmtComprimentoComercial(m.comprimento) : "—", m ? fmtM3(m.volume) : "—", t.autex ?? ""].map(String);
     const l = linha(t); l[10] = fmtM3(Number(t.volume));
     return cols.map((j) => String(l[j] ?? ""));
   });
   const foot = head.map(() => "");
-  foot[0] = "TOTAL"; foot[1] = `${toras.length} toras`; foot[comercial ? 7 : 9] = fmtM3(total);
+  foot[0] = "TOTAL"; foot[1] = `${toras.length} toras`; foot[comercial ? 8 : 10] = fmtM3(total);
   const itens = toras.map((t, i) => ({ ...t, volume: volumes[i] ?? 0 }));
   return { head, body, foot, total, porAutex: resumoPorAutex(itens), porEspecie: resumoPorEspecie(itens), semMedidas: comercial ? medidas.filter((m) => !m).length : 0 };
 }
@@ -84,7 +84,8 @@ export async function exportarPdf(toras: Tora[], titulo: string, medida: MedidaR
     head: [dados.head],
     body: dados.body,
     foot: [dados.foot],
-    styles: { fontSize: 7.5 },
+    styles: { fontSize: 7.5, overflow: "linebreak", cellPadding: 1.5 },
+    columnStyles: { 3: { cellWidth: 30 }, 4: { cellWidth: 42, fontStyle: "italic" }, [dados.head.length - 1]: { cellWidth: 38 } },
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },
   });
