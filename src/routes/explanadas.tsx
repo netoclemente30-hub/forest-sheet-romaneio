@@ -237,8 +237,10 @@ function ExplanadasPage() {
                             op.empresa_id === empresa &&
                             op.autex === explanada.autex &&
                             op.plaqueta === t.plaqueta);
-                          const destinoPendente = pendencia?.op.tipo === "transferencia_explanada"
-                            ? (cadastradas.data ?? []).find((x) => x.id === pendencia.op.destino_id)?.nome
+                          const transferenciaPendente = pendencia?.op.tipo === "transferencia_explanada"
+                            ? pendencia.op : null;
+                          const destinoPendente = transferenciaPendente
+                            ? (cadastradas.data ?? []).find((x) => x.id === transferenciaPendente.destino_id)?.nome
                             : null;
                           const editando = plaquetaTransferir === t.plaqueta;
                           return (
