@@ -4,7 +4,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
@@ -12,7 +11,8 @@ import { fmtM3 } from "@/lib/volume";
 import { TextoMedidaComercial } from "@/components/MedidaComercial";
 import { totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
-import { empresaIdGravacao } from "@/lib/empresa";
+import { getEmpresaAtiva } from "@/lib/empresa";
+import { empresaDaOperacao, listarCadastrosRomaneio } from "@/lib/cadastros-empresa";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
@@ -39,7 +39,8 @@ export const Route = createFileRoute("/romaneio")({
 });
 
 function RomaneioPage() {
-  const { papel } = useAuth();
+  const { papel, empresaId, isSuperAdmin } = useAuth();
+  const empresa = empresaDaOperacao(isSuperAdmin, empresaId, getEmpresaAtiva());
   const podeCarregar = pode(papel, "carga_criar");
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
@@ -52,18 +53,16 @@ function RomaneioPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const cad = useQuery({
-    queryKey: ["cadastros-romaneio"],
-    queryFn: async () => {
-      const [m, v] = await Promise.all([supabase.from("motoristas").select("*").order("nome"), supabase.from("veiculos").select("*").order("placa")]);
-      return { motoristas: m.data ?? [], veiculos: v.data ?? [] };
-    },
+    queryKey: ["cadastros-romaneio", empresa],
+    queryFn: () => listarCadastrosRomaneio(empresa!),
+    enabled: !!empresa,
   });
   const setMotorista = (nome: string) => {
     const m = cad.data?.motoristas.find((x) => x.nome.toLowerCase() === nome.trim().toLowerCase());
-    setCab((c) => ({ ...c, motorista: nome, cpf: m?.cpf ?? c.cpf }));
+    setCab((c) => ({ ...c, motorista: nome, cpf: m?.cpf ?? "" }));
   };
 
-  const mapa = useMemo(() => new Map((toras.data ?? []).map((t) => [t.plaqueta, t])), [toras.data]);
+  const mapa = useMemo(() => new Map((toras.data ?? []).filter((t) => empresa && t.empresa_id === empresa).map((t) => [t.plaqueta, t])), [toras.data, empresa]);
 
   const adicionar = useCallback(
     (raw: string) => {
@@ -90,6 +89,11 @@ function RomaneioPage() {
 
   async function salvar() {
     if (!podeCarregar) return;
+    if (!empresa) { toast.error("Selecione uma empresa antes de criar o romaneio"); return; }
+    if (itens.some((t) => t.empresa_id !== empresa)) {
+      toast.error("Há toras de outra empresa nesta carga. Refaça a seleção.");
+      return;
+    }
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
     const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
     if (!estaOnline()) {
@@ -100,7 +104,7 @@ function RomaneioPage() {
         total_volume: Math.round(total * 10000) / 10000,
         qtd_toras: itens.length,
         plaquetas: itens.map((t) => t.plaqueta),
-        empresa_id: empresaIdGravacao().empresa_id ?? null,
+        empresa_id: empresa,
         log,
       });
       setBusy(false);
@@ -111,7 +115,7 @@ function RomaneioPage() {
     }
     setBusy(true);
     try {
-      const id = await salvarRomaneioNoBanco(cab, itens.map((t) => t.plaqueta), log);
+      const id = await salvarRomaneioNoBanco(cab, itens.map((t) => t.plaqueta), log, empresa);
       await qc.invalidateQueries();
       toast.success("Romaneio salvo");
       nav({ to: "/historico/$id", params: { id } });
@@ -135,9 +139,15 @@ function RomaneioPage() {
         <h1 className="text-3xl font-bold uppercase">Romaneio de carga</h1>
         <Link to="/historico" className="text-sm font-semibold text-primary underline">Ver romaneios emitidos</Link>
       </div>
+      {!empresa && <p role="alert" className="rounded-md border border-destructive px-3 py-2 text-sm text-destructive">
+        Selecione uma empresa no topo para consultar cadastros e lançar romaneios.
+      </p>}
+      {cad.isError && <p role="alert" className="rounded-md border px-3 py-2 text-sm text-destructive">
+        Não foi possível carregar motoristas e veículos desta empresa. Confira a conexão.
+      </p>}
       <datalist id="lista-caminhao">{cad.data?.veiculos.filter((v) => v.tipo === "caminhao").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
       <datalist id="lista-reboque">{cad.data?.veiculos.filter((v) => v.tipo === "reboque").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
-      <datalist id="lista-motorista">{cad.data?.motoristas.map((m) => <option key={m.nome} value={m.nome}>{m.cpf ?? ""}</option>)}</datalist>
+      <datalist id="lista-motorista">{cad.data?.motoristas.map((m) => <option key={m.nome} value={m.nome} />)}</datalist>
       <div className="bg-card border rounded-xl p-3 grid grid-cols-2 gap-2">
         {f("placa", "Placa / caminhão", "text", "lista-caminhao")}
         {f("julieta", " Reboque", "text", "lista-reboque")}
@@ -220,7 +230,7 @@ function RomaneioPage() {
           <div className="p-4 text-sm text-muted-foreground flex gap-2"><AlertTriangle className="size-4 shrink-0" />Plaquetas já carregadas são bloqueadas automaticamente.</div>
         )}
       </div>
-      {podeCarregar && <Button size="lg" className="w-full h-12" disabled={busy || !itens.length} onClick={salvar}>Salvar romaneio</Button>}
+      {podeCarregar && <Button size="lg" className="w-full h-12" disabled={busy || !empresa || !itens.length} onClick={salvar}>Salvar romaneio</Button>}
     </div>
   );
 }
