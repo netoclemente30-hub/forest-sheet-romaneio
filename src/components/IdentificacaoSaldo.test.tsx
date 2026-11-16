@@ -8,7 +8,7 @@ function traduzir(el: HTMLElement) {
   for (const n of ns) { const f = document.createElement("font"); f.textContent = n.nodeValue; n.parentNode!.replaceChild(f, n); }
 }
 type R = { p?: number; arvore?: number | string | null; secao?: string | null; autex?: string | null };
-const linhas: R[][] = [
+const linhas: [R[], R[], R[]] = [
   [{ p: 12, arvore: 117, secao: "B", autex: "AUTEX-1" }, { arvore: 48, secao: null, autex: null }],
   [{ arvore: 9, secao: "", autex: "AUTESP-2" }, { p: 3, arvore: 5, secao: "A", autex: "AUTEX-1" }],
   [],
