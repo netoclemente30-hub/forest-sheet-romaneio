@@ -30,7 +30,8 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
     return; // A RPC registra a auditoria na mesma transação.
   }
   if (op.tipo === "arrasto_arvore") {
-    const { error } = await supabase.rpc("registrar_arrasto_arvore", {
+    // Legacy queue entries may have no landing; preserve null for server validation.
+    const { error } = await supabase.rpc("registrar_arrasto_arvore" as never, {
       _empresa: op.empresa_id,
       _autex: op.autex,
       _arvore: op.arvore,
@@ -40,7 +41,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _precisao: op.precisao,
       _capturado_em: op.capturado_em,
       _operacao: op.log.operacao_id ?? operacao ?? "",
-    });
+    } as never);
     if (error) throw new Error(error.message);
     return; // Auditoria inserida atomicamente no Postgres.
   }

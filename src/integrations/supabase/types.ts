@@ -46,6 +46,73 @@ export type Database = {
           },
         ]
       }
+      arrastos_arvores: {
+        Row: {
+          arvore: number
+          autex: string
+          capturado_em: string
+          criado_em: string
+          empresa_id: string
+          explanada_id: string | null
+          gps_precisao: number
+          id: string
+          latitude: number
+          longitude: number
+          operacao_id: string
+          realizado_por: string
+        }
+        Insert: {
+          arvore: number
+          autex: string
+          capturado_em: string
+          criado_em?: string
+          empresa_id: string
+          explanada_id?: string | null
+          gps_precisao: number
+          id?: string
+          latitude: number
+          longitude: number
+          operacao_id: string
+          realizado_por: string
+        }
+        Update: {
+          arvore?: number
+          autex?: string
+          capturado_em?: string
+          criado_em?: string
+          empresa_id?: string
+          explanada_id?: string | null
+          gps_precisao?: number
+          id?: string
+          latitude?: number
+          longitude?: number
+          operacao_id?: string
+          realizado_por?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arrastos_arvores_arvore_fkey"
+            columns: ["empresa_id", "arvore", "autex"]
+            isOneToOne: false
+            referencedRelation: "arvores"
+            referencedColumns: ["empresa_id", "numero", "autex"]
+          },
+          {
+            foreignKeyName: "arrastos_arvores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arrastos_arvores_explanada_fkey"
+            columns: ["empresa_id", "autex", "explanada_id"]
+            isOneToOne: false
+            referencedRelation: "explanadas"
+            referencedColumns: ["empresa_id", "autex", "id"]
+          },
+        ]
+      }
       arvores: {
         Row: {
           abatida_em: string | null
@@ -204,59 +271,6 @@ export type Database = {
           status?: string
         }
         Relationships: []
-      }
-      arrastos_arvores: {
-        Row: {
-          id: string
-          empresa_id: string
-          autex: string
-          arvore: number
-          explanada_id: string | null
-          capturado_em: string
-          latitude: number
-          longitude: number
-          gps_precisao: number
-          operacao_id: string
-          realizado_por: string
-          criado_em: string
-        }
-        Insert: {
-          id?: string
-          empresa_id: string
-          autex: string
-          arvore: number
-          explanada_id?: string | null
-          capturado_em: string
-          latitude: number
-          longitude: number
-          gps_precisao: number
-          operacao_id: string
-          realizado_por: string
-          criado_em?: string
-        }
-        Update: {
-          id?: string
-          empresa_id?: string
-          autex?: string
-          arvore?: number
-          explanada_id?: string | null
-          capturado_em?: string
-          latitude?: number
-          longitude?: number
-          gps_precisao?: number
-          operacao_id?: string
-          realizado_por?: string
-          criado_em?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "arrastos_arvores_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       explanadas: {
         Row: {
@@ -1086,15 +1100,15 @@ export type Database = {
       }
       registrar_arrasto_arvore: {
         Args: {
-          _empresa: string
-          _autex: string
           _arvore: number
-          _explanada: string | null
+          _autex: string
+          _capturado_em: string
+          _empresa: string
+          _explanada: string
           _lat: number
           _lng: number
-          _precisao: number
-          _capturado_em: string
           _operacao: string
+          _precisao: number
         }
         Returns: string
       }
@@ -1190,6 +1204,18 @@ export type Database = {
           serrada_em: string
           volume: number
         }[]
+      }
+      transferir_tora_explanada: {
+        Args: {
+          _autex: string
+          _destino: string
+          _empresa: string
+          _log: Json
+          _operacao: string
+          _origem: string
+          _plaqueta: number
+        }
+        Returns: string
       }
     }
     Enums: {

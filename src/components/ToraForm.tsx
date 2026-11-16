@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { AutexPicker } from "./AutexPicker";
 import { mesmaArvoreSecao, type LinhaSaldo } from "@/lib/saldo";
 import { useAuth } from "@/hooks/useAuth";
-import { avisoDuplicidade, toraDuplicada, type IdentidadeTora } from "@/lib/tora-duplicidade";
+import { avisoDuplicidade, secaoParaLancamento, toraDuplicada, type IdentidadeTora } from "@/lib/tora-duplicidade";
 import { registrarOperacao } from "@/lib/registro-operacao";
 import { validarBaseManejo, type OrigemTora } from "@/lib/tora-origem";
 
@@ -27,7 +27,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
   const empresa = getEmpresaAtiva() ?? empresaId;
   const torasEmpresa = useMemo(() => toras.filter((t) => t.empresa_id === empresa), [toras, empresa]);
   const proxima = useMemo(() => toras.reduce((m, t) => Math.max(m, t.plaqueta), 0) + 1, [toras]);
-  const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: origem === "manejo" ? "A" : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+  const [f, setF] = useState({ plaqueta: String(proxima), arvore: "", secao: "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   const [busy, setBusy] = useState(false);
   const [autex, setAutex] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
@@ -66,7 +66,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
     const plaqueta = Number(f.plaqueta);
     if (candidatas.length > 1 && !arv) { toast.error(`Árvore ${f.arvore} existe em mais de uma AUTEX — escolha qual`); return; }
     if (torasEmpresa.some((t) => t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe`); return; }
-    const sec = f.secao.trim().toUpperCase();
+    const sec = secaoParaLancamento(f.secao);
     const dados = {
       origem, plaqueta, arvore: Number(f.arvore), especie: linhaSaldo?.especie || especie || "Não cadastrada", nome_cientifico: linhaSaldo?.nome_cientifico || arv?.nome_cientifico || null, autex: autexEfetiva, carregada: false, secao: sec || null, ...medidas, volume: vol, empresa_id: empresa,
     };
@@ -117,7 +117,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
     toast.success(`Tora ${t.plaqueta} medida — saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³`);
     await qc.invalidateQueries({ queryKey: ["toras"] });
     onSaved(t.plaqueta);
-    setF({ ...f, arvore: "", secao: origem === "manejo" ? "A" : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+    setF({ ...f, arvore: "", secao: "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
   }
 
   const field = (k: keyof typeof f, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (
@@ -133,7 +133,7 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
       <div className="grid grid-cols-3 gap-2">
         {field("plaqueta", "Plaqueta azul")}
         {field("arvore", "Nº árvore")}
-        {field("secao", origem === "serraria" ? "Seção (opcional)" : "Secção", "text")}
+        {field("secao", "Secção (opcional)", "text")}
       </div>
       {duplicada && <div role="alert" className="rounded-md bg-destructive text-destructive-foreground px-3 py-2 text-sm font-semibold">{avisoDuplicidade(duplicada)}. Esta tora já foi lançada.</div>}
       {candidatas.length > 1 && (
