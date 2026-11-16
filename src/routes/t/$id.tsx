@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type React from "react";
-import { CheckCircle2, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, TreePine, Truck } from "lucide-react";
+import { CheckCircle2, Factory, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, TreePine, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { medidaComercial, fmtComprimentoComercial } from "@/lib/medida-comercial";
+import { dataHoraSerragem, situacaoSerragem } from "@/lib/situacao-serragem";
 import { EscolherAparencia } from "@/components/Aparencia";
 
 export const Route = createFileRoute("/t/$id")({
@@ -32,6 +33,7 @@ function ToraPublica() {
   const { id } = Route.useParams();
   const q = useQuery({
     queryKey: ["tora-publica", id],
+    refetchOnMount: "always",
     queryFn: async () => {
       if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
       const { data, error } = await supabase.rpc("tora_publica", { _id: id });
@@ -64,11 +66,12 @@ type Publica = Database["public"]["Functions"]["tora_publica"]["Returns"][number
 
 function Detalhes({ t }: { t: Publica }) {
   const c = medidaComercial(t);
+  const serragem = situacaoSerragem(t.serrada_em);
   const etapas = [
     { txt: "Abate", det: data(t.abatida_em), ok: !!t.abatida_em },
     { txt: "Medida e etiquetada", det: data(t.created_at), ok: true },
     { txt: "Romaneio de carga", det: t.romaneio_data ? `Carregada em ${data(t.romaneio_data)}` : "", ok: t.carregada || !!t.serrada_em },
-    { txt: "Serrada", det: data(t.serrada_em), ok: !!t.serrada_em },
+    { txt: "Serrada", det: dataHoraSerragem(t.serrada_em) ?? "", ok: !!t.serrada_em },
   ].filter((e) => e.ok);
   const temGps = t.latitude != null && t.longitude != null;
   return (
@@ -84,6 +87,22 @@ function Detalhes({ t }: { t: Publica }) {
         <p className="mt-1 text-sm uppercase opacity-90">{t.especie ?? "Espécie não informada"}</p>
         <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-forest-foreground/40 bg-forest-foreground/10 px-3 py-1 text-xs"><CheckCircle2 className="h-3.5 w-3.5" />Verificada &amp; Autêntica</span>
       </section>
+
+      <Cartao icone={Factory} titulo="Situação na serraria">
+        <p role="status" className="mb-3 rounded-md bg-muted p-3 text-center text-lg font-bold text-primary">
+          {serragem.status}
+        </p>
+        {serragem.serrada ? (
+          <Linha k="Data e hora da serragem" v={dataHoraSerragem(t.serrada_em)} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Esta tora ainda não possui data de serragem registrada no sistema.
+          </p>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Situação consultada no registro atual da tora. Horário de Rondônia (UTC−4).
+        </p>
+      </Cartao>
 
       <Cartao icone={TreePine} titulo="Resumo da Madeira">
         <div className="grid grid-cols-2 gap-2">
