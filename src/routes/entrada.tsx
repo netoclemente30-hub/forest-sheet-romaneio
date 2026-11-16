@@ -9,9 +9,10 @@ import type { Romaneio, Tora } from "@/lib/data";
 import { lerQrRomaneio } from "@/lib/tora-qr";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
-import { comCache, lerCache } from "@/lib/offline/cache";
+import { lerCache } from "@/lib/offline/cache";
 import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { getEmpresaAtiva } from "@/lib/empresa";
+import { empresaDaOperacao, listarPatiosSerraria } from "@/lib/cadastros-empresa";
 import { conferirCargaQr, recebimentoPendente } from "@/lib/tora-origem";
 import { capturarLog } from "@/lib/registro";
 import { registrarOperacao } from "@/lib/registro-operacao";
@@ -48,31 +49,37 @@ function Entrada() {
   const [busy, setBusy] = useState(false);
   const [patio, setPatio] = useState("");
   const pendentes = useFilaOffline();
-  const empresaEsperada = isSuperAdmin ? getEmpresaAtiva() : empresaId;
-  const patios = useQuery({ queryKey: ["patios"], queryFn: () => comCache<{ nome: string }>("patios", async () => (await supabase.from("patios").select("nome").order("nome")).data ?? []) });
+  const empresaEsperada = empresaDaOperacao(isSuperAdmin, empresaId, getEmpresaAtiva());
+  const patios = useQuery({
+    queryKey: ["patios", empresaEsperada],
+    enabled: !!empresaEsperada,
+    networkMode: "always",
+    queryFn: () => listarPatiosSerraria(empresaEsperada!),
+  });
 
   const q = useQuery({
-    queryKey: ["entrada", id],
-    enabled: !!id,
+    queryKey: ["entrada", id, empresaEsperada],
+    enabled: !!id && !!empresaEsperada,
     networkMode: "always",
     queryFn: async () => {
       if (!estaOnline()) {
         // Offline: only loads already cached for this account/company.
         const [roms, toras] = await Promise.all([lerCache<Romaneio>("romaneios"), lerCache<Tora>("toras")]);
-        const r = roms?.find((x) => x.id === id) ?? null;
+        const r = roms?.find((x) => x.id === id && x.empresa_id === empresaEsperada) ?? null;
         return { r, itens: r ? (toras ?? []).filter((t) => t.romaneio_id === id && t.empresa_id === r.empresa_id).sort((a, b) => a.plaqueta - b.plaqueta) : [], offline: true };
       }
       const [{ data: r, error }, { data: itens, error: e2 }] = await Promise.all([
-        supabase.from("romaneios").select("*").eq("id", id!).maybeSingle(),
-        supabase.from("toras").select("*").eq("romaneio_id", id!).order("plaqueta"),
+        supabase.from("romaneios").select("*").eq("id", id!).eq("empresa_id", empresaEsperada!).maybeSingle(),
+        supabase.from("toras").select("*").eq("romaneio_id", id!).eq("empresa_id", empresaEsperada!).order("plaqueta"),
       ]);
       if (error) throw error;
       if (e2) throw e2;
-      return { r: r as Romaneio | null, itens: ((itens ?? []) as Tora[]).filter((t) => !r || t.empresa_id === r.empresa_id), offline: false };
+      return { r: r as Romaneio | null, itens: ((itens ?? []) as Tora[]).filter((t) => r && t.empresa_id === r.empresa_id), offline: false };
     },
   });
 
   function ler(raw: string) {
+    if (!empresaEsperada) { toast.error("Selecione uma empresa antes de ler a carga"); return; }
     const d = lerQrRomaneio(raw);
     if (!d) { toast.error("Este não é um QR de romaneio"); return; }
     setScan(false);
@@ -84,10 +91,11 @@ function Entrada() {
   const conferencia = q.data?.r ? conferirCargaQr(qrPlaquetas, q.data.r, q.data.itens, empresaEsperada) : null;
 
   async function confirmar() {
-    if (!podeReceber || busy) return;
+    if (!podeReceber || busy || !empresaEsperada) return;
     if (!id || !q.data?.r?.empresa_id) return;
     if (conferencia && !conferencia.ok) { toast.error(conferencia.motivo); return; }
     const empresa = q.data.r.empresa_id;
+    if (empresa !== empresaEsperada) { toast.error("A carga pertence a outra empresa"); return; }
     const p = patio.trim();
     if (!p) { toast.error("Escolha o pátio de destino"); return; }
     setBusy(true);
@@ -117,9 +125,15 @@ function Entrada() {
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Entrada no pátio</h1>
       <p className="text-sm text-muted-foreground">Leia o QR do romaneio para receber todas as toras da carga de uma vez.</p>
+      {!empresaEsperada && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">
+        Selecione a empresa no topo antes de consultar cargas ou pátios.
+      </p>}
+      {patios.isError && <p role="alert" className="rounded-md border p-3 text-sm text-destructive">
+        Não foi possível carregar os pátios desta empresa. Confira a conexão.
+      </p>}
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); ler(txt); setTxt(""); }}>
-        <Input aria-label="Conteúdo do QR do romaneio" placeholder="Cole o QR do romaneio" value={txt} onChange={(e) => setTxt(e.target.value)} className="h-12" />
-        <Button type="button" className="h-12" aria-label="Ler QR do romaneio" onClick={() => setScan(!scan)}><Camera /> Ler QR</Button>
+        <Input aria-label="Conteúdo do QR do romaneio" placeholder="Cole o QR do romaneio" value={txt} disabled={!empresaEsperada} onChange={(e) => setTxt(e.target.value)} className="h-12" />
+        <Button type="button" className="h-12" aria-label="Ler QR do romaneio" disabled={!empresaEsperada} onClick={() => setScan(!scan)}><Camera /> Ler QR</Button>
       </form>
       {scan && <QrScanner onScan={ler} onClose={() => { setScan(false); toast.error("Não foi possível abrir a câmera"); }} />}
 
@@ -143,11 +157,11 @@ function Entrada() {
           ) : podeReceber ? (
             <>
             <label className="text-sm font-semibold block space-y-1">Pátio de destino
-              <input list="lista-patios" aria-label="Pátio de destino" placeholder="Ex.: Pátio RJ Madeiras" value={patio} onChange={(e) => setPatio(e.target.value)} className="w-full h-12 rounded-md border bg-background px-3 font-normal" />
+              <input list="lista-patios" aria-label="Pátio de destino" placeholder="Ex.: Pátio principal da serraria" value={patio} onChange={(e) => setPatio(e.target.value)} className="w-full h-12 rounded-md border bg-background px-3 font-normal" />
             </label>
             <datalist id="lista-patios">{(patios.data ?? []).map((x) => <option key={x.nome} value={x.nome} />)}</datalist>
             {!!patios.data?.length && <div className="flex flex-wrap gap-2">{patios.data.map((x) => <Button key={x.nome} type="button" size="sm" variant={patio === x.nome ? "default" : "outline"} onClick={() => setPatio(x.nome)}>{x.nome}</Button>)}</div>}
-            <Button size="lg" className="w-full h-12" disabled={busy || (conferencia ? !conferencia.ok : false)} onClick={confirmar}>Confirmar entrada das {itens.length} toras</Button>
+            <Button size="lg" className="w-full h-12" disabled={busy || !empresaEsperada || patios.isError || (conferencia ? !conferencia.ok : false)} onClick={confirmar}>Confirmar entrada das {itens.length} toras</Button>
             </>
           ) : <p className="text-sm text-muted-foreground">Carga aguardando recebimento.</p>}
           <div className="bg-card border rounded-xl p-3">
