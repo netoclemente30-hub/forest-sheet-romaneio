@@ -23,6 +23,7 @@ function descrever(op: Op): string {
     case "arrasto_arvore": return `Arrasto da árvore ${op.arvore} · AUTEX ${op.autex}`;
     case "transferencia_explanada": return `Transferência da tora ${op.plaqueta} · AUTEX ${op.autex}`;
     case "aguardando_insert": return `Tora não identificada NI-${String(op.dados["numero"] ?? "?")}`;
+    case "aguardando_update": return `Tora não identificada editada NI-${String(op.dados["numero"] ?? "?")}`;
     case "aguardando_impressa": return `Etiqueta de tora não identificada · ${op.imprimiu ? "impressa" : "não impressa"}`;
     case "rastro_salvar": return `Rastreio GPS · AUTEX ${op.autex} · ${op.pontos.length} pontos`;
   }
