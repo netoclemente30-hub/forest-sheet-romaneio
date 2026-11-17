@@ -53,3 +53,4 @@ use the editor.
 - Inventory mutations use registrar_operacao (stable offline IDs, atomic snapshot logs); triggers capture other stock writes. Reversal is an admin/company-checked RPC comparing current snapshots and appending a compensating event; legacy logs are non-reversible. Why: undo must never invent old data or overwrite newer work.
 - AppShell groups routes into nav sections with sub-tabs. Why: keep URLs/QR links.
 - Roles (pode_funcao) are enforced by DB policies/RPCs on every write and replay; client role only shapes navigation. Why: offline roles must not bypass checks.
+- Imported sawn-timber manifests are editable company-scoped documents, not stock dispatches; save via an audited, optimistic-concurrency RPC with stable operation IDs. Why: arbitrary imported lengths and corrections must not mutate immutable dispatched packages or duplicate inventory.
