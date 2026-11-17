@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CadastrosFiscais } from "@/components/CatalogoFiscal";
+import { GerenciamentoFiscal } from "@/components/GerenciamentoFiscal";
 import { ConsultaCnpjFiscal } from "@/components/ConsultaCnpjFiscal";
 import {
   documentoId,
@@ -20,6 +21,8 @@ import { cnpjValido } from "@/lib/cnpj";
 import { cargasFiscais, importarCarga } from "@/lib/fiscal-cargas";
 import {
   chaveFiscal,
+  idRascunho,
+  copiarRascunho,
   detalhesIniciais,
   modalidadesFrete,
   camposEndereco,
@@ -104,7 +107,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
     queryFn: () => importarCarga(empresa, origem),
     enabled: !!origem,
   });
-  const previa = conta.historico.find((r) => r.origem === aberto);
+  const previa = conta.historico.find((r) => idRascunho(r) === aberto);
   function salvar(proxima: ContaFiscal) {
     try {
       sessionStorage.setItem(chave, JSON.stringify(proxima));
@@ -138,6 +141,27 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
         Homologação Spedy · Rascunhos sem valor fiscal. Clientes e produtos ficam neste navegador. O
         histórico fica nesta aba durante a sessão.
       </p>
+      <GerenciamentoFiscal
+        notas={conta.historico}
+        abrir={setAberto}
+        copiar={(r) => {
+          const copia = copiarRascunho(r);
+          if (salvar({ ...conta, historico: [copia, ...conta.historico] })) {
+            setAberto(idRascunho(copia));
+            toast.success("Cópia criada para edição.");
+          }
+        }}
+        nova={() => {
+          setAberto("");
+          document
+            .getElementById("preparar-nfe")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+        inutilizacoes={conta.inutilizacoes ?? []}
+        salvarInutilizacao={(r) =>
+          salvar({ ...conta, inutilizacoes: [r, ...(conta.inutilizacoes ?? [])] })
+        }
+      />
       <section className={painel}>
         <h2 className="text-xl font-bold">Emitente</h2>
         <small>Empresa do Gestor · {empresa}</small>
@@ -221,7 +245,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
         </Button>
         <p role="status">{conexao}</p>
       </section>
-      <section className={painel}>
+      <section className={painel} id="preparar-nfe">
         <h2 className="text-xl font-bold">Preparar NF-e</h2>
         <label>
           Romaneio
@@ -266,7 +290,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
                 if (
                   salvar({
                     ...conta,
-                    historico: [r, ...conta.historico.filter((i) => i.origem !== origem)],
+                    historico: [r, ...conta.historico],
                   })
                 )
                   setAberto(origem);
@@ -275,7 +299,10 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               }
             }}
             existente={conta.historico.some((d) => d.origem === origem)}
-            abrir={() => setAberto(origem)}
+            abrir={() => {
+              const r = conta.historico.find((r) => r.origem === origem);
+              if (r) setAberto(idRascunho(r));
+            }}
           />
         )}
       </section>
@@ -283,7 +310,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
         <section className={painel}>
           <Previa r={previa} />
           <EditarDadosNota
-            key={previa.origem}
+            key={idRascunho(previa)}
             r={previa}
             catalogo={catalogo}
             habilitado={conta.assinatura}
@@ -331,20 +358,6 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           )}
         </section>
       )}
-      <section className={painel}>
-        <h2 className="text-xl font-bold">Histórico fiscal da sessão</h2>
-        {!conta.historico.length && <p>Nenhum rascunho salvo.</p>}
-        {conta.historico.map((r) => (
-          <Button
-            className="block"
-            variant="outline"
-            key={r.origem}
-            onClick={() => setAberto(r.origem)}
-          >
-            {r.carga.numero} · {r.assinado ? "Assinatura simulada" : "Rascunho"}
-          </Button>
-        ))}
-      </section>
     </main>
   );
 }
@@ -377,7 +390,7 @@ function Editor({
           ),
         },
   );
-  const [aba, setAba] = useState("Cliente");
+  const [aba, setAba] = useState("Cabeçalho");
   const [buscarCliente, setBuscarCliente] = useState("");
   const [produtos, setProdutos] = useState(() =>
     carga.itens.map((i, index) => {
@@ -424,7 +437,7 @@ function Editor({
       }}
     >
       <div className="flex flex-wrap gap-2">
-        {["Cliente", "Produtos", "Transporte", "Fisco"].map((a) => (
+        {["Cabeçalho", "Cliente", "Produtos", "Totais", "Transporte", "Fisco"].map((a) => (
           <Button
             type="button"
             key={a}
@@ -435,6 +448,89 @@ function Editor({
             {a}
           </Button>
         ))}
+      </div>
+      <div hidden={aba !== "Cabeçalho"} data-aba="Cabeçalho" className="grid gap-3 sm:grid-cols-2">
+        <p>Modelo 55 · Homologação · Romaneio {carga.numero}</p>
+        {(
+          [
+            ["natureza", "Natureza da operação"],
+            ["serie", "Série"],
+            ["numero", "Número da NF-e para revisão"],
+          ] as const
+        ).map(([k, label]) => (
+          <label key={k}>
+            {label}
+            <Input
+              value={cliente.cabecalho?.[k] ?? (k === "natureza" ? (carga.natureza ?? "") : "")}
+              maxLength={k === "serie" ? 3 : k === "numero" ? 9 : 60}
+              pattern={k === "natureza" ? undefined : "[0-9]*"}
+              onChange={(e) =>
+                setCliente({
+                  ...cliente,
+                  cabecalho: {
+                    natureza: carga.natureza ?? "",
+                    serie: "",
+                    numero: "",
+                    finalidade: "1",
+                    ...cliente.cabecalho,
+                    [k]: e.target.value,
+                  },
+                })
+              }
+            />
+          </label>
+        ))}
+        <label>
+          Finalidade
+          <select
+            className="block w-full rounded border bg-background p-2"
+            value={cliente.cabecalho?.finalidade ?? "1"}
+            onChange={(e) =>
+              setCliente({
+                ...cliente,
+                cabecalho: {
+                  natureza: carga.natureza ?? "",
+                  serie: "",
+                  numero: "",
+                  ...cliente.cabecalho,
+                  finalidade: e.target.value,
+                },
+              })
+            }
+          >
+            {["Normal", "Complementar", "Ajuste", "Devolução"].map((f, n) => (
+              <option key={f} value={String(n + 1)}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div hidden={aba !== "Totais"} data-aba="Totais" className="space-y-3">
+        <p>
+          Volume do romaneio ·{" "}
+          {carga.itens
+            .reduce((s, i) => s + i.quantidade, 0)
+            .toLocaleString("pt-BR", { maximumFractionDigits: 4 })}{" "}
+          m³
+        </p>
+        <p>
+          Soma dos produtos preenchidos ·{" "}
+          {moeda(
+            carga.itens.reduce(
+              (s, i, n) =>
+                s +
+                Math.round(
+                  i.quantidade * (Number(produtos[n]?.preco.replace(",", ".")) || 0) * 100,
+                ),
+              0,
+            ) / 100,
+          )}
+        </p>
+        <p>
+          Impostos, frete cobrado e demais valores dependem de conferência para compor o total
+          fiscal.
+        </p>
       </div>
       <div hidden={aba !== "Cliente"} data-aba="Cliente">
         <label>
@@ -607,6 +703,11 @@ function Previa({ r }: { r: Rascunho }) {
       <h2 className="text-xl font-bold">
         Prévia da NF-e · {r.assinado ? "Assinatura simulada" : "Rascunho"}
       </h2>
+      <p>
+        Modelo 55 · Série {r.detalhes?.cabecalho?.serie || "Pendente"} · Número{" "}
+        {r.detalhes?.cabecalho?.numero || "Pendente"} ·{" "}
+        {r.detalhes?.cabecalho?.natureza || r.carga.natureza || "Natureza da operação pendente"}
+      </p>
       <p>
         {r.cadastro.nome} · CNPJ {r.cadastro.cnpj} · IE {r.cadastro.ie}
       </p>

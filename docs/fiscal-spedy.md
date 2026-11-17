@@ -1,5 +1,13 @@
 # Fiscal em homologação
 
+## Gerenciamento de notas
+
+A listagem reúne destinatário, romaneio, valor e situação, com busca e filtro. **Nova NF-e do romaneio** leva à seleção de cargas de toras ou madeira serrada. A edição tem Cabeçalho, Cliente, Produtos, Totais, Transporte e Fisco.
+
+**Copiar** cria outro rascunho com identidade independente, vinculado ao mesmo romaneio. A cópia preserva cliente, itens, quantidades e preços, limpa o número fiscal e reinicia a assinatura simulada. Alterações posteriores na cópia ficam somente nela.
+
+**Inutilizar numeração** prepara uma solicitação local com série, número inicial, final e justificativa. O painel verifica o intervalo e sobreposições com outras solicitações locais. O envio à Spedy depende de aprovação e implementação da operação no servidor. A verificação da disponibilidade fiscal da faixa depende da integração.
+
 ## Cadastros e preenchimento
 
 Em **Fiscal → Cadastros de clientes e produtos**, salve clientes com documento e endereço, e produtos com código, descrição, NCM, CFOP padrão e preço por m³. O catálogo e o emitente ficam neste navegador, separados por usuário e empresa. A sincronização entre computadores exige persistência no banco.

@@ -25,6 +25,7 @@ export const camposEndereco = {
   cep: "CEP",
 } as const;
 export type DetalhesNota = {
+  cabecalho?: { natureza: string; serie: string; numero: string; finalidade: string };
   nome: string;
   documento: string;
   endereco: Record<keyof typeof camposEndereco, string>;
@@ -48,10 +49,41 @@ export function detalhesIniciais(carga: DadosNfe): DetalhesNota {
     infAdFisco: "",
   };
 }
-export type ContaFiscal = { cadastro: Cadastro; assinatura: boolean; historico: Rascunho[] };
+export type InutilizacaoRascunho = {
+  id: string;
+  serie: number;
+  inicio: number;
+  fim: number;
+  justificativa: string;
+};
+export type ContaFiscal = {
+  cadastro: Cadastro;
+  assinatura: boolean;
+  historico: Rascunho[];
+  inutilizacoes?: InutilizacaoRascunho[];
+};
 export type Rascunho = Omit<ReturnType<typeof montarRascunho>, "detalhes"> & {
   detalhes?: DetalhesNota;
+  id?: string;
 };
+export const idRascunho = (r: Rascunho) => r.id ?? r.origem;
+export function copiarRascunho(r: Rascunho): Rascunho {
+  const copia = structuredClone(r);
+  if (copia.detalhes) {
+    copia.detalhes.cabecalho = {
+      natureza: copia.detalhes.cabecalho?.natureza ?? copia.carga.natureza ?? "",
+      serie: copia.detalhes.cabecalho?.serie ?? "",
+      numero: "",
+      finalidade: copia.detalhes.cabecalho?.finalidade ?? "1",
+    };
+  }
+  return {
+    ...copia,
+    id: crypto.randomUUID(),
+    assinado: false,
+    criado: new Date().toISOString(),
+  };
+}
 export const contaNova = (): ContaFiscal => ({
   cadastro: { nome: "", cnpj: "", ie: "" },
   assinatura: false,
