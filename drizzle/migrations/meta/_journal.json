@@ -281,6 +281,13 @@
       "when": 1794774695368,
       "tag": "0039_marcar_registro_revertido",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794936901634,
+      "tag": "0040_romaneios_serrados_importados",
+      "breakpoints": true
     }
   ]
 }

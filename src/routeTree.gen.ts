@@ -16,6 +16,7 @@ import { Route as CortadorRouteImport } from './routes/cortador'
 import { Route as EntradaRouteImport } from './routes/entrada'
 import { Route as EtiquetasRouteImport } from './routes/etiquetas'
 import { Route as ExplanadasRouteImport } from './routes/explanadas'
+import { Route as FiscalRouteImport } from './routes/fiscal'
 import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as RegistrosRouteImport } from './routes/registros'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
@@ -64,6 +65,11 @@ const EtiquetasRoute = EtiquetasRouteImport.update({
 const ExplanadasRoute = ExplanadasRouteImport.update({
   id: '/explanadas',
   path: '/explanadas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FiscalRoute = FiscalRouteImport.update({
+  id: '/fiscal',
+  path: '/fiscal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportarRoute = ImportarRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/explanadas': typeof ExplanadasRoute
+  '/fiscal': typeof FiscalRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/explanadas': typeof ExplanadasRoute
+  '/fiscal': typeof FiscalRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/entrada': typeof EntradaRoute
   '/etiquetas': typeof EtiquetasRoute
   '/explanadas': typeof ExplanadasRoute
+  '/fiscal': typeof FiscalRoute
   '/importar': typeof ImportarRoute
   '/registros': typeof RegistrosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/entrada'
     | '/etiquetas'
     | '/explanadas'
+    | '/fiscal'
     | '/importar'
     | '/registros'
     | '/relatorios'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/entrada'
     | '/etiquetas'
     | '/explanadas'
+    | '/fiscal'
     | '/importar'
     | '/registros'
     | '/relatorios'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/entrada'
     | '/etiquetas'
     | '/explanadas'
+    | '/fiscal'
     | '/importar'
     | '/registros'
     | '/relatorios'
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   EntradaRoute: typeof EntradaRoute
   EtiquetasRoute: typeof EtiquetasRoute
   ExplanadasRoute: typeof ExplanadasRoute
+  FiscalRoute: typeof FiscalRoute
   ImportarRoute: typeof ImportarRoute
   RegistrosRoute: typeof RegistrosRoute
   RelatoriosRoute: typeof RelatoriosRoute
@@ -348,6 +361,13 @@ declare module '@tanstack/react-router' {
       path: '/explanadas'
       fullPath: '/explanadas'
       preLoaderRoute: typeof ExplanadasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fiscal': {
+      id: '/fiscal'
+      path: '/fiscal'
+      fullPath: '/fiscal'
+      preLoaderRoute: typeof FiscalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/importar': {
@@ -471,6 +491,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntradaRoute: EntradaRoute,
   EtiquetasRoute: EtiquetasRoute,
   ExplanadasRoute: ExplanadasRoute,
+  FiscalRoute: FiscalRoute,
   ImportarRoute: ImportarRoute,
   RegistrosRoute: RegistrosRoute,
   RelatoriosRoute: RelatoriosRoute,

@@ -18,6 +18,7 @@ import { PacoteSerradoForm } from './PacoteSerradoForm';
 import { CargaSerradaForm } from './CargaSerradaForm';
 import { NfeWhatsapp } from './NfeWhatsapp';
 import { itensDeSerrada } from '@/lib/nfe-txt';
+import { RomaneiosSerradosImportados } from './RomaneiosSerradosImportados';
 
 export function MadeiraSerrada({empresa}:{empresa:string|null}) {
   const { papel } = useAuth();
@@ -52,6 +53,7 @@ export function MadeiraSerrada({empresa}:{empresa:string|null}) {
     <div className="border-y py-3 flex flex-wrap justify-between gap-2"><span><strong>{todos.filter(p=>!p.carga_id).length}</strong> pacotes disponíveis · <strong>{r.pecas}</strong> peças</span><strong>{r.volume.toFixed(4).replace('.',',')} m³</strong></div>
     <div className="flex flex-wrap justify-between items-center gap-2"><h2 className="text-2xl font-bold">{aba==='pacotes'?'Estoque de Pacotes':'Romaneios de Carga'}</h2><div className="flex flex-wrap gap-2">{podeOperar&&aba==='pacotes'&&<Button variant="outline" disabled={pacotes.isPending||!!pacotes.error} onClick={()=>{setEdit(undefined);setForm('pacote');}}><Plus/>Novo pacote</Button>}{podeOperar&&<Button disabled={pacotes.isPending||!!pacotes.error} onClick={()=>{setEdit(undefined);setForm('carga');}}><Truck/>Criar romaneio</Button>}</div></div>
     <Input aria-label="Buscar madeira serrada" placeholder={aba==='pacotes'?'Buscar pacote ou espécie':'Buscar carga, cliente ou placa'} value={q} onChange={e=>setQ(e.target.value)}/>
+    {aba==='cargas'&&<RomaneiosSerradosImportados key={empresa} empresa={empresa} podeOperar={podeOperar} q={q}/>}
     {aba==='pacotes'&&<select aria-label="Situação dos pacotes" className="w-full h-10 rounded-md border bg-background px-2 text-sm" value={status} onChange={e=>setStatus(e.target.value)}><option value="disponiveis">Disponíveis no pátio</option><option value="expedidos">Expedidos</option><option value="todos">Todos os pacotes</option></select>}
     {(pacotes.isPending||cargas.isPending)&&<p className="text-muted-foreground">Carregando madeira serrada…</p>}
     {(pacotes.error||cargas.error)&&<div className="border border-destructive rounded-lg p-3 text-sm text-destructive">Não foi possível carregar os dados. <Button variant="outline" size="sm" onClick={()=>{void pacotes.refetch();void cargas.refetch();}}>Tentar de novo</Button></div>}

@@ -806,6 +806,53 @@ export type Database = {
           },
         ]
       }
+      romaneios_serrados_importados: {
+        Row: {
+          atualizado_em: string
+          cab: Json
+          created_at: string
+          empresa_id: string
+          id: string
+          itens: Json
+          revisao: number
+          total_pecas: number
+          total_volume_m3: number
+          ultima_operacao: string
+        }
+        Insert: {
+          atualizado_em?: string
+          cab: Json
+          created_at?: string
+          empresa_id: string
+          id: string
+          itens: Json
+          revisao?: number
+          total_pecas: number
+          total_volume_m3: number
+          ultima_operacao: string
+        }
+        Update: {
+          atualizado_em?: string
+          cab?: Json
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          itens?: Json
+          revisao?: number
+          total_pecas?: number
+          total_volume_m3?: number
+          ultima_operacao?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "romaneios_serrados_importados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saldos: {
         Row: {
           atualizado_em: string
@@ -1165,6 +1212,18 @@ export type Database = {
           _log: Json
         }
         Returns: string
+      }
+      salvar_romaneio_serrado_importado: {
+        Args: {
+          _cab: Json
+          _empresa: string
+          _id: string
+          _itens: Json
+          _log: Json
+          _operacao: string
+          _revisao: number
+        }
+        Returns: number
       }
       salvar_romaneio_toras: {
         Args: {
