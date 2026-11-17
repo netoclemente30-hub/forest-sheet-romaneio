@@ -37,7 +37,7 @@ const navPorPapel = (papel: Papel) => {
   const relatorios = { to: "/relatorios" as const, label: "Relatórios", icon: BarChart3 };
   const registros = { to: "/registros" as const, label: "Registros", icon: ClipboardList };
   if (papel === "superadmin" || papel === "admin_empresa")
-    return [...nav, registros, { to: "/usuarios" as const, label: "Usuários", icon: Users }];
+    return [...nav, { to: "/fiscal" as const, label: "Fiscal", icon: ClipboardList }, registros, { to: "/usuarios" as const, label: "Usuários", icon: Users }];
   if (papel === "cortador" || papel === "tratorista") return [mapa];
   if (papel === "romaneador") return [toras, patios, mapa];
   if (papel === "motorista") return [carga, { to: "/historico" as const, label: "Cargas", icon: Truck }];
