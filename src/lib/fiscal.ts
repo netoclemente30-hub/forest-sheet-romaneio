@@ -2,8 +2,51 @@ import type { DadosNfe } from "./nfe-txt";
 import { cnpjValido } from "./cnpj";
 
 export type Cadastro = { nome: string; cnpj: string; ie: string };
+export const modalidadesFrete = {
+  "0": "CIF · Frete por conta do remetente",
+  "1": "FOB · Frete por conta do destinatário",
+  "2": "Frete por conta de terceiros",
+  "3": "Transporte próprio do remetente",
+  "4": "Transporte próprio do destinatário",
+  "9": "Sem ocorrência de transporte",
+} as const;
+export const camposEndereco = {
+  logradouro: "Logradouro",
+  numero: "Número",
+  complemento: "Complemento",
+  bairro: "Bairro",
+  municipio: "Município",
+  uf: "UF",
+  cep: "CEP",
+} as const;
+export type DetalhesNota = {
+  nome: string;
+  documento: string;
+  endereco: Record<keyof typeof camposEndereco, string>;
+  modFrete: keyof typeof modalidadesFrete | "";
+  infAdFisco: string;
+};
+export function detalhesIniciais(carga: DadosNfe): DetalhesNota {
+  return {
+    nome: carga.cliente?.nome ?? "",
+    documento: carga.cliente?.documento ?? "",
+    endereco: {
+      logradouro: "",
+      numero: "",
+      complemento: "",
+      bairro: "",
+      municipio: "",
+      uf: "",
+      cep: "",
+    },
+    modFrete: "",
+    infAdFisco: "",
+  };
+}
 export type ContaFiscal = { cadastro: Cadastro; assinatura: boolean; historico: Rascunho[] };
-export type Rascunho = ReturnType<typeof montarRascunho>;
+export type Rascunho = Omit<ReturnType<typeof montarRascunho>, "detalhes"> & {
+  detalhes?: DetalhesNota;
+};
 export const contaNova = (): ContaFiscal => ({
   cadastro: { nome: "", cnpj: "", ie: "" },
   assinatura: false,
@@ -16,12 +59,12 @@ export function montarRascunho(
   cadastro: Cadastro,
   carga: DadosNfe,
   origem: string,
-  cliente: string,
+  detalhes: DetalhesNota,
   precos: string[],
 ) {
   if (!cadastro.nome.trim() || !cnpjValido(cadastro.cnpj) || !cadastro.ie.trim())
     throw new Error("Revise o cadastro do emitente.");
-  if (!cliente.trim() || !carga.itens.length)
+  if (!detalhes.nome.trim() || !carga.itens.length)
     throw new Error("Confira o destinatário e os itens da carga.");
   const itens = carga.itens.map((item, index) => {
     const valor = precos[index]?.trim().replace(",", ".");
@@ -41,10 +84,11 @@ export function montarRascunho(
   });
   return {
     origem,
+    detalhes,
     cadastro: { ...cadastro },
     carga: {
       ...carga,
-      cliente: { nome: cliente.trim(), documento: carga.cliente?.documento || "" },
+      cliente: { nome: detalhes.nome.trim(), documento: detalhes.documento.trim() },
     },
     itens,
     total: itens.reduce((s, i) => s + i.centavos, 0),

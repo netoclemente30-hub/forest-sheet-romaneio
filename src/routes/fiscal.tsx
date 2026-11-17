@@ -4,12 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DadosFiscaisNota } from "@/components/DadosFiscaisNota";
 import { useAuth } from "@/hooks/useAuth";
 import { EVENTO_EMPRESA, getEmpresaAtiva } from "@/lib/empresa";
 import { cnpjValido } from "@/lib/cnpj";
 import { cargasFiscais, importarCarga } from "@/lib/fiscal-cargas";
 import {
   chaveFiscal,
+  detalhesIniciais,
+  modalidadesFrete,
+  type DetalhesNota,
   contaNova,
   montarRascunho,
   type ContaFiscal,
@@ -184,9 +188,29 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
       {previa && (
         <section className={painel}>
           <Previa r={previa} />
+          <EditarDadosNota
+            key={previa.origem}
+            r={previa}
+            habilitado={conta.assinatura}
+            salvarDados={(detalhes) => {
+              const atualizado = {
+                ...previa,
+                detalhes,
+                assinado: false,
+                carga: {
+                  ...previa.carga,
+                  cliente: { nome: detalhes.nome.trim(), documento: detalhes.documento.trim() },
+                },
+              };
+              return salvar({
+                ...conta,
+                historico: conta.historico.map((r) => (r === previa ? atualizado : r)),
+              });
+            }}
+          />
           {!previa.assinado && (
             <Button
-              disabled={!conta.assinatura}
+              disabled={!conta.assinatura || !previa.detalhes}
               onClick={() =>
                 salvar({
                   ...conta,
@@ -227,11 +251,11 @@ function Editor({
 }: {
   carga: DadosNfe;
   habilitado: boolean;
-  gerar: (cliente: string, precos: string[]) => void;
+  gerar: (cliente: DetalhesNota, precos: string[]) => void;
   existente: boolean;
   abrir: () => void;
 }) {
-  const [cliente, setCliente] = useState(carga.cliente?.nome || "");
+  const [cliente, setCliente] = useState(() => detalhesIniciais(carga));
   const [precos, setPrecos] = useState(carga.itens.map(() => ""));
   if (existente) return <Button onClick={abrir}>Abrir rascunho existente</Button>;
   return (
@@ -242,15 +266,7 @@ function Editor({
         gerar(cliente, precos);
       }}
     >
-      <label>
-        Destinatário
-        <Input
-          required
-          value={cliente}
-          readOnly={!!carga.cliente?.nome}
-          onChange={(e) => setCliente(e.target.value)}
-        />
-      </label>
+      <DadosFiscaisNota dados={cliente} alterar={setCliente} />
       {carga.itens.map((i, n) => (
         <label className="block" key={i.descricao}>
           {i.descricao} · {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} m³ ·
@@ -268,7 +284,45 @@ function Editor({
     </form>
   );
 }
+function EditarDadosNota({
+  r,
+  habilitado,
+  salvarDados,
+}: {
+  r: Rascunho;
+  habilitado: boolean;
+  salvarDados: (d: DetalhesNota) => boolean;
+}) {
+  const [edicao, setEdicao] = useState<DetalhesNota | null>(null);
+  if (!edicao)
+    return (
+      <Button
+        variant="outline"
+        disabled={!habilitado}
+        onClick={() => setEdicao(r.detalhes ?? detalhesIniciais(r.carga))}
+      >
+        Editar dados da nota
+      </Button>
+    );
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (habilitado && salvarDados(edicao)) setEdicao(null);
+      }}
+    >
+      <DadosFiscaisNota dados={edicao} alterar={setEdicao} />
+      {r.assinado && <p>Ao salvar as alterações, a nota volta ao estado de rascunho.</p>}
+      <Button disabled={!habilitado}>Salvar alterações</Button>{" "}
+      <Button type="button" variant="outline" onClick={() => setEdicao(null)}>
+        Cancelar
+      </Button>
+    </form>
+  );
+}
 function Previa({ r }: { r: Rascunho }) {
+  const endereco = r.detalhes?.endereco;
   return (
     <>
       <h2 className="text-xl font-bold">
@@ -277,8 +331,30 @@ function Previa({ r }: { r: Rascunho }) {
       <p>
         {r.cadastro.nome} · CNPJ {r.cadastro.cnpj} · IE {r.cadastro.ie}
       </p>
+      <p>Destinatário · {r.carga.cliente.nome}</p>
+      <p>CPF ou CNPJ · {r.carga.cliente.documento || "Pendente"}</p>
       <p>
-        Destinatário · {r.carga.cliente.nome} {r.carga.cliente.documento}
+        Endereço ·{" "}
+        {endereco
+          ? [
+              endereco.logradouro,
+              endereco.numero,
+              endereco.complemento,
+              endereco.bairro,
+              endereco.municipio,
+              endereco.uf,
+              "CEP " + endereco.cep,
+            ]
+              .filter(Boolean)
+              .join(", ")
+          : "Pendente"}
+      </p>
+      <p>
+        Modalidade do frete ·{" "}
+        {r.detalhes?.modFrete ? modalidadesFrete[r.detalhes.modFrete] : "Pendente"}
+      </p>
+      <p className="whitespace-pre-wrap">
+        Informações adicionais de interesse do Fisco · {r.detalhes?.infAdFisco || "Não informadas"}
       </p>
       <p>
         Romaneio {r.carga.numero} · {r.carga.data} · {r.carga.motorista?.nome} · {r.carga.placa}{" "}

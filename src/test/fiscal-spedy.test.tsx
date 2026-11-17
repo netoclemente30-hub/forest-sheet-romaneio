@@ -51,6 +51,20 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
     target: { value: "Cliente de teste" },
   });
   fireEvent.change(screen.getByLabelText(/Preço por m³/), { target: { value: "250,50" } });
+  for (const [label, value] of Object.entries({
+    "CPF ou CNPJ do destinatário": "11222333000181",
+    Logradouro: "Rua das Toras",
+    Número: "42",
+    Complemento: "Galpão A",
+    Bairro: "Centro",
+    Município: "Manaus",
+    UF: "AM",
+    CEP: "69000-000",
+    "Modalidade do frete": "1",
+    "Informações adicionais de interesse do Fisco (opcional)": "Observação de teste",
+  })) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  }
   fireEvent.click(screen.getByText("Gerar prévia e salvar rascunho"));
   expect(screen.getByText(/Total dos produtos/)).toHaveTextContent("375,75");
   fireEvent.click(screen.getByText("Simular assinatura digital"));
@@ -63,6 +77,60 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
   view.rerender(tela());
   fireEvent.click(screen.getByRole("button", { name: /C-1.*Assinatura simulada/ }));
   expect(within(view.container).getByText(/Destinatário · Cliente de teste/)).toBeVisible();
+  expect(screen.getByText(/Modalidade do frete · FOB/)).toBeVisible();
+  expect(screen.getByText(/Endereço · Rua das Toras, 42, Galpão A/)).toBeVisible();
+  expect(screen.getByText(/Fisco · Observação de teste/)).toBeVisible();
+  fireEvent.click(screen.getByText("Editar dados da nota"));
+  fireEvent.change(screen.getByLabelText("Modalidade do frete"), { target: { value: "0" } });
+  fireEvent.click(screen.getByText("Salvar alterações"));
+  expect(screen.getByText(/Modalidade do frete · CIF/)).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Prévia da NF-e · Rascunho" })).toBeVisible();
+});
+it("completa um rascunho anterior sem substituir carga, emitente ou preços", () => {
+  const chave = "fiscal-spedy-v1:usuario:a";
+  const cadastro = { nome: "Emitente antigo", cnpj: "11222333000181", ie: "1234" };
+  const antigo = {
+    origem: "toras/antiga",
+    cadastro,
+    carga: {
+      numero: "R-antigo",
+      data: "2026-01-01",
+      cliente: { nome: "Cliente antigo", documento: "12345678909" },
+      itens: [],
+    },
+    itens: [],
+    total: 3400,
+    criado: "2026-01-01",
+    assinado: false,
+  };
+  sessionStorage.setItem(
+    chave,
+    JSON.stringify({ cadastro, assinatura: true, historico: [antigo] }),
+  );
+  const Fiscal = Route.options.component!;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Fiscal />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByText("R-antigo · Rascunho"));
+  fireEvent.click(screen.getByText("Editar dados da nota"));
+  expect(screen.getByLabelText("CPF ou CNPJ do destinatário")).toHaveValue("12345678909");
+  for (const [label, value] of Object.entries({
+    Logradouro: "Rua A",
+    Número: "15",
+    Bairro: "Centro",
+    Município: "Manaus",
+    UF: "AM",
+    CEP: "69000000",
+    "Modalidade do frete": "9",
+  })) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  }
+  fireEvent.click(screen.getByText("Salvar alterações"));
+  expect(JSON.parse(sessionStorage.getItem(chave)!).historico).toEqual([
+    { ...antigo, detalhes: expect.objectContaining({ modFrete: "9" }) },
+  ]);
 });
 it("consulta somente o sandbox e usa exclusivamente a chave da empresa", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
