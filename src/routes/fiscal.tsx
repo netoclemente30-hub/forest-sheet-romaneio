@@ -451,6 +451,29 @@ function Editor({
       </div>
       <div hidden={aba !== "Cabeçalho"} data-aba="Cabeçalho" className="grid gap-3 sm:grid-cols-2">
         <p>Modelo 55 · Homologação · Romaneio {carga.numero}</p>
+        <label>
+          Tipo da nota
+          <select
+            className="block w-full rounded border bg-background p-2"
+            value={cliente.cabecalho?.tipo ?? "1"}
+            onChange={(e) =>
+              setCliente({
+                ...cliente,
+                cabecalho: {
+                  natureza: carga.natureza ?? "",
+                  serie: "",
+                  numero: "",
+                  finalidade: "1",
+                  ...cliente.cabecalho,
+                  tipo: e.target.value as "0" | "1",
+                },
+              })
+            }
+          >
+            <option value="0">0 · Entrada</option>
+            <option value="1">1 · Saída</option>
+          </select>
+        </label>
         {(
           [
             ["natureza", "Natureza da operação"],
@@ -704,7 +727,8 @@ function Previa({ r }: { r: Rascunho }) {
         Prévia da NF-e · {r.assinado ? "Assinatura simulada" : "Rascunho"}
       </h2>
       <p>
-        Modelo 55 · Série {r.detalhes?.cabecalho?.serie || "Pendente"} · Número{" "}
+        Modelo 55 · {r.detalhes?.cabecalho?.tipo === "0" ? "Entrada" : "Saída"} · Série{" "}
+        {r.detalhes?.cabecalho?.serie || "Pendente"} · Número{" "}
         {r.detalhes?.cabecalho?.numero || "Pendente"} ·{" "}
         {r.detalhes?.cabecalho?.natureza || r.carga.natureza || "Natureza da operação pendente"}
       </p>

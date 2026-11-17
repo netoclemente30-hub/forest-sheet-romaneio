@@ -157,7 +157,8 @@ export function GerenciamentoFiscal({
                   {r.carga.numero}
                   <div>
                     {r.origem.startsWith("serrada/") ? "Madeira serrada" : "Toras"} ·{" "}
-                    {r.detalhes?.cabecalho?.numero || "Numeração pendente"}
+                    {r.detalhes?.cabecalho?.numero || "Numeração pendente"} ·{" "}
+                    {r.detalhes?.cabecalho?.tipo === "0" ? "Entrada" : "Saída"}
                   </div>
                 </td>
                 <td className="p-3 whitespace-nowrap">{moeda(r.total / 100)}</td>

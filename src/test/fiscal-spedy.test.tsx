@@ -82,9 +82,15 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
   expect(screen.getByText(/Endereço · Rua das Toras, 42, Galpão A/)).toBeVisible();
   expect(screen.getByText(/Fisco · Observação de teste/)).toBeVisible();
   fireEvent.click(screen.getByText("Editar dados da nota"));
+  expect(screen.getByLabelText("Tipo da nota")).toHaveValue("1");
+  fireEvent.change(screen.getByLabelText("Tipo da nota"), { target: { value: "0" } });
   fireEvent.change(screen.getByLabelText("Modalidade do frete"), { target: { value: "0" } });
   fireEvent.click(screen.getByText("Salvar alterações"));
   expect(screen.getByText(/Modalidade do frete · CIF/)).toBeVisible();
+  expect(screen.getByText(/Modelo 55 · Entrada · Série/)).toBeVisible();
+  fireEvent.click(screen.getByText("Editar dados da nota"));
+  expect(screen.getByLabelText("Tipo da nota")).toHaveValue("0");
+  fireEvent.click(screen.getByText("Cancelar"));
   expect(screen.getByRole("heading", { name: "Prévia da NF-e · Rascunho" })).toBeVisible();
 });
 it("completa um rascunho anterior sem substituir carga, emitente ou preços", () => {

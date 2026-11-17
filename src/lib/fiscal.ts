@@ -25,7 +25,13 @@ export const camposEndereco = {
   cep: "CEP",
 } as const;
 export type DetalhesNota = {
-  cabecalho?: { natureza: string; serie: string; numero: string; finalidade: string };
+  cabecalho?: {
+    natureza: string;
+    serie: string;
+    numero: string;
+    finalidade: string;
+    tipo?: "0" | "1";
+  };
   nome: string;
   documento: string;
   endereco: Record<keyof typeof camposEndereco, string>;
@@ -75,6 +81,7 @@ export function copiarRascunho(r: Rascunho): Rascunho {
       serie: copia.detalhes.cabecalho?.serie ?? "",
       numero: "",
       finalidade: copia.detalhes.cabecalho?.finalidade ?? "1",
+      tipo: copia.detalhes.cabecalho?.tipo ?? "1",
     };
   }
   return {

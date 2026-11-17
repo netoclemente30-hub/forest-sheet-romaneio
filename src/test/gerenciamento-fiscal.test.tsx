@@ -16,7 +16,13 @@ it.each(["toras/1", "serrada/2"])(
     const detalhes = {
       ...detalhesIniciais(carga),
       nome: "Cliente",
-      cabecalho: { serie: "1", numero: "123", natureza: "Venda", finalidade: "1" },
+      cabecalho: {
+        serie: "1",
+        numero: "123",
+        natureza: "Venda",
+        finalidade: "1",
+        tipo: "0" as const,
+      },
     };
     const nota = montarRascunho(
       { nome: "Emitente", cnpj: "11222333000181", ie: "123" },
@@ -31,6 +37,7 @@ it.each(["toras/1", "serrada/2"])(
     expect(copia.origem).toBe(origem);
     expect(copia.total).toBe(5000);
     expect(copia.assinado).toBe(false);
+    expect(copia.detalhes?.cabecalho?.tipo).toBe("0");
     expect(copia.detalhes?.cabecalho?.numero).toBe("");
     copia.itens[0]!.quantidade = 99;
     expect(nota.itens[0]!.quantidade).toBe(2.5);
