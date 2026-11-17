@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileUp, Pencil, Plus, Trash2, Save } from 'lucide-react';
+import { FileUp, Pencil, Plus, Trash2, Save, FileText, FileSpreadsheet, Download, Share2, LoaderCircle } from 'lucide-react';
+import { baixarArquivo, compartilharArquivoExato, type ArquivoGerado } from '@/lib/arquivo';
+import { gerarExcelImportado, gerarPdfImportado } from '@/lib/romaneio-serrado-exportar';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -46,7 +48,10 @@ function RomaneioEditor({empresa,documento,abas,onCancelar,onSalvo}:{empresa:str
   </form>;
 }
 
-export function RomaneiosSerradosImportados({empresa,podeOperar,q}:{empresa:string;podeOperar:boolean;q:string}) {
+export function RomaneiosSerradosImportados({empresa,empresaNome,podeOperar,q}:{empresa:string;empresaNome?:string;podeOperar:boolean;q:string}) {
+  const [arq,setArq]=useState<ArquivoGerado|null>(null);const [gerando,setGerando]=useState(false);const [arqOpen,setArqOpen]=useState(false);
+  async function exportar(r:RomaneioImportado,tipo:'pdf'|'xlsx'){setArqOpen(true);setGerando(true);setArq(null);try{setArq(tipo==='pdf'?await gerarPdfImportado(r,empresaNome??'Empresa'):await gerarExcelImportado(r));}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível gerar o arquivo');setArqOpen(false);}finally{setGerando(false);}}
+  async function compartilhar(){if(!arq)return;const m=await compartilharArquivoExato(arq);if(m==='baixado')toast.info('Arquivo salvo para anexar no WhatsApp');}
   const qc=useQueryClient();const query=useQuery(importadosQuery(empresa));
   const input=useRef<HTMLInputElement>(null);
   const [abas,setAbas]=useState<AbaRomaneio[]>([]);const [edit,setEdit]=useState<RomaneioImportado>();const [open,setOpen]=useState(false);const [busy,setBusy]=useState(false);
@@ -57,7 +62,8 @@ export function RomaneiosSerradosImportados({empresa,podeOperar,q}:{empresa:stri
     <input ref={input} hidden type="file" accept=".xlsx,.xls" aria-label="Planilha de romaneio serrado" onChange={e=>{const file=e.target.files?.[0];if(file)void ler(file);}}/>
     {query.isPending&&<p className="text-sm text-muted-foreground">Carregando romaneios importados…</p>}
     {query.error&&<p className="text-sm text-destructive">Não foi possível carregar os romaneios importados. <Button variant="outline" size="sm" onClick={()=>void query.refetch()}>Tentar novamente</Button></p>}
-    <div className="divide-y">{(query.data??[]).filter(r=>r.empresa_id===empresa&&`${r.cab.numero_carga} ${r.cab.cliente_nome} ${r.cab.placa_veiculo} ${r.itens.map(i=>`${i.especie} ${i.nome_cientifico} ${i.autex}`).join(' ')}`.toLowerCase().includes(q.toLowerCase())).map(r=><div key={r.id} className="py-3 space-y-2"><div className="flex flex-wrap justify-between gap-2"><div><h4 className="font-bold text-lg">{r.cab.numero_carga}</h4><p className="text-sm break-words">{r.cab.cliente_nome} · {[...new Set(r.itens.map(i=>i.especie))].join(', ')}</p></div><strong>{Number(r.total_volume_m3).toFixed(4).replace('.',',')} m³</strong></div><div className="flex flex-wrap justify-between items-center gap-2"><p className="text-xs text-muted-foreground">{r.total_pecas} peças · {r.cab.data.split('-').reverse().join('/')} · Importado · Sem expedição</p>{podeOperar&&<Button size="sm" variant="outline" onClick={()=>{setEdit(r);setAbas([]);setOpen(true);}}><Pencil/>Editar romaneio</Button>}</div></div>)}</div>
+    <div className="divide-y">{(query.data??[]).filter(r=>r.empresa_id===empresa&&`${r.cab.numero_carga} ${r.cab.cliente_nome} ${r.cab.placa_veiculo} ${r.itens.map(i=>`${i.especie} ${i.nome_cientifico} ${i.autex}`).join(' ')}`.toLowerCase().includes(q.toLowerCase())).map(r=><div key={r.id} className="py-3 space-y-2"><div className="flex flex-wrap justify-between gap-2"><div><h4 className="font-bold text-lg">{r.cab.numero_carga}</h4><p className="text-sm break-words">{r.cab.cliente_nome} · {[...new Set(r.itens.map(i=>i.especie))].join(', ')}</p></div><strong>{Number(r.total_volume_m3).toFixed(4).replace('.',',')} m³</strong></div><div className="flex flex-wrap justify-between items-center gap-2"><p className="text-xs text-muted-foreground">{r.total_pecas} peças · {r.cab.data.split('-').reverse().join('/')} · Importado · Sem expedição</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={()=>void exportar(r,'pdf')}><FileText/>PDF</Button><Button size="sm" variant="outline" onClick={()=>void exportar(r,'xlsx')}><FileSpreadsheet/>Excel</Button>{podeOperar&&<Button size="sm" variant="outline" onClick={()=>{setEdit(r);setAbas([]);setOpen(true);}}><Pencil/>Editar romaneio</Button>}</div></div></div>)}</div>
+    <Dialog open={arqOpen} onOpenChange={setArqOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{gerando?'Gerando arquivo…':'Romaneio pronto'}</DialogTitle><DialogDescription className="break-all">{arq?.nome??'Romaneio importado'}</DialogDescription></DialogHeader>{gerando&&<LoaderCircle className="animate-spin mx-auto"/>}{arq&&<div className="space-y-2"><Button className="w-full" onClick={()=>baixarArquivo(arq)}><Download/>Baixar</Button><Button className="w-full" variant="secondary" onClick={()=>void compartilhar()}><Share2/>Compartilhar (WhatsApp)</Button></div>}</DialogContent></Dialog>
     <Dialog open={podeOperar&&open} onOpenChange={v=>{if(!v)setOpen(false);}}><DialogContent className="sm:max-w-4xl max-h-[90dvh] overflow-y-auto"><DialogHeader><DialogTitle>{edit?'Editar romaneio importado':'Importar romaneio de madeira serrada'}</DialogTitle><DialogDescription>{edit?edit.cab.numero_carga:'Conferência da planilha'}</DialogDescription></DialogHeader>{open&&podeOperar&&<RomaneioEditor key={edit?.id??abas.map(a=>a.nome).join('|')} empresa={empresa} {...(edit?{documento:edit}:{})} abas={abas} onCancelar={()=>setOpen(false)} onSalvo={()=>void salvo()}/>}</DialogContent></Dialog>
   </div>;
 }
