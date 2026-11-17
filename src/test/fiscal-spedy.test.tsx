@@ -1,5 +1,5 @@
 import { it, expect, vi, afterEach } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route } from "@/routes/fiscal";
 import { verificarSandbox } from "@/lib/spedy.server";
@@ -24,6 +24,7 @@ vi.mock("@/lib/fiscal-cargas", () => ({
 afterEach(() => {
   cleanup();
   sessionStorage.clear();
+  localStorage.clear();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -131,6 +132,71 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", ()
   expect(JSON.parse(sessionStorage.getItem(chave)!).historico).toEqual([
     { ...antigo, detalhes: expect.objectContaining({ modFrete: "9" }) },
   ]);
+});
+it("consulta CNPJ, cadastra cliente e produto e reutiliza os dados ao preparar a nota", async () => {
+  const cnpj = "11222333000181";
+  const http = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      cnpj,
+      razao_social: "Madeiras Exemplo",
+      logradouro: "Rua A",
+      numero: "10",
+      bairro: "Centro",
+      municipio: "Manaus",
+      uf: "AM",
+      cep: "69000000",
+    }),
+  });
+  vi.stubGlobal("fetch", http);
+  const Fiscal = Route.options.component!;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Fiscal />
+    </QueryClientProvider>,
+  );
+  const preencher = (label: string, value: string) =>
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  preencher("CNPJ", cnpj);
+  await screen.findByDisplayValue("Madeiras Exemplo", {}, { timeout: 3000 });
+  expect(screen.getByLabelText("Município do emitente")).toHaveValue("Manaus");
+  preencher("Inscrição estadual", "123");
+  fireEvent.click(screen.getByText("Salvar cadastro"));
+  fireEvent.click(screen.getByText("Simular contratação"));
+  fireEvent.click(screen.getByText("Cadastros de clientes e produtos"));
+  preencher("CPF ou CNPJ do destinatário", cnpj);
+  await waitFor(() => expect(screen.getByLabelText("Logradouro")).toHaveValue("Rua A"), {
+    timeout: 3000,
+  });
+  fireEvent.click(screen.getByText("Salvar cliente"));
+  expect(localStorage.getItem("fiscal-spedy-v1:usuario:a:cadastros:cliente:" + cnpj)).toContain(
+    "Manaus",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Produtos" }));
+  for (const [label, v] of Object.entries({
+    "Código do item": "JAT",
+    "Descrição do produto": "Jatobá serrado",
+    NCM: "44072990",
+    "CFOP padrão": "5101",
+    "Preço padrão por m³ (R$)": "120",
+  }))
+    preencher(label, v);
+  fireEvent.click(screen.getByText("Salvar produto"));
+  fireEvent.click(screen.getByText("Cadastros de clientes e produtos"));
+  await screen.findByText("Carga 1");
+  preencher("Romaneio", "toras/1");
+  await screen.findByLabelText("Buscar cliente cadastrado");
+  preencher("Buscar cliente cadastrado", cnpj);
+  expect(screen.getByLabelText("Município")).toHaveValue("Manaus");
+  fireEvent.click(screen.getByRole("button", { name: "Produtos" }));
+  preencher("Produto cadastrado", "JAT");
+  expect(screen.getByLabelText("NCM da operação")).toHaveValue("44072990");
+  expect(screen.getByLabelText("CFOP da operação")).toHaveValue("5101");
+  fireEvent.click(screen.getByRole("button", { name: "Transporte" }));
+  preencher("Modalidade do frete", "1");
+  fireEvent.click(screen.getByText("Gerar prévia e salvar rascunho"));
+  expect(screen.getByText(/Total dos produtos/)).toHaveTextContent("180,00");
+  expect(screen.getByText(/Jatobá serrado · NCM/)).toHaveTextContent("CFOP 5101");
 });
 it("consulta somente o sandbox e usa exclusivamente a chave da empresa", async () => {
   const id = "00000000-0000-4000-8000-000000000001";

@@ -1,5 +1,15 @@
 # Fiscal em homologação
 
+## Cadastros e preenchimento
+
+Em **Fiscal → Cadastros de clientes e produtos**, salve clientes com documento e endereço, e produtos com código, descrição, NCM, CFOP padrão e preço por m³. O catálogo e o emitente ficam neste navegador, separados por usuário e empresa. A sincronização entre computadores exige persistência no banco.
+
+A preparação e a edição da nota têm as seções Cliente, Produtos, Transporte e Fisco. Selecionar um cliente copia seus dados. Selecionar um produto copia descrição, NCM, CFOP e preço, mantendo o volume da carga. O CFOP permanece editável para conferir a operação. Os dados de motorista e veículo vêm do romaneio.
+
+Ao digitar um CNPJ completo no emitente ou no cliente, a BrasilAPI consulta razão social e endereço. A consulta usa dados públicos e permite preenchimento manual se estiver indisponível. A inscrição estadual é preenchida e conferida pelo usuário. Cadastros já salvos podem ser selecionados sem nova consulta.
+
+[Consulta pública por CNPJ](https://brasilapi.com.br/docs)
+
 Acesse **Fiscal** com um administrador da empresa. No perfil de administrador geral, escolha a empresa no seletor do Gestor. O módulo usa a sessão do Gestor e consulta as tabelas de cargas pelo identificador da empresa, com as políticas de acesso existentes.
 
 ## Experimentar o fluxo

@@ -1,4 +1,13 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { CadastrosFiscais } from "@/components/CatalogoFiscal";
+import { ConsultaCnpjFiscal } from "@/components/ConsultaCnpjFiscal";
+import {
+  documentoId,
+  lerCatalogo,
+  type CatalogoFiscal,
+  type ProdutoFiscal,
+  type ClienteFiscal,
+} from "@/lib/catalogo-fiscal";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -13,6 +22,7 @@ import {
   chaveFiscal,
   detalhesIniciais,
   modalidadesFrete,
+  camposEndereco,
   type DetalhesNota,
   contaNova,
   montarRascunho,
@@ -48,10 +58,40 @@ function Fiscal() {
   return <Painel key={chave} empresa={empresa} chave={chave} />;
 }
 function Painel({ empresa, chave }: { empresa: string; chave: string }) {
-  const [conta, setConta] = useState<ContaFiscal>(
-    () => JSON.parse(sessionStorage.getItem(chave) || "null") ?? contaNova(),
-  );
+  const [conta, setConta] = useState<ContaFiscal>(() => {
+    const sessao: ContaFiscal = JSON.parse(sessionStorage.getItem(chave) || "null") ?? contaNova();
+    return {
+      ...sessao,
+      cadastro: JSON.parse(localStorage.getItem(chave + ":emitente") || "null") ?? sessao.cadastro,
+    };
+  });
   const [cadastro, setCadastro] = useState(conta.cadastro);
+  const prefixo = chave + ":cadastros:";
+  const [catalogo, setCatalogo] = useState(() => lerCatalogo(prefixo));
+  const [mostrarCadastros, setMostrarCadastros] = useState(false);
+  const [buscarEmitente, setBuscarEmitente] = useState("");
+  useEffect(() => {
+    const atualizar = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith(prefixo)) setCatalogo(lerCatalogo(prefixo));
+    };
+    window.addEventListener("storage", atualizar);
+    return () => window.removeEventListener("storage", atualizar);
+  }, [prefixo]);
+  function gravar(
+    tipo: "cliente" | "produto",
+    id: string,
+    registro: ClienteFiscal | ProdutoFiscal,
+  ) {
+    try {
+      localStorage.setItem(prefixo + tipo + ":" + id, JSON.stringify(registro));
+      setCatalogo(lerCatalogo(prefixo));
+      toast.success("Cadastro salvo.");
+      return true;
+    } catch {
+      toast.error("Falha ao salvar cadastro neste navegador.");
+      return false;
+    }
+  }
   const [origem, setOrigem] = useState("");
   const [aberto, setAberto] = useState("");
   const [conexao, setConexao] = useState("");
@@ -86,9 +126,17 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
   return (
     <main className="space-y-4">
       <h1 className="text-3xl font-bold">Fiscal</h1>
+      <Button
+        variant="outline"
+        aria-expanded={mostrarCadastros}
+        onClick={() => setMostrarCadastros(!mostrarCadastros)}
+      >
+        Cadastros de clientes e produtos
+      </Button>
+      {mostrarCadastros && <CadastrosFiscais catalogo={catalogo} gravar={gravar} />}
       <p>
-        Homologação Spedy · Rascunhos sem valor fiscal. Cadastro e histórico ficam nesta aba durante
-        a sessão.
+        Homologação Spedy · Rascunhos sem valor fiscal. Clientes e produtos ficam neste navegador. O
+        histórico fica nesta aba durante a sessão.
       </p>
       <section className={painel}>
         <h2 className="text-xl font-bold">Emitente</h2>
@@ -101,13 +149,19 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               toast.error("Confira a razão social, o CNPJ e a inscrição estadual.");
               return;
             }
+            try {
+              localStorage.setItem(chave + ":emitente", JSON.stringify(cadastro));
+            } catch {
+              toast.error("Falha ao salvar o emitente neste navegador.");
+              return;
+            }
             if (salvar({ ...conta, cadastro })) toast.success("Cadastro fiscal salvo.");
           }}
         >
           {(
             [
-              ["nome", "Razão social"],
               ["cnpj", "CNPJ"],
+              ["nome", "Razão social"],
               ["ie", "Inscrição estadual"],
             ] as const
           ).map(([campo, label]) => (
@@ -117,10 +171,42 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
                 required
                 maxLength={campo === "cnpj" ? 18 : 120}
                 value={cadastro[campo]}
-                onChange={(e) => setCadastro({ ...cadastro, [campo]: e.target.value })}
+                onChange={(e) => {
+                  if (campo === "cnpj") setBuscarEmitente(e.target.value);
+                  setCadastro({ ...cadastro, [campo]: e.target.value });
+                }}
               />
             </label>
           ))}
+          <ConsultaCnpjFiscal
+            documento={buscarEmitente}
+            aplicar={(c) =>
+              setCadastro((atual) => ({ ...atual, nome: c.nome, endereco: c.endereco }))
+            }
+          />
+          <details open={!!cadastro.endereco}>
+            <summary>Endereço do emitente</summary>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(Object.keys(camposEndereco) as (keyof typeof camposEndereco)[]).map((k) => (
+                <label key={k}>
+                  {camposEndereco[k]} do emitente
+                  <Input
+                    value={cadastro.endereco?.[k] ?? ""}
+                    onChange={(e) =>
+                      setCadastro({
+                        ...cadastro,
+                        endereco: {
+                          ...detalhesIniciais({ numero: "", data: "", itens: [] }).endereco,
+                          ...cadastro.endereco,
+                          [k]: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </details>
           <Button>Salvar cadastro</Button>
         </form>
         <p>Assinatura do módulo · {conta.assinatura ? "Ativa em simulação" : "Inativa"}</p>
@@ -165,10 +251,18 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           <Editor
             key={origem}
             carga={carga.data}
+            catalogo={catalogo}
             habilitado={conta.assinatura && !!conta.cadastro.nome}
-            gerar={(cliente, precos) => {
+            gerar={(cliente, precos, fiscais) => {
               try {
-                const r = montarRascunho(conta.cadastro, carga.data, origem, cliente, precos);
+                const r = montarRascunho(
+                  conta.cadastro,
+                  carga.data,
+                  origem,
+                  cliente,
+                  precos,
+                  fiscais,
+                );
                 if (
                   salvar({
                     ...conta,
@@ -191,10 +285,22 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           <EditarDadosNota
             key={previa.origem}
             r={previa}
+            catalogo={catalogo}
             habilitado={conta.assinatura}
-            salvarDados={(detalhes) => {
+            salvarDados={(detalhes, precos, fiscais) => {
               const atualizado = {
                 ...previa,
+                ...(previa.itens.length
+                  ? montarRascunho(
+                      previa.cadastro,
+                      previa.carga,
+                      previa.origem,
+                      detalhes,
+                      precos,
+                      fiscais,
+                    )
+                  : {}),
+                criado: previa.criado,
                 detalhes,
                 assinado: false,
                 carga: {
@@ -247,40 +353,209 @@ function Editor({
   habilitado,
   gerar,
   existente,
+  catalogo,
   abrir,
+  anterior,
+  cancelar,
 }: {
   carga: DadosNfe;
   habilitado: boolean;
-  gerar: (cliente: DetalhesNota, precos: string[]) => void;
+  gerar: (cliente: DetalhesNota, precos: string[], fiscais: ProdutoFiscal[]) => void;
+  catalogo: CatalogoFiscal;
   existente: boolean;
   abrir: () => void;
+  anterior?: Rascunho;
+  cancelar?: () => void;
 }) {
-  const [cliente, setCliente] = useState(() => detalhesIniciais(carga));
-  const [precos, setPrecos] = useState(carga.itens.map(() => ""));
+  const [cliente, setCliente] = useState(() =>
+    anterior
+      ? (anterior.detalhes ?? detalhesIniciais(anterior.carga))
+      : {
+          ...detalhesIniciais(carga),
+          ...catalogo.clientes.find(
+            (c) => documentoId(c.documento) === documentoId(carga.cliente?.documento ?? ""),
+          ),
+        },
+  );
+  const [aba, setAba] = useState("Cliente");
+  const [buscarCliente, setBuscarCliente] = useState("");
+  const [produtos, setProdutos] = useState(() =>
+    carga.itens.map((i, index) => {
+      const salvo = anterior?.itens[index];
+      if (salvo)
+        return {
+          codigo: salvo.codigo,
+          descricao: salvo.descricao,
+          ncm: salvo.ncm,
+          cfop: salvo.cfop ?? "",
+          preco: String(salvo.preco),
+        };
+      const p = catalogo.produtos.find((p) => p.codigo === i.codigo && p.descricao === i.descricao);
+      return p ?? { codigo: i.codigo, descricao: i.descricao, ncm: i.ncm, cfop: "", preco: "" };
+    }),
+  );
+  function atualizar(index: number, produto: ProdutoFiscal) {
+    setProdutos((ps) => ps.map((p, n) => (n === index ? produto : p)));
+  }
   if (existente) return <Button onClick={abrir}>Abrir rascunho existente</Button>;
   return (
     <form
       className="space-y-3"
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        gerar(cliente, precos);
+        const invalido = e.currentTarget.querySelector<HTMLInputElement>(
+          ":is(input,select,textarea):invalid",
+        );
+        if (invalido) {
+          const secao = invalido.closest<HTMLElement>("[data-aba]")?.dataset["aba"];
+          if (secao) setAba(secao);
+          requestAnimationFrame(() => {
+            invalido.focus();
+            invalido.reportValidity();
+          });
+          return;
+        }
+        gerar(
+          cliente,
+          produtos.map((p) => p.preco),
+          produtos,
+        );
       }}
     >
-      <DadosFiscaisNota dados={cliente} alterar={setCliente} />
-      {carga.itens.map((i, n) => (
-        <label className="block" key={i.descricao}>
-          {i.descricao} · {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} m³ ·
-          Preço por m³ (R$)
-          <Input
-            required
-            inputMode="decimal"
-            value={precos[n]}
-            onChange={(e) => setPrecos(precos.map((p, j) => (j === n ? e.target.value : p)))}
-          />
+      <div className="flex flex-wrap gap-2">
+        {["Cliente", "Produtos", "Transporte", "Fisco"].map((a) => (
+          <Button
+            type="button"
+            key={a}
+            aria-pressed={aba === a}
+            variant={aba === a ? "default" : "outline"}
+            onClick={() => setAba(a)}
+          >
+            {a}
+          </Button>
+        ))}
+      </div>
+      <div hidden={aba !== "Cliente"} data-aba="Cliente">
+        <label>
+          Buscar cliente cadastrado
+          <select
+            className="block w-full rounded border bg-background p-2"
+            value={
+              catalogo.clientes.find(
+                (c) => documentoId(c.documento) === documentoId(cliente.documento),
+              )?.documento ?? ""
+            }
+            onChange={(e) => {
+              setBuscarCliente("");
+              const c = catalogo.clientes.find((c) => c.documento === e.target.value);
+              setCliente({
+                ...cliente,
+                ...(c ?? detalhesIniciais(carga)),
+                modFrete: cliente.modFrete,
+                infAdFisco: cliente.infAdFisco,
+              });
+            }}
+          >
+            <option value="">Preencher destinatário</option>
+            {catalogo.clientes.map((c) => (
+              <option key={c.documento} value={c.documento}>
+                {c.nome} · {c.documento}
+              </option>
+            ))}
+          </select>
         </label>
-      ))}
+        <DadosFiscaisNota
+          secao="cliente"
+          dados={cliente}
+          alterar={(d) => {
+            if (d.documento !== cliente.documento) {
+              const salvo = catalogo.clientes.find(
+                (c) => documentoId(c.documento) === documentoId(d.documento),
+              );
+              setBuscarCliente(salvo ? "" : d.documento);
+              if (salvo) {
+                setCliente({ ...d, ...salvo });
+                return;
+              }
+            }
+            setCliente(d);
+          }}
+        />
+        <ConsultaCnpjFiscal
+          documento={buscarCliente}
+          aplicar={(c) => setCliente((d) => ({ ...d, ...c }))}
+        />
+      </div>
+      <div hidden={aba !== "Transporte"} data-aba="Transporte">
+        <p>
+          Motorista · {carga.motorista?.nome || "Não informado"} {carga.motorista?.cpf}
+        </p>
+        <p>
+          Veículo · {carga.placa || "Não informado"} {carga.reboque}
+        </p>
+        <DadosFiscaisNota secao="transporte" dados={cliente} alterar={setCliente} />
+      </div>
+      <div hidden={aba !== "Fisco"} data-aba="Fisco">
+        <DadosFiscaisNota secao="fisco" dados={cliente} alterar={setCliente} />
+      </div>
+      <div hidden={aba !== "Produtos"} data-aba="Produtos">
+        {carga.itens.map((i, n) => (
+          <fieldset className="mb-3 space-y-2 rounded border p-3" key={i.descricao}>
+            <legend>{i.descricao}</legend>
+            <label>
+              Produto cadastrado
+              <select
+                className="block w-full rounded border bg-background p-2"
+                value={
+                  catalogo.produtos.find((p) => p.codigo === produtos[n]?.codigo)?.codigo ?? ""
+                }
+                onChange={(e) => {
+                  const p = catalogo.produtos.find((p) => p.codigo === e.target.value);
+                  atualizar(n, p ?? { ...i, cfop: "", preco: "" });
+                }}
+              >
+                <option value="">Usar item do romaneio</option>
+                {catalogo.produtos.map((p) => (
+                  <option key={p.codigo} value={p.codigo}>
+                    {p.codigo} · {p.descricao}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(["ncm", "cfop"] as const).map((k) => (
+              <label key={k}>
+                {k.toUpperCase()} da operação
+                <Input
+                  pattern={k === "ncm" ? "[0-9]{8}" : "[0-9]{4}"}
+                  value={produtos[n]?.[k] ?? ""}
+                  onChange={(e) => atualizar(n, { ...produtos[n]!, [k]: e.target.value })}
+                />
+              </label>
+            ))}
+            <label className="block" key={i.descricao}>
+              {i.descricao} · {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}{" "}
+              m³ · Preço por m³ (R$)
+              <Input
+                required
+                inputMode="decimal"
+                value={produtos[n]?.preco ?? ""}
+                onChange={(e) => atualizar(n, { ...produtos[n]!, preco: e.target.value })}
+              />
+            </label>
+          </fieldset>
+        ))}
+      </div>
       {!habilitado && <p>Salve o cadastro e ative a assinatura simulada para criar o rascunho.</p>}
-      <Button disabled={!habilitado || !carga.itens.length}>Gerar prévia e salvar rascunho</Button>
+      {anterior?.assinado && <p>Ao salvar as alterações, a nota volta ao estado de rascunho.</p>}
+      <Button disabled={!habilitado || (!anterior && !carga.itens.length)}>
+        {anterior ? "Salvar alterações" : "Gerar prévia e salvar rascunho"}
+      </Button>
+      {cancelar && (
+        <Button type="button" variant="outline" onClick={cancelar}>
+          Cancelar
+        </Button>
+      )}
     </form>
   );
 }
@@ -288,10 +563,12 @@ function EditarDadosNota({
   r,
   habilitado,
   salvarDados,
+  catalogo,
 }: {
   r: Rascunho;
   habilitado: boolean;
-  salvarDados: (d: DetalhesNota) => boolean;
+  salvarDados: (d: DetalhesNota, precos: string[], fiscais: ProdutoFiscal[]) => boolean;
+  catalogo: CatalogoFiscal;
 }) {
   const [edicao, setEdicao] = useState<DetalhesNota | null>(null);
   if (!edicao)
@@ -305,20 +582,22 @@ function EditarDadosNota({
       </Button>
     );
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (habilitado && salvarDados(edicao)) setEdicao(null);
+    <Editor
+      carga={r.carga}
+      catalogo={catalogo}
+      anterior={r}
+      habilitado={habilitado}
+      existente={false}
+      abrir={() => {}}
+      cancelar={() => setEdicao(null)}
+      gerar={(d, precos, fiscais) => {
+        try {
+          if (habilitado && salvarDados(d, precos, fiscais)) setEdicao(null);
+        } catch (e) {
+          toast.error((e as Error).message);
+        }
       }}
-    >
-      <DadosFiscaisNota dados={edicao} alterar={setEdicao} />
-      {r.assinado && <p>Ao salvar as alterações, a nota volta ao estado de rascunho.</p>}
-      <Button disabled={!habilitado}>Salvar alterações</Button>{" "}
-      <Button type="button" variant="outline" onClick={() => setEdicao(null)}>
-        Cancelar
-      </Button>
-    </form>
+    />
   );
 }
 function Previa({ r }: { r: Rascunho }) {
@@ -331,6 +610,11 @@ function Previa({ r }: { r: Rascunho }) {
       <p>
         {r.cadastro.nome} · CNPJ {r.cadastro.cnpj} · IE {r.cadastro.ie}
       </p>
+      {r.cadastro.endereco && (
+        <p>
+          Endereço do emitente · {Object.values(r.cadastro.endereco).filter(Boolean).join(", ")}
+        </p>
+      )}
       <p>Destinatário · {r.carga.cliente.nome}</p>
       <p>CPF ou CNPJ · {r.carga.cliente.documento || "Pendente"}</p>
       <p>
@@ -362,8 +646,8 @@ function Previa({ r }: { r: Rascunho }) {
       </p>
       <ul>
         {r.itens.map((i) => (
-          <li key={i.descricao}>
-            {i.descricao} · NCM {i.ncm} ·{" "}
+          <li key={i.codigo + "-" + r.itens.indexOf(i)}>
+            {i.descricao} · NCM {i.ncm} · CFOP {i.cfop || "Pendente"} ·{" "}
             {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} m³ ×{" "}
             {moeda(i.preco)} = {moeda(i.centavos / 100)}
           </li>

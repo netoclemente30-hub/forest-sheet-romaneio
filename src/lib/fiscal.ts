@@ -1,7 +1,12 @@
 import type { DadosNfe } from "./nfe-txt";
 import { cnpjValido } from "./cnpj";
 
-export type Cadastro = { nome: string; cnpj: string; ie: string };
+export type Cadastro = {
+  nome: string;
+  cnpj: string;
+  ie: string;
+  endereco?: DetalhesNota["endereco"];
+};
 export const modalidadesFrete = {
   "0": "CIF · Frete por conta do remetente",
   "1": "FOB · Frete por conta do destinatário",
@@ -61,6 +66,7 @@ export function montarRascunho(
   origem: string,
   detalhes: DetalhesNota,
   precos: string[],
+  fiscais: { codigo: string; descricao: string; ncm: string; cfop: string }[] = [],
 ) {
   if (!cadastro.nome.trim() || !cnpjValido(cadastro.cnpj) || !cadastro.ie.trim())
     throw new Error("Revise o cadastro do emitente.");
@@ -78,6 +84,7 @@ export function montarRascunho(
       throw new Error("Informe quantidade e preço positivos em todos os itens.");
     return {
       ...item,
+      ...fiscais[index],
       preco: Number(valor),
       centavos: Math.round(item.quantidade * Number(valor) * 100),
     };
