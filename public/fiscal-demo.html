@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Fiscal · Gestor Florestal</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#f2f5ef;color:#20382d;font:16px/1.5 system-ui,sans-serif}header{background:#193f32;color:white;padding:16px max(5vw,20px);font-weight:700}main{max-width:920px;margin:32px auto;padding:0 18px}h1{font-size:clamp(30px,6vw,50px);margin:0;letter-spacing:-.04em}h2{font-size:21px;margin:0 0 16px}p{margin:6px 0 16px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(290px,100%),1fr));gap:16px}section{background:white;border:1px solid #cfdbce;padding:22px;border-radius:12px;margin:16px 0}.grid section{margin:0}label{display:block;font-weight:600;margin:12px 0}input,select,button{font:inherit;padding:9px;border-radius:6px}input,select{display:block;width:100%;border:1px solid #819487;color:inherit;background:white}button{background:#22503d;color:white;border:0;cursor:pointer}button:disabled{background:#d7dfd9;color:#516356;cursor:default}small{display:block;color:#4c6255}#preview{white-space:pre-line;border-left:4px solid #609972;padding-left:16px}li{margin:.5rem 0}li button{background:#edf3ed;color:#204530}#status{color:#195238;font-weight:600}
+details{margin:16px 0}summary{cursor:pointer;font-weight:600}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;margin:16px 0}caption{text-align:left;font-weight:700}th,td{text-align:left;padding:9px 7px;border-bottom:1px solid #d6dfd8}th{font-size:13px;color:#486253}td input{min-width:90px;max-width:125px}td:last-child{white-space:nowrap}
+</style>
+<header>Gestor Florestal / Fiscal</header>
+<main>
+<h1>Emissor de NF-e</h1>
+<p>Simulação Focus NFe · Romaneios de exemplo · Sem valor fiscal</p>
+<label>Empresa de teste<select id="company"><option value="norte">Madenorte</option><option value="vale">Serraria do Vale</option></select></label>
+<details><summary>Cadastro, assinatura e certificado da empresa</summary><div class="grid">
+<section><h2>Cadastro do emitente</h2>
+<label>Nome do emitente de teste<input id="issuer" maxlength="80" autocomplete="off"></label>
+<label>Identificação do estabelecimento<input id="identifier" readonly></label>
+<button id="save">Salvar cadastro</button>
+</section>
+<section><h2>Habilitação do emissor</h2>
+<p id="planState"></p><button id="plan"></button>
+<p id="certState" style="margin-top:16px"></p><button id="cert"></button>
+</section></div></details>
+<section><h2>Itens da nota a partir do romaneio</h2>
+<label>Romaneio da empresa<select id="shipment"></select></label>
+<p id="summary"></p><details><summary>Conferir peças do romaneio</summary><ul id="pieces"></ul></details>
+<div class="scroll"><table><caption>Produtos da NF-e</caption><thead><tr><th>Descrição</th><th>Quantidade</th><th>R$/m³</th><th>Valor do item</th></tr></thead><tbody id="products"></tbody></table></div>
+<p>Total dos produtos <strong id="total"></strong></p><button id="generate">Gerar rascunho</button>
+<small id="requirements"></small></section>
+<section><h2>Prévia da NF-e</h2><div id="preview"></div>
+<button id="sign" hidden>Simular assinatura digital</button></section>
+<section><h2>Histórico da empresa</h2><p id="empty">Nenhum rascunho nesta sessão.</p><ul id="history"></ul>
+<small>O histórico fica disponível enquanto esta página estiver aberta. Recarregar reinicia a demonstração.</small></section>
+<p id="status" role="status"></p>
+</main>
+<script>
+"use strict";
+// Romaneios fictícios seguem os campos de DadosNfe usados em src/lib/nfe-txt.ts.
+const companies = {
+  norte: { nome: "Madenorte", id: "DEMO-MADENORTE", cargas: [
+    { numero: "MD-101", data: "2026-11-10", cliente: "Beneficiadora Horizonte", placa: "DEMO-01", motorista: "Condutor A", toras: [
+      { placa: "T-041", especie: "Abiurana", volume: 1.28 },
+      { placa: "T-042", especie: "Abiurana", volume: 1.72 }] },
+    { numero: "MD-102", data: "2026-11-11", cliente: "Depósito das Águas", placa: "DEMO-02", motorista: "Condutor B", toras: [
+      { placa: "T-050", especie: "Abiurana", volume: 1.4 },
+      { placa: "T-051", especie: "Jatobá", volume: 2.375 },
+      { placa: "T-052", especie: "Abiurana", volume: 0.85 }] }] },
+  vale: { nome: "Serraria do Vale", id: "DEMO-VALE", cargas: [
+    { numero: "SV-201", data: "2026-11-12", cliente: "Oficina Central", placa: "DEMO-03", motorista: "Condutor C", itens: [
+      { descricao: "Pranchas de Angelim", quantidade: 1.875, pecas: 25 }] }] }
+};
+const field = id => document.getElementById(id);
+const accounts = new Map();
+let company;
+let account;
+let selected;
+const volume = qty => qty.toLocaleString("pt-BR", {minimumFractionDigits: 0, maximumFractionDigits: 4}) + " m³";
+function openCompany() {
+  company = companies[field("company").value];
+  if (!accounts.has(company.id)) accounts.set(company.id, {nome: company === companies.norte ? company.nome : "", plano: company === companies.norte, a1: company === companies.norte, drafts: [], precos: new Map()});
+  account = accounts.get(company.id);
+  selected = null;
+  field("issuer").value = account.nome || company.nome;
+  field("identifier").value = company.id;
+  field("shipment").replaceChildren(...company.cargas.map(c => new Option(c.numero + " · " + c.cliente, c.numero)));
+  render();
+}
+function currentShipment() {
+  return company.cargas.find(c => c.numero === field("shipment").value);
+}
+const moeda = v => v.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+function itensDaCarga(carga) {
+  if (!carga.toras) return carga.itens;
+  const especies = new Map();
+  for (const tora of carga.toras) {
+    const item = especies.get(tora.especie) || {descricao: tora.especie + " em toras", pecas: 0, quantidade: 0};
+    item.pecas++;
+    item.quantidade += tora.volume;
+    especies.set(tora.especie, item);
+  }
+  return [...especies.values()];
+}
+function mostrarProdutos(carga) {
+  const draft = account.drafts.find(d => d.numero === carga.numero);
+  const itens = draft?.itens ?? itensDaCarga(carga);
+  field("pieces").replaceChildren(...(carga.toras ?? carga.itens).map(p => {
+    const li = document.createElement("li");
+    li.textContent = p.especie ? [p.placa, p.especie, volume(p.volume)].join(" · ") : p.pecas + " peças · " + p.descricao;
+    return li;
+  }));
+  const valores = [];
+  field("products").replaceChildren(...itens.map((item, index) => {
+    const row = document.createElement("tr");
+    row.insertCell().textContent = item.descricao;
+    row.insertCell().textContent = volume(item.quantidade);
+    const preco = document.createElement("input");
+    preco.type = "number"; preco.min = "0"; preco.max = "9999999"; preco.step = "0.01";
+    preco.setAttribute("aria-label", "Preço de teste por m³ de " + item.descricao);
+    const chave = carga.numero + "/" + item.descricao;
+    preco.value = account.precos.get(chave) ?? "500.00";
+    preco.disabled = Boolean(draft);
+    row.insertCell().append(preco);
+    const subtotal = row.insertCell();
+    function atualizar() {
+      const valido = preco.validity.valid && preco.value !== "";
+      valores[index] = valido ? Math.round(item.quantidade * Number(preco.value) * 100) : NaN;
+      subtotal.textContent = valido ? moeda(valores[index] / 100) : "Revisar preço";
+      const soma = valores.reduce((a,b) => a+b, 0);
+      field("total").textContent = Number.isFinite(soma) ? moeda(soma / 100) : "Revisar preço";
+    }
+    preco.oninput = () => { account.precos.set(chave, preco.value); atualizar(); };
+    atualizar();
+    return row;
+  }));
+}
+function render(message = "") {
+  const carga = currentShipment();
+  const missing = [];
+  if (!account.nome) missing.push("salvar o cadastro");
+  if (!account.plano) missing.push("ativar a assinatura do módulo");
+  if (!account.a1) missing.push("configurar o A1 simulado");
+  field("planState").textContent = "Assinatura do módulo · " + (account.plano ? "Ativa (simulada)" : "Inativa");
+  field("plan").textContent = account.plano ? "Suspender assinatura" : "Simular contratação";
+  field("certState").textContent = "Certificado A1 · " + (account.a1 ? "Configurado (simulado)" : "Pendente");
+  field("cert").textContent = account.a1 ? "Remover A1 simulado" : "Configurar A1 simulado";
+  field("summary").textContent = carga.motorista + " · " + carga.placa + " · " + volume(itensDaCarga(carga).reduce((s,i) => s+i.quantidade, 0));
+  mostrarProdutos(carga);
+  field("generate").textContent = account.drafts.some(d => d.numero === carga.numero) ? "Abrir rascunho" : "Gerar rascunho";
+  field("generate").disabled = missing.length > 0;
+  field("requirements").textContent = missing.length ? "Para gerar: " + missing.join(", ") + "." : "";
+  field("preview").textContent = selected ? [
+    selected.id + " · " + selected.estado, "Emitente: " + selected.emitente + " · " + company.id,
+    "Romaneio " + selected.numero + " · " + selected.data.split("-").reverse().join("/"),
+    "Destinatário: " + selected.cliente, "Transporte: " + selected.motorista + " · " + selected.placa,
+    ...selected.itens.map(i => i.descricao + " · " + volume(i.quantidade) + " · " + moeda(i.preco) + "/m³ · " + moeda(i.centavos / 100)),
+    "Total: " + volume(selected.itens.reduce((s,i) => s+i.quantidade, 0)),
+    "Total dos produtos: " + moeda(selected.itens.reduce((s,i) => s+i.centavos, 0) / 100),
+    "CFOP e tributos pendentes de revisão fiscal."
+  ].join("\n") : "Gere um rascunho ou abra um documento do histórico.";
+  field("sign").hidden = !selected || selected.estado !== "Rascunho";
+  field("sign").disabled = missing.length > 0;
+  field("empty").hidden = account.drafts.length > 0;
+  field("history").replaceChildren(...account.drafts.map(d => {
+    const row = document.createElement("li");
+    const button = document.createElement("button");
+    button.textContent = d.id + " · " + d.numero + " · " + d.estado;
+    button.onclick = () => { selected = d; field("shipment").value = d.numero; render(); field("preview").scrollIntoView({block:"center"}); };
+    row.append(button);
+    return row;
+  }));
+  field("status").textContent = message;
+}
+field("company").onchange = openCompany;
+field("shipment").onchange = () => { selected = null; render(); };
+field("save").onclick = () => {
+  const nome = field("issuer").value.trim();
+  if (!nome) { field("issuer").focus(); render("Informe a razão social fictícia."); return; }
+  account.nome = nome;
+  render("Cadastro salvo para " + company.id + ".");
+};
+field("plan").onclick = () => { account.plano = !account.plano; render(); };
+field("cert").onclick = () => { account.a1 = !account.a1; render(); };
+field("generate").onclick = () => {
+  const carga = currentShipment();
+  selected = account.drafts.find(d => d.numero === carga.numero);
+  if (selected) { render("Rascunho existente aberto."); return; }
+  const inputs = [...field("products").querySelectorAll("input")];
+  const invalido = inputs.find(i => !i.validity.valid || i.value === "");
+  if (invalido) { invalido.focus(); field("status").textContent = "Revise o preço por m³."; return; }
+  const itens = itensDaCarga(carga).map((item,i) => {
+    const preco = Number(inputs[i].value);
+    return {...item, preco, centavos: Math.round(item.quantidade * preco * 100)};
+  });
+  selected = {...structuredClone(carga), itens, id: company.id + "-" + (account.drafts.length + 1),
+    emitente: account.nome, estado: "Rascunho"};
+  account.drafts.unshift(selected);
+  render("Prévia gerada.");
+};
+field("sign").onclick = () => { selected.estado = "Assinatura simulada"; render("Assinatura digital simulada neste rascunho."); };
+openCompany();
+</script>
+</html>

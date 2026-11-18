@@ -110,6 +110,11 @@ export function AppShell() {
       <header className="no-print bg-forest text-forest-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
         <span className="font-display text-xl font-bold uppercase min-w-0">GESTOR FLORESTAL{"\n"}</span>
         <div className="ml-auto flex items-center gap-1 shrink-0">
+          {(papel === "admin_empresa" || papel === "superadmin") && (
+            <a href="/fiscal-demo.html" className="rounded-md px-3 py-2 text-sm font-semibold hover:bg-white/10">
+              Fiscal
+            </a>
+          )}
           <EscolherAparencia />
           <Button size="icon" variant="ghost" aria-label="Este aparelho" title="Este aparelho" onClick={abrirAparelho} className="opacity-80">
             <Smartphone className="size-5" />
