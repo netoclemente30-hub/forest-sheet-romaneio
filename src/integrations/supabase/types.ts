@@ -222,6 +222,38 @@ export type Database = {
           },
         ]
       }
+      empresa_contador: {
+        Row: {
+          atualizado_em: string
+          email: string
+          empresa_id: string
+          envio_automatico: boolean
+          escritorio: string
+        }
+        Insert: {
+          atualizado_em?: string
+          email?: string
+          empresa_id: string
+          envio_automatico?: boolean
+          escritorio?: string
+        }
+        Update: {
+          atualizado_em?: string
+          email?: string
+          empresa_id?: string
+          envio_automatico?: boolean
+          escritorio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_contador_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresa_usuarios: {
         Row: {
           created_at: string
@@ -253,6 +285,7 @@ export type Database = {
           cnpj: string | null
           created_at: string
           id: string
+          ie: string | null
           nome: string
           status: string
         }
@@ -260,6 +293,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           id?: string
+          ie?: string | null
           nome: string
           status?: string
         }
@@ -267,6 +301,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           id?: string
+          ie?: string | null
           nome?: string
           status?: string
         }

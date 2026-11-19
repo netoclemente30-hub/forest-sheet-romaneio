@@ -19,6 +19,7 @@ import { DadosFiscaisNota } from "@/components/DadosFiscaisNota";
 import { useAuth } from "@/hooks/useAuth";
 import { EVENTO_EMPRESA, getEmpresaAtiva } from "@/lib/empresa";
 import { cnpjValido } from "@/lib/cnpj";
+import { ContadorFiscal } from "@/components/ContadorFiscal";
 import { cargasFiscais, importarCarga } from "@/lib/fiscal-cargas";
 import {
   chaveFiscal,
@@ -171,6 +172,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           salvar({ ...conta, inutilizacoes: [r, ...(conta.inutilizacoes ?? [])] })
         }
       />
+      <ContadorFiscal empresa={empresa} />
       <InutilizacaoHomologacao empresa={empresa} cadastro={conta.cadastro} itens={conta.inutilizacoes ?? []} />
       <section className={painel}>
         <h2 className="text-xl font-bold">Emitente</h2>

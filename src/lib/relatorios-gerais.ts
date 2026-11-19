@@ -150,3 +150,39 @@ export async function exportarTabelasPdf(nome: string, filtro: string, tabelas: 
   }
   return { blob: doc.output("blob"), nome: `${slug(nome)}_${new Date().toISOString().slice(0, 10)}.pdf` };
 }
+
+/** Resumo geral da empresa no período: entradas, produção, vendas e estoque atual. */
+export function resumoGeral(toras: Tora[], roms: Romaneio[], pacotes: PacoteSerrado[], cargas: Omit<CargaSerrada, "pacotes">[], p: Periodo) {
+  const recebidos = roms.filter((r) => r.recebido_em && noPeriodo(dia(r.recebido_em), p));
+  const serr = rendimentoDesdobro(toras, pacotes, { ...p, especie: "" }).total;
+  const pacs = pacotes.filter((pc) => noPeriodo(dia(pc.data), p));
+  const vend = cargas.filter((c) => noPeriodo(dia(c.data), p));
+  const est = estoqueConsolidado(toras, roms, pacotes, "");
+  const soma = <T,>(ls: T[], f: (x: T) => number) => r4(ls.reduce((n, x) => n + f(x), 0));
+  return {
+    cargasRecebidas: recebidos.length, torasRecebidas: recebidos.reduce((n, r) => n + r.qtd_toras, 0), volRecebido: soma(recebidos, (r) => Number(r.total_volume)),
+    torasSerradas: serr.qtdToras, volSerradoToras: serr.volToras, pacotes: pacs.length, pecas: serr.pecas, volProduzido: serr.volSerrado, rendimento: serr.rendimento,
+    cargasVendidas: vend.length, volVendido: soma(vend, (c) => Number(c.total_volume_m3)),
+    estoquePatio: soma(est.patio, (r) => r.volume), estoqueFloresta: soma(est.manejo, (r) => r.volume), estoqueSerrada: soma(est.madeira, (r) => r.volume),
+  };
+}
+
+export function tabelaGeral(toras: Tora[], roms: Romaneio[], pacotes: PacoteSerrado[], cargas: Omit<CargaSerrada, "pacotes">[], p: Periodo): Tabela[] {
+  const g = resumoGeral(toras, roms, pacotes, cargas, p);
+  const vendas = new Map<string, { n: number; v: number }>();
+  for (const c of cargas) if (noPeriodo(dia(c.data), p)) { const k = c.cliente_nome?.trim() || "Sem cliente"; const r = vendas.get(k) ?? { n: 0, v: 0 }; r.n++; r.v += Number(c.total_volume_m3); vendas.set(k, r); }
+  const vl = [...vendas.entries()].sort((a, b) => b[1].v - a[1].v);
+  return [
+    { titulo: "Resumo geral da empresa", cabecalho: ["Indicador", "Quantidade", "Volume (m³)"], linhas: [
+      ["Cargas de toras recebidas no pátio", g.cargasRecebidas, fmtM3(g.volRecebido)],
+      ["Toras recebidas", g.torasRecebidas, fmtM3(g.volRecebido)],
+      ["Toras serradas", g.torasSerradas, fmtM3(g.volSerradoToras)],
+      ["Pacotes de madeira serrada produzidos", g.pacotes, fmtM3(g.volProduzido)],
+      ["Peças serradas", g.pecas, ""],
+      ["Rendimento do desdobro", pct(g.rendimento), ""],
+      ["Cargas de madeira serrada vendidas", g.cargasVendidas, fmtM3(g.volVendido)],
+    ] },
+    { titulo: "Vendas por cliente", cabecalho: ["Cliente", "Cargas", "Volume (m³)"], linhas: vl.map(([k, r]) => [k, r.n, fmtM3(r4(r.v))]), rodape: ["TOTAL", g.cargasVendidas, fmtM3(g.volVendido)] },
+    { titulo: "Estoque atual", cabecalho: ["Local", "Volume (m³)"], linhas: [["Toras no pátio (não serradas)", fmtM3(g.estoquePatio)], ["Toras na floresta (não carregadas)", fmtM3(g.estoqueFloresta)], ["Madeira serrada pronta", fmtM3(g.estoqueSerrada)]] },
+  ];
+}

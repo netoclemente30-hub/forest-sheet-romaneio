@@ -302,6 +302,13 @@
       "when": 1795124488606,
       "tag": "0042_romaneio_toras_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795128898146,
+      "tag": "0043_contador_e_ie_empresa",
+      "breakpoints": true
     }
   ]
 }

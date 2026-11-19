@@ -7,7 +7,7 @@ import { romaneiosQuery, torasQuery } from "@/lib/data";
 import { madeiraQuery, cargasSerradasQuery } from "@/lib/madeira-serrada";
 import { useAuth } from "@/hooks/useAuth";
 import { getEmpresaAtiva } from "@/lib/empresa";
-import { exportarTabelasExcel, exportarTabelasPdf, tabelaEstoque, tabelaRendimento, tabelaRomaneios, type Tabela } from "@/lib/relatorios-gerais";
+import { exportarTabelasExcel, exportarTabelasPdf, tabelaEstoque, tabelaRendimento, tabelaRomaneios, tabelaGeral, type Tabela } from "@/lib/relatorios-gerais";
 import { salvarArquivo, type ArquivoGerado } from "@/lib/arquivo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,8 @@ export const Route = createFileRoute("/relatorios")({
   component: Relatorios,
 });
 
-type Tipo = "rendimento" | "romaneios" | "estoque";
-const NOMES: Record<Tipo, string> = { rendimento: "Rendimento do desdobro", romaneios: "Romaneios emitidos", estoque: "Estoque consolidado" };
+type Tipo = "geral" | "rendimento" | "romaneios" | "estoque";
+const NOMES: Record<Tipo, string> = { geral: "Geral da empresa", rendimento: "Rendimento do desdobro", romaneios: "Romaneios emitidos", estoque: "Estoque consolidado" };
 
 function Relatorios() {
   const { empresaId } = useAuth();
@@ -38,7 +38,7 @@ function Relatorios() {
   const roms = useQuery(romaneiosQuery);
   const pacotes = useQuery(madeiraQuery(empresa));
   const cargas = useQuery(cargasSerradasQuery(empresa));
-  const [tipo, setTipo] = useState<Tipo>("rendimento");
+  const [tipo, setTipo] = useState<Tipo>("geral");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [especie, setEspecie] = useState("");
@@ -54,6 +54,7 @@ function Relatorios() {
 
   const tabelas: Tabela[] = useMemo(() => {
     const p = { inicio, fim, especie };
+    if (tipo === "geral") return tabelaGeral(toras.data ?? [], roms.data ?? [], pacotes.data ?? [], cargas.data ?? [], p);
     if (tipo === "rendimento") return tabelaRendimento(toras.data ?? [], pacotes.data ?? [], p);
     if (tipo === "romaneios") return tabelaRomaneios(roms.data ?? [], cargas.data ?? [], p);
     return tabelaEstoque(toras.data ?? [], roms.data ?? [], pacotes.data ?? [], especie);
@@ -73,7 +74,8 @@ function Relatorios() {
     <div className="space-y-4">
       <h1 className="font-display text-2xl font-bold">Relatórios</h1>
       <Tabs value={tipo} onValueChange={(v) => { setTipo(v as Tipo); setArquivo(null); }}>
-        <TabsList className="w-full h-auto grid grid-cols-3">
+        <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="geral" className="whitespace-normal">Geral</TabsTrigger>
           <TabsTrigger value="rendimento" className="whitespace-normal">Rendimento</TabsTrigger>
           <TabsTrigger value="romaneios" className="whitespace-normal">Romaneios</TabsTrigger>
           <TabsTrigger value="estoque" className="whitespace-normal">Estoque</TabsTrigger>

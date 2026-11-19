@@ -311,3 +311,18 @@ export const cadastrarEmpresaPublica = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const definirCnpjEmpresa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { empresaId: string; cnpj: string; ie: string }) => ({
+    empresaId: String(input?.empresaId ?? ""), cnpj: limparCnpj(String(input?.cnpj ?? "")), ie: String(input?.ie ?? "").trim().slice(0, 20),
+  }))
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as Ctx;
+    const { data: souSuper } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "superadmin" });
+    if (!souSuper) throw new Error("Apenas o administrador geral altera o CNPJ");
+    if (!cnpjValido(data.cnpj)) throw new Error("CNPJ inválido");
+    const { error } = await ctx.supabase.from("empresas").update({ cnpj: data.cnpj, ie: data.ie || null }).eq("id", data.empresaId);
+    if (error) throw new Error(/duplicate|unique/i.test(error.message) ? "CNPJ já usado por outra empresa" : error.message);
+    return { ok: true };
+  });
