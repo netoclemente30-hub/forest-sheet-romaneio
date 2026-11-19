@@ -254,6 +254,32 @@ export type Database = {
           },
         ]
       }
+      empresa_emitente: {
+        Row: {
+          atualizado_em: string
+          cadastro: Json
+          empresa_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          cadastro?: Json
+          empresa_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          cadastro?: Json
+          empresa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_emitente_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresa_usuarios: {
         Row: {
           created_at: string

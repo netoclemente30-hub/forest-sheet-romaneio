@@ -40,6 +40,15 @@ export function OnboardingSpedy({ empresa, cadastro }: { empresa: string; cadast
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [empresa]);
 
+  useEffect(() => {
+    setF((atual) => ({
+      ...atual, razao: cadastro.nome, cnpj: cadastro.cnpj, ie: cadastro.ie,
+      logradouro: cadastro.endereco?.logradouro ?? "", numero: cadastro.endereco?.numero ?? "",
+      complemento: cadastro.endereco?.complemento ?? "", bairro: cadastro.endereco?.bairro ?? "",
+      municipio: cadastro.endereco?.municipio ?? "", uf: cadastro.endereco?.uf ?? "", cep: cadastro.endereco?.cep ?? "",
+    }));
+  }, [cadastro]);
+
   async function travar<T>(fn: () => Promise<T>): Promise<T | undefined> {
     if (enviando.current) return undefined;
     enviando.current = true; setOcupado(true);

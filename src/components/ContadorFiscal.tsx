@@ -7,6 +7,7 @@ import { baixarNfeHomologacao } from "@/lib/spedy.functions";
 import { salvarArquivo } from "@/lib/arquivo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 type Doc = { id: string; rascunho_id: string; status: string; numero: string | null; serie: string | null; chave_acesso: string | null; criado_em: string };
 const mesAtual = () => new Date().toISOString().slice(0, 7);
@@ -20,6 +21,7 @@ export function ContadorFiscal({ empresa }: { empresa: string }) {
   const [fim, setFim] = useState(new Date().toISOString().slice(0, 10));
   const [docs, setDocs] = useState<Doc[]>([]);
   const [ocupado, setOcupado] = useState(false);
+  const [aberto, setAberto] = useState(false);
 
   useEffect(() => {
     void supabase.from("empresa_contador").select("escritorio,email,envio_automatico").eq("empresa_id", empresa).maybeSingle()
@@ -56,7 +58,12 @@ export function ContadorFiscal({ empresa }: { empresa: string }) {
 
   return (
     <section className="space-y-3 rounded-xl border bg-card p-4">
-      <h2 className="text-xl font-bold">Contador</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-xl font-bold">Contador</h2>
+        <Button variant="ghost" size="icon" aria-label={aberto ? "Minimizar contador" : "Expandir contador"} aria-expanded={aberto} onClick={() => setAberto(!aberto)}>{aberto ? <ChevronUp /> : <ChevronDown />}</Button>
+      </div>
+      {!aberto && f.email && <p className="break-words text-sm text-muted-foreground">{f.escritorio} · {f.email}</p>}
+      <div hidden={!aberto} className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="grid text-sm">Escritório / responsável<Input value={f.escritorio} onChange={(e) => setF({ ...f, escritorio: e.target.value })} /></label>
         <label className="grid text-sm">E-mail do contador<Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
@@ -72,6 +79,7 @@ export function ContadorFiscal({ empresa }: { empresa: string }) {
         {docs.map((d) => <li key={d.id} className="flex justify-between gap-2 p-2"><span>{d.criado_em.slice(0, 10).split("-").reverse().join("/")} · Nº {d.numero ?? "—"} · Série {d.serie ?? "—"}</span><span>{d.status === "authorized" ? "Autorizada" : d.status}</span></li>)}
       </ul>
       <Button variant="outline" disabled={ocupado} onClick={zip}>{ocupado ? "Gerando…" : `Baixar XMLs do período (.ZIP) · ${autorizadas.length}`}</Button>
+      </div>
     </section>
   );
 }

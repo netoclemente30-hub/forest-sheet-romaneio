@@ -45,7 +45,7 @@ export function GerenciamentoFiscal({
           <Button variant="outline" onClick={() => setInutilizar(!inutilizar)}>
             Inutilizar numeração
           </Button>
-          <Button onClick={nova}>Nova NF-e do romaneio</Button>
+          <Button onClick={nova}>Nova NF-e</Button>
         </div>
       </div>
       {inutilizar && (
