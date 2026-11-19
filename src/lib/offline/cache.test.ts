@@ -21,11 +21,25 @@ it("resposta atrasada da RJ não grava toras no cache da empresa selecionada dep
   localStorage.setItem("empresa_ativa", "rj");
   let resolver: ((dados: { plaqueta: number }[]) => void) | undefined;
   const pendente = comCache("toras", () => new Promise<{ plaqueta: number }[]>((resolve) => { resolver = resolve; }));
+  await vi.waitFor(() => expect(resolver).toBeTypeOf('function'));
   localStorage.setItem("empresa_ativa", "ricardo");
   resolver?.([{ plaqueta: 273 }]);
   await pendente;
   expect(put).toHaveBeenCalledWith("cache", expect.objectContaining({ dados: [{ plaqueta: 273 }] }), "usuario-a:rj:toras");
   expect(put).not.toHaveBeenCalledWith("cache", expect.anything(), "usuario-a:ricardo:toras");
+});
+
+it('resposta perdida de uma conta não é salva no cache da conta seguinte', async () => {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+  const put = vi.spyOn(idb, 'put').mockResolvedValue(undefined);
+  let resolver: ((dados: { plaqueta: number }[]) => void) | undefined;
+  const leitura = comCache('toras', () => new Promise<{ plaqueta: number }[]>(resolve => { resolver = resolve; }));
+  await vi.waitFor(() => expect(resolver).toBeTypeOf('function'));
+  idUsuario = 'usuario-b';
+  resolver?.([{ plaqueta: 9 }]);
+  expect(await leitura).toEqual([]);
+  expect(put).toHaveBeenCalledWith('cache', expect.anything(), 'usuario-a:sem-vinculo:toras');
+  expect(put).not.toHaveBeenCalledWith('cache', expect.anything(), 'usuario-b:sem-vinculo:toras');
 });
 
 describe("consulta sem internet", () => {

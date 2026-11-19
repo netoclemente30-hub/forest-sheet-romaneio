@@ -46,10 +46,11 @@ describe("lançar novamente 1861-B do saldo", () => {
     expect(mocks.insert).not.toHaveBeenCalled();
     expect(mocks.enfileirar).not.toHaveBeenCalled();
   });
-  it("consulta o lançamento de outro usuário antes de gravar com a lista desatualizada", async () => {
+  it("guarda localmente mesmo se navegador disser online sem sinal, sem envio direto", async () => {
     mocks.selectResult.mockResolvedValue({ data: [existente], error: null });
     preencher([]);
-    await waitFor(() => expect(mocks.error).toHaveBeenCalledWith("Árvore 1861 já tem a secção B (plaqueta 5009)"));
+    await waitFor(() => expect(mocks.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'tora_insert', dados: expect.objectContaining({ empresa_id: 'rj', arvore: 1861 }) })));
     expect(mocks.insert).not.toHaveBeenCalled();
+    expect(mocks.selectResult).not.toHaveBeenCalled();
   });
 });

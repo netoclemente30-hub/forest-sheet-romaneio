@@ -30,18 +30,15 @@ import {
 export async function excluirTora(t: Tora): Promise<boolean> {
   const aviso = t.carregada ? " Ela já foi carregada em um romaneio." : "";
   if (!window.confirm(`Excluir a tora da plaqueta ${t.plaqueta}? Essa ação não pode ser desfeita.${aviso}`)) return false;
-  const log = await capturarLog("Tora excluída", `Plaqueta ${t.plaqueta} · árvore ${t.arvore}${t.secao ? `-${t.secao}` : ""} · ${t.especie ?? "sem espécie"}`);
-  if (!estaOnline()) {
-    await fila().enfileirar({ tipo: "tora_delete", plaqueta: t.plaqueta, empresa_id: t.empresa_id, log });
-    toast.success(`Plaqueta ${t.plaqueta} guardada para excluir — será enviada quando conectar`);
-    return true;
+  try {
+    const log = await capturarLog("Tora excluída", `Plaqueta ${t.plaqueta} · árvore ${t.arvore}${t.secao ? `-${t.secao}` : ""} · ${t.especie ?? "sem espécie"}`);
+    await registrarOperacao("tora_delete", t.empresa_id, {}, [t.plaqueta], log);
   }
-  try { await registrarOperacao("tora_delete", t.empresa_id, {}, [t.plaqueta], log); }
   catch (error) {
     toast.error(error instanceof Error ? error.message : "Não foi possível excluir");
     return false;
   }
-  toast.success(`Plaqueta ${t.plaqueta} excluída`);
+  toast.success(`Exclusão da plaqueta ${t.plaqueta} guardada — aguarda confirmação na nuvem`);
   return true;
 }
 
@@ -65,45 +62,24 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
     }
     const dados = dadosDaEdicao(e);
     const mudouPlaqueta = dados.plaqueta !== e.plaqueta;
-    const log = await capturarLog(
+    setBusy(true);
+    try {
+      const log = await capturarLog(
       "Tora editada",
       `Plaqueta ${mudouPlaqueta ? `${e.plaqueta} → ${dados.plaqueta}` : e.plaqueta} · ${dados.especie ?? "sem espécie"} · árvore ${dados.arvore}${dados.secao ? `-${dados.secao}` : ""} · ${fmtM3(dados.volume)} m³`,
     );
-    setBusy(true);
-    if (!estaOnline()) {
       await fila().enfileirar({ tipo: "tora_update", plaqueta: e.plaqueta, empresa_id: e.empresa_id, autex: dados.autex, dados, log });
-      setBusy(false);
-      toast.success(`Plaqueta ${dados.plaqueta} salva offline — será enviada quando conectar`);
-      onDone();
-      return;
-    }
-    // A AUTEX digitada precisa existir no cadastro da empresa antes de gravar na tora.
-    if (dados.autex) {
-      const { error: ea } = await supabase
-        .from("autex")
-        .upsert({ numero: dados.autex, empresa_id: e.empresa_id }, { onConflict: "empresa_id,numero", ignoreDuplicates: true });
-      if (ea) {
-        setBusy(false);
-        toast.error(ea.message);
-        return;
-      }
-    }
-    try { await registrarOperacao("tora_update", e.empresa_id, dados, [e.plaqueta], log); }
-    catch (error) {
-      setBusy(false);
+      toast.success(`Alterações da plaqueta ${dados.plaqueta} guardadas — aguardam confirmação na nuvem`);
+      await refresh();
+    } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível editar");
-      return;
-    }
-    setBusy(false);
-    toast.success(mudouPlaqueta ? `Plaqueta ${e.plaqueta} alterada para ${dados.plaqueta}` : `Plaqueta ${e.plaqueta} alterada`);
-    await refresh();
+    } finally { setBusy(false); }
   }
 
   async function excluir() {
     setBusy(true);
-    const ok = await excluirTora(tora);
-    setBusy(false);
-    if (ok) await refresh();
+    try { if (await excluirTora(tora)) await refresh(); }
+    finally { setBusy(false); }
   }
 
   const campo = (k: keyof EdicaoTora, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (

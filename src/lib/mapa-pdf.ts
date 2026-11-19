@@ -5,6 +5,7 @@ import { getEmpresaAtiva } from "@/lib/empresa";
 import { comCache } from "@/lib/offline/cache";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { idb } from "@/lib/offline/db";
+import { guardarRascunho, contextoLocal } from './offline/rascunho';
 
 export const MAPA_PDF_BUCKET = "mapas-exploracao";
 export const MAPA_PDF_MAX_BYTES = 100 * 1024 * 1024;
@@ -54,8 +55,9 @@ export async function enviarMapaPdf({ file, autex, empresa, atual, userId }: {
   atual: MapaPdf | null;
   userId: string | null;
 }): Promise<MapaPdf> {
-  if (!navigator.onLine) throw new Error("Conecte-se à internet para enviar o PDF do mapa");
   await validarMapaPdf(file);
+  await guardarRascunho(`mapa-pdf:${autex}`, { file, autex, empresa, atual, confirmado: false }, empresa);
+  if (!navigator.onLine) throw new Error("PDF guardado como rascunho neste aparelho. Conecte-se à internet para enviá-lo.");
   const log = await capturarLog(atual ? "PDF do mapa substituído" : "PDF do mapa enviado", `AUTEX ${autex} · ${file.name}`);
   const id = atual?.id ?? crypto.randomUUID();
   const path = atual?.arquivo_path ?? caminhoMapaPdf(empresa, id);
@@ -84,15 +86,18 @@ export async function enviarMapaPdf({ file, autex, empresa, atual, userId }: {
   return data;
 }
 
-const chavePdf = (mapa: MapaPdf) => `geopdf:${mapa.empresa_id}:${mapa.autex}`;
+const chavePdf = async (mapa: MapaPdf) => {
+  const c = await contextoLocal(mapa.empresa_id);
+  return `geopdf:${c.usuario}:${c.empresa}:${mapa.autex}`;
+};
 async function guardarPdfLocal(mapa: MapaPdf, blob: Blob) {
-  try { await idb.put("cache", { versao: mapa.atualizado_em, path: mapa.arquivo_path, blob }, chavePdf(mapa)); }
+  try { await idb.put("cache", { versao: mapa.atualizado_em, path: mapa.arquivo_path, blob }, await chavePdf(mapa)); }
   catch { /* File still accessible online; local storage may be full. */ }
 }
 
 export async function baixarMapaPdf(mapa: MapaPdf): Promise<ArquivoGerado> {
   let local: { versao: string; path: string; blob: Blob } | undefined;
-  try { local = await idb.get("cache", chavePdf(mapa)); } catch { /* cache unavailable */ }
+  try { local = await idb.get("cache", await chavePdf(mapa)); } catch { /* cache unavailable */ }
   if (local?.versao === mapa.atualizado_em && local.path === mapa.arquivo_path) return { blob: local.blob, nome: mapa.nome_arquivo };
   if (!navigator.onLine) throw new Error("Abra este mapa uma vez com internet neste aparelho para usá-lo offline");
   const { data, error } = await supabase.storage.from(MAPA_PDF_BUCKET).download(mapa.arquivo_path);

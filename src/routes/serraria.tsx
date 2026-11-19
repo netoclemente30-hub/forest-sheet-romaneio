@@ -126,21 +126,12 @@ function Serraria() {
     const log = await capturarLog(desfazer ? "Toras voltaram ao pátio" : "Toras serradas", `${selecionadas.length} toras · plaquetas ${selecionadas.map((t) => t.plaqueta).slice(0, 10).join(", ")}${selecionadas.length > 10 ? "…" : ""}`);
     const porEmpresa = new Map<string, number[]>();
     for (const t of selecionadas) porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
-    if (!estaOnline()) {
-      setBusy(true);
-      for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log });
-      setBusy(false);
-      setToraLida(null);
-      if(!desfazer)irParaAba('serradas');else setSel([]);
-      toast.success("Baixa salva offline — será enviada quando conectar");
-      return;
-    }
     setBusy(true);
     try { for (const [empresa, plaquetas] of porEmpresa) await registrarOperacao("toras_serradas", empresa, { desfazer }, plaquetas, log, crypto.randomUUID()); }
     catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível serrar"); return; }
     setBusy(false);
     setToraLida(null);
-    toast.success(desfazer ? `${selecionadas.length} toras voltaram ao pátio` : `${selecionadas.length} toras serradas`);
+    toast.success(`${selecionadas.length} alterações guardadas neste aparelho — aguardam confirmação na nuvem`);
     if(!desfazer)irParaAba('serradas');else setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }

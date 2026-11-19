@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { QrImage } from "@/components/QrImage";
 
 const query = {
+  networkMode: 'always' as const,
   queryKey: ["toras_aguardando"],
   queryFn: async (): Promise<ToraAguardando[]> => {
     const salvas = await comCache<ToraAguardando>("toras_aguardando", async () => {
@@ -29,13 +30,7 @@ const query = {
       if (error) throw error;
       return (data ?? []).map(norma);
     });
-    const ids = new Set(salvas.map((t) => t.id));
-    const itensFila = await fila().listar().catch(() => []);
-    const edicoes = new Map<string, Record<string, unknown>>();
-    for (const { op } of itensFila) if (op.tipo === "aguardando_update") edicoes.set(op.id, { ...edicoes.get(op.id), ...op.dados });
-    const comEdicoes = salvas.map((t) => edicoes.has(t.id) ? norma({ ...t, ...edicoes.get(t.id) }) : t);
-    const pendentes = itensFila.flatMap(({ op }) => op.tipo === "aguardando_insert" && !ids.has(String(op.dados["id"])) ? [norma(op.dados)] : []);
-    return [...pendentes, ...comEdicoes].sort((a, b) => b.numero - a.numero);
+    return salvas.sort((a, b) => b.numero - a.numero);
   },
 };
 
@@ -58,7 +53,7 @@ type Filtro = "todas" | "nao" | "sim";
 const ROTULO_FILTRO: Record<Filtro, string> = { todas: "Todas", nao: "Não impressas", sim: "Impressas" };
 
 export function TorasAguardando({ especies }: { especies: { especie: string; nome_cientifico: string | null }[] }) {
-  const { papel } = useAuth();
+  const { papel, empresaId } = useAuth();
   const podeOperar = pode(papel, "serraria_operar");
   // Mesma regra do botão Editar da lista de toras (administrador).
   const podeEditar = podeOperar && (papel === "admin_empresa" || papel === "superadmin");
@@ -96,31 +91,16 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
     if (!vol) { toast.error("Preencha os 4 diâmetros e o comprimento"); return; }
     setBusy(true);
     try {
-      if (!navigator.onLine) {
-        const atuais = await qc.fetchQuery({ ...query, staleTime: 0 });
-        const t = { id: crypto.randomUUID(), ...empresaIdGravacao(), numero: proximoNumeroAguardando(atuais), especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)), created_at: new Date().toISOString(), etiqueta_impressa: false, etiqueta_impressa_em: null };
+        const atuais = lista.data ?? [];
+        const empresa = empresaIdGravacao().empresa_id ?? empresaId;
+        if (!empresa) throw new Error('Escolha uma empresa');
+        const t = { id: crypto.randomUUID(), empresa_id: empresa, numero: proximoNumeroAguardando(atuais), especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)), created_at: new Date().toISOString(), etiqueta_impressa: false, etiqueta_impressa_em: null };
         const log = await capturarLog("Tora não identificada medida", `${codigoAguardando(t.numero)} · ${t.especie} · físico ${fmtM3(t.volume)} m³ · comercial ${fmtM3(vol.comercial?.volume ?? 0)} m³`);
         await fila().enfileirar({ tipo: "aguardando_insert", dados: t, log });
-        toast.success(`${codigoAguardando(t.numero)} salva sem internet — será enviada quando conectar`);
+        toast.success(`${codigoAguardando(t.numero)} guardada neste aparelho — aguarda confirmação na nuvem`);
         setF((x) => ({ ...vazio, especie: x.especie, nome_cientifico: x.nome_cientifico }));
         await qc.invalidateQueries({ queryKey: query.queryKey });
         setQr(t as unknown as ToraAguardando);
-        return;
-      }
-      let salvo: ToraAguardando | null = null;
-      for (let tent = 0; tent < 3 && !salvo; tent++) {
-        const atuais = (await qc.fetchQuery({ ...query, staleTime: 0 }));
-        const numero = proximoNumeroAguardando(atuais);
-        const { data, error } = await supabase.from("toras_aguardando").insert({ id: crypto.randomUUID(), ...empresaIdGravacao(), numero, especie: f.especie.trim(), nome_cientifico: f.nome_cientifico.trim() || null, ...(medidas as MedidasAguardando), volume: Number(vol.fisico.toFixed(4)) }).select().single();
-        if (error && error.code !== "23505") throw error;
-        if (data) salvo = norma(data as Record<string, unknown>);
-      }
-      if (!salvo) throw new Error("Não foi possível reservar o número. Tente de novo.");
-      await gravarRegistro(await capturarLog("Tora não identificada medida", `${codigoAguardando(salvo.numero)} · ${salvo.especie} · físico ${fmtM3(salvo.volume)} m³ · comercial ${fmtM3(vol.comercial?.volume ?? 0)} m³`));
-      toast.success(`${codigoAguardando(salvo.numero)} salva`);
-      setF((x) => ({ ...vazio, especie: x.especie, nome_cientifico: x.nome_cientifico }));
-      await qc.invalidateQueries({ queryKey: query.queryKey });
-      setQr(salvo);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao salvar"); }
     finally { setBusy(false); }
   }
@@ -150,11 +130,13 @@ export function TorasAguardando({ especies }: { especies: { especie: string; nom
   async function excluir(t: ToraAguardando) {
     if (!podeOperar) return;
     if (!confirm(`Excluir ${codigoAguardando(t.numero)} (${t.especie})?`)) return;
-    if (!navigator.onLine) { toast.error("Precisa de internet para excluir"); return; }
-    const { error } = await supabase.from("toras_aguardando").delete().eq("id", t.id);
-    if (error) { toast.error(error.message); return; }
-    await gravarRegistro(await capturarLog("Tora não identificada excluída", `${codigoAguardando(t.numero)} · ${t.especie}`));
-    await qc.invalidateQueries({ queryKey: query.queryKey });
+    setBusy(true);
+    try {
+      await fila().enfileirar({ tipo: 'aguardando_delete', id: t.id, empresa_id: t.empresa_id, log: await capturarLog('Tora não identificada excluída', `${codigoAguardando(t.numero)} · ${t.especie}`) });
+      toast.success('Exclusão guardada neste aparelho — aguarda confirmação na nuvem');
+      await qc.invalidateQueries({ queryKey: query.queryKey });
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível guardar a exclusão'); }
+    finally { setBusy(false); }
   }
 
   /** Marca a impressão (ou volta a marcar como não impressa); offline vai junto com a fila. */

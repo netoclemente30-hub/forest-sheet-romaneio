@@ -9,6 +9,11 @@ import type { PontoRastro } from '@/lib/exploracao';
 import type { DadosArvoreGPS } from '@/lib/exploracao-salvar';
 
 export type Op =
+  | { tipo: 'estoque_operacao'; empresa_id: string; operacao: string; tipo_operacao: string; dados: Record<string, unknown>; alvos: (number | string)[]; log: LogCapturado }
+  | { tipo: 'aguardando_delete'; id: string; empresa_id: string; log: LogCapturado }
+  | { tipo: 'romaneio_importado_salvar'; empresa_id: string; documento_id: string; revisao: number; cab: import('@/lib/romaneio-serrado-importar').CabImportado; itens: import('@/lib/romaneio-serrado-importar').PecaImportada[]; operacao: string; log: LogCapturado }
+  | { tipo: 'campo_update'; empresa_id: string; tabela: 'arvores' | 'autex' | 'toras'; alvo: string | number; chave: 'id' | 'numero' | 'plaqueta'; dados: Record<string, unknown>; log: LogCapturado }
+  | { tipo: 'cadastro_upsert'; empresa_id: string; tabela: 'autex' | 'explanadas' | 'saldos'; dados: Record<string, unknown>; conflito: string; log: LogCapturado }
   | { tipo:'pacote_serrado_salvar'; empresa_id:string; pacote_id:string; cab:CabPacote; itens:BitolaSerrada[]; log:LogCapturado }
   | { tipo: "tora_insert"; dados: Record<string, unknown>; log?: LogCapturado }
   | {
@@ -77,6 +82,8 @@ export interface ItemFila {
   op: Op;
   /** Responsável pelo lançamento offline (separa contas no mesmo aparelho). */
   usuario_id?: string;
+  /** Durable marker: the remote response may have been lost. Do not rewrite this intent. */
+  envio_iniciado?: boolean;
   erro?: string;
 }
 
@@ -109,6 +116,7 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
     async editarErro(id: string, op: Op) {
       const item = (await store.all()).find((i) => i.id === id);
       if (!item?.erro) throw new Error("Este lançamento não está mais disponível para edição");
+      if (item.envio_iniciado) throw new Error('Este lançamento já teve envio iniciado. Tente novamente antes de editar.');
       if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
       // Keep the error until an explicit retry: saving must not send unexpectedly.
       await store.put({ ...item, op });
@@ -118,13 +126,18 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
     async substituir(id: string, op: Op) {
       const item = (await store.all()).find((i) => i.id === id);
       if (!item) throw new Error("Este lançamento não está mais na lista de pendentes");
+      if (item.envio_iniciado) throw new Error('Este lançamento já teve envio iniciado. Aguarde a confirmação antes de editar.');
       if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
+      const empresaAtual = 'empresa_id' in item.op ? item.op.empresa_id : 'dados' in item.op ? item.op.dados['empresa_id'] : null;
+      const empresaNova = 'empresa_id' in op ? op.empresa_id : 'dados' in op ? op.dados['empresa_id'] : null;
+      if (empresaAtual !== empresaNova) throw new Error('Não é possível trocar a empresa do lançamento');
       await store.put({ ...item, op });
       onMudou();
     },
     async atualizarPacote(id:string, op:Extract<Op,{tipo:'pacote_serrado_salvar'}>) {
       const item=(await store.all()).find(i=>i.id===id);
       if(!item||item.op.tipo!=='pacote_serrado_salvar'||item.op.empresa_id!==op.empresa_id||item.op.pacote_id!==op.pacote_id) throw new Error('Pacote pendente não encontrado');
+      if (item.envio_iniciado) throw new Error('O envio deste pacote já começou. Aguarde a confirmação antes de editar.');
       await store.put({...item,op:{...op,log:item.op.log}});
       onMudou();
     },
@@ -136,6 +149,12 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
         await store.put(resto);
         onMudou();
       }
+    },
+    async iniciarEnvio(id: string) {
+      const item = (await store.all()).find(i => i.id === id);
+      if (!item) throw new Error('Lançamento não encontrado');
+      await store.put({ ...item, envio_iniciado: true });
+      return item;
     },
     async marcarErro(id: string, erro: string) {
       const itens = await store.all();
@@ -189,7 +208,13 @@ export function fila(): Fila {
       all: async () => {
         const usuario = await identidadeFila();
         const itens = await idb.getAll<ItemFila>("fila");
-        return itens.filter((item) => pertenceAoUsuario(item, usuario));
+        const { getEmpresaAtiva, lerEmpresaSalva } = await import('@/lib/empresa');
+        const empresa = getEmpresaAtiva() ?? lerEmpresaSalva(usuario.id);
+        return itens.filter((item) => {
+          if (!pertenceAoUsuario(item, usuario)) return false;
+          const emp = 'empresa_id' in item.op ? item.op.empresa_id : 'dados' in item.op ? item.op.dados['empresa_id'] : null;
+          return !empresa || !emp || emp === empresa;
+        });
       },
       put: async (item) => {
         const usuario = await identidadeFila();
@@ -197,6 +222,14 @@ export function fila(): Fila {
         if (item.usuario_id && item.usuario_id !== usuario.id) {
           throw new Error("Operação offline pertencente a outra conta");
         }
+        const email = item.op.log?.user_email?.trim().toLowerCase();
+        if (item.op.log?.usuario_id && item.op.log.usuario_id !== usuario.id) throw new Error('A conta mudou durante a gravação. O formulário foi mantido.');
+        if (!item.usuario_id && email && email !== usuario.email) throw new Error('A conta mudou durante a gravação. O formulário foi mantido.');
+        const { getEmpresaAtiva } = await import('@/lib/empresa');
+        const empresa = 'empresa_id' in item.op ? item.op.empresa_id : 'dados' in item.op ? item.op.dados['empresa_id'] : null;
+        const antigo = await idb.get<ItemFila>('fila', item.id);
+        if (!empresa && !antigo) throw new Error('Escolha uma empresa antes de guardar o lançamento');
+        if (getEmpresaAtiva() && empresa && getEmpresaAtiva() !== empresa) throw new Error('A empresa mudou durante a gravação. O formulário foi mantido.');
         await idb.put("fila", { ...item, usuario_id: usuario.id });
       },
       del: async (id) => {

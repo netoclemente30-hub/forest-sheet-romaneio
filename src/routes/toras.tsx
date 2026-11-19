@@ -81,7 +81,6 @@ export function TorasList({ nova }: { nova?: boolean }) {
 
   async function excluirRomaneadas() {
     if (!romaneadasSel.length || !confirm(`Excluir ${romaneadasSel.length} toras já romaneadas? Isso não pode ser desfeito.`)) return;
-    if (!navigator.onLine) { toast.error("Precisa de internet para excluir"); return; }
     // Plaquetas se repetem entre empresas: apagar só as toras da empresa de cada uma.
     const porEmpresa = new Map<string, number[]>();
     for (const t of (toras.data ?? []).filter((x) => x.carregada && romaneadasSel.includes(x.plaqueta)))
@@ -90,7 +89,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       try { await registrarOperacao("toras_delete", emp, {}, plaquetas, await capturarLog("Toras romaneadas excluídas", `${plaquetas.length} toras · plaquetas ${plaquetas.join(", ")}`)); }
       catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível excluir"); return; }
     }
-    toast.success(`${romaneadasSel.length} toras excluídas`);
+    toast.success(`${romaneadasSel.length} exclusões guardadas — aguardam confirmação na nuvem`);
     setSelecionadas((s) => s.filter((p) => !romaneadasSel.includes(p)));
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }

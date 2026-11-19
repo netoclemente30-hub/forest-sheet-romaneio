@@ -11,6 +11,11 @@ import { EditarLancamento } from "@/components/EditarLancamento";
 function descrever(op: Op): string {
   if (op.log?.detalhe) return `${op.log.acao} · ${op.log.detalhe}`;
   switch (op.tipo) {
+    case 'estoque_operacao': return op.log.detalhe;
+    case 'aguardando_delete': return 'Exclusão de tora não identificada';
+    case 'cadastro_upsert': return `Cadastro ${op.tabela}`;
+    case 'romaneio_importado_salvar': return `Romaneio importado ${op.cab.numero_carga}`;
+    case 'campo_update': return `Alteração de ${op.tabela} · ${op.alvo}`;
     case 'pacote_serrado_salvar': return `Pacote de madeira serrada ${op.cab.numero}`;
     case "tora_insert": return `Tora lançada · plaqueta ${String(op.dados["plaqueta"] ?? "?")}`;
     case "tora_update": return `Tora editada · plaqueta ${op.plaqueta}`;
@@ -44,38 +49,49 @@ export function SyncStatus() {
   const [enviando, setEnviando] = useState(0);
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<ItemFila | null>(null);
+  const [semCache, setSemCache] = useState(false);
   const pendentes = itens.filter((i) => !i.erro).length;
   const comErro = itens.filter((i) => i.erro);
   const erros = comErro.length;
 
   const atualizar = useCallback(async () => {
     setOnline(estaOnline());
-    setItens(await fila().listar());
+    try { setItens(await fila().listar()); }
+    catch (error) { console.warn('Não foi possível consultar a fila local', error); }
   }, []);
 
   const tentarSync = useCallback(async () => {
-    await atualizar();
-    if (!estaOnline()) return;
-    setEnviando((await fila().listar()).filter((i) => !i.erro).length);
-    setSync(true);
-    const r = await sincronizar(fila());
-    setSync(false);
-    await atualizar();
-    if (r.enviados > 0) {
-      toast.success(`${r.enviados} lançamento(s) offline enviados para a nuvem`);
-      qc.invalidateQueries();
-    }
-    if (r.erros > 0) toast.error(`${r.erros} lançamento(s) com erro — toque no aviso laranja para ver`);
+    try {
+      await atualizar();
+      if (!estaOnline()) return;
+      setEnviando((await fila().listar()).filter((i) => !i.erro).length);
+      setSync(true);
+      const r = await sincronizar(fila());
+      await atualizar();
+      if (r.enviados > 0) {
+        toast.success(`${r.enviados} lançamento(s) confirmados na nuvem`);
+        void qc.invalidateQueries();
+      }
+      if (r.erros > 0) toast.error(`${r.erros} lançamento(s) com erro — toque no aviso laranja para ver`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível sincronizar. Os lançamentos continuam guardados.');
+    } finally { setSync(false); }
   }, [atualizar, qc]);
 
   useEffect(() => {
-    const desassinar = assinarFila(() => void atualizar());
+    const cacheStatus = (event: Event) => {
+      const detalhe = (event as CustomEvent<{ ausente: boolean }>).detail;
+      if (detalhe?.ausente) setSemCache(true);
+    };
+    window.addEventListener('cache-disponibilidade', cacheStatus);
+    const desassinar = assinarFila(() => { void atualizar(); void qc.invalidateQueries(); });
     window.addEventListener("online", tentarSync);
     window.addEventListener("offline", atualizar);
     const intervalo = window.setInterval(() => { if (estaOnline()) void tentarSync(); }, 30000);
     void tentarSync();
     return () => {
       window.clearInterval(intervalo);
+      window.removeEventListener('cache-disponibilidade', cacheStatus);
       desassinar();
       window.removeEventListener("online", tentarSync);
       window.removeEventListener("offline", atualizar);
@@ -113,7 +129,7 @@ export function SyncStatus() {
         {erros && !sync ? (
           <><AlertTriangle className="size-3.5 shrink-0" /> {erros} lançamento(s) com erro ao enviar — toque para ver</>
         ) : !online ? (
-          <><CloudOff className="size-3.5" /> Sem internet — {pendentes} lançamento(s) serão enviados quando conectar</>
+          <><CloudOff className="size-3.5" /><span>{semCache ? 'Sem internet — há listas ainda não salvas neste aparelho; isso não significa estoque vazio.' : `Sem internet — ${pendentes} lançamento(s) aguardam envio`}</span></>
         ) : sync ? (
           <><RefreshCw className="size-3.5 animate-spin" /> {enviando > 0 ? `Sincronizando ${enviando} ${enviando === 1 ? "item" : "itens"}…` : "Sincronizando…"}</>
         ) : erros ? (
@@ -136,7 +152,7 @@ export function SyncStatus() {
                 <div className="text-sm text-destructive break-words">{explicar(i.erro ?? "")}</div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={sync} onClick={() => tentarDeNovo(i.id)}><RefreshCw /> Tentar de novo</Button>
-                  {i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
+                  {!i.envio_iniciado && i.op.tipo !== 'estoque_operacao' && i.op.tipo !== 'aguardando_delete' && i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
                   <Button size="sm" variant="destructive" disabled={sync} onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
                 </div>
               </div>

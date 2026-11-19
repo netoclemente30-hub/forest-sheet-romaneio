@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Pencil, Trash2, FileUp, Map as MapIcon, ChevronRight } from "lucide-react";
+import { fila } from '@/lib/offline/fila';
+import { capturarLog } from '@/lib/registro';
+import { guardarRascunho } from '@/lib/offline/rascunho';
 
 export const Route = createFileRoute("/base/")({
   staticData: { sitemap: false },
@@ -62,34 +65,41 @@ function BasePage() {
   async function salvarEdicao() {
     if (!isAdmin) return;
     if (!editando) return;
+    if (!editando.empresa_id) { toast.error('A árvore não tem empresa identificada'); return; }
     const numero = parseInt(form.numero, 10);
     if (!numero || !form.nome_vulgar.trim()) { toast.error("Número e espécie são obrigatórios"); return; }
     setBusyArvore(true);
-    const { error } = await supabase.from("arvores").update({
+    try {
+      await fila().enfileirar({ tipo: 'campo_update', tabela: 'arvores', chave: 'id', alvo: editando.id, empresa_id: editando.empresa_id, dados: {
       numero, nome_vulgar: form.nome_vulgar.trim(), nome_cientifico: form.nome_cientifico.trim() || null,
       cap: num(form.cap), dap: num(form.dap), altura: num(form.altura), volume: num(form.volume),
       categoria: form.categoria.trim() || null, picada: form.picada.trim() || null, autex: form.autex.trim(),
-    }).eq("id", editando.id);
-    setBusyArvore(false);
-    if (error) { toast.error(error.message.includes("duplicate") ? "Já existe uma árvore com esse número nessa AUTEX" : error.message); return; }
+      }, log: await capturarLog('Árvore editada', `Árvore ${editando.numero}`) });
     await qc.invalidateQueries({ queryKey: ["arvores"] });
     setEditando(null);
-    toast.success("Árvore atualizada");
+    toast.success('Alteração da árvore guardada — aguarda confirmação na nuvem');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível guardar a edição'); }
+    finally { setBusyArvore(false); }
   }
 
   async function excluirArvore(a: Arvore) {
     if (!isAdmin) return;
+    if (!a.empresa_id) { toast.error('A árvore não tem empresa identificada'); return; }
     if (volExpl.has(chaveArvore(a.numero, a.autex))) {
       toast.error("Essa árvore já tem toras lançadas e não pode ser excluída. Se o manejo acabou, use Encerrar no manejo.");
       return;
     }
     if (!window.confirm(`Excluir a árvore ${a.numero} (${a.nome_vulgar})? Essa ação não pode ser desfeita.`)) return;
     setBusyArvore(true);
-    const { error } = await supabase.from("arvores").delete().eq("id", a.id);
-    setBusyArvore(false);
-    if (error) { toast.error(error.message); return; }
+    try {
+    await guardarRascunho(`excluir-arvore:${a.id}`, { arvore: a, confirmado: false }, a.empresa_id);
+    if (!navigator.onLine) throw new Error('Solicitação guardada no aparelho. Conecte para excluir a árvore com segurança.');
+    const { error } = await supabase.from('arvores').delete().eq('id', a.id).eq('empresa_id', a.empresa_id);
+    if (error) throw new Error(error.message);
     await qc.invalidateQueries({ queryKey: ["arvores"] });
     toast.success("Árvore excluída");
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível excluir'); }
+    finally { setBusyArvore(false); }
   }
 
   const encerradas = useMemo(() => new Set((autex.data ?? []).filter((a) => a.encerrado).map((a) => a.numero)), [autex.data]);
@@ -97,11 +107,14 @@ function BasePage() {
   async function alternarEncerrado(numero: string, encerrado: boolean) {
     if (!isAdmin) return;
     setBusyAutex(numero);
-    const { error } = await supabase.from("autex").update({ encerrado: !encerrado }).eq("numero", numero);
-    setBusyAutex("");
-    if (error) { toast.error(error.message); return; }
+    try {
+    const manejo = autex.data?.find(a => a.numero === numero);
+    if (!manejo) throw new Error('Manejo não encontrado');
+    await fila().enfileirar({ tipo: 'campo_update', tabela: 'autex', chave: 'numero', alvo: numero, empresa_id: manejo.empresa_id, dados: { encerrado: !encerrado }, log: await capturarLog('Situação do manejo alterada', numero) });
     await qc.invalidateQueries({ queryKey: ["autex"] });
-    toast.success(encerrado ? "Manejo reaberto" : "Manejo encerrado e arquivado");
+    toast.success('Situação do manejo guardada — aguarda confirmação na nuvem');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível guardar'); }
+    finally { setBusyAutex(''); }
   }
 
   async function excluirManejo(numero: string) {
@@ -110,12 +123,16 @@ function BasePage() {
     const n = (arvores.data ?? []).filter((a) => a.autex === numero).length;
     if (!window.confirm(`Excluir o manejo ${numero} e suas ${n} árvores da Base? Essa ação não pode ser desfeita.`)) return;
     setBusyAutex(numero);
+    try {
+    await guardarRascunho(`excluir-manejo:${numero}`, { numero, confirmado: false });
+    if (!navigator.onLine) throw new Error('Solicitação guardada no aparelho. Conecte para excluir o manejo com segurança.');
     // Exclui mapas_exploracao, rastros_gps, arvores e a AUTEX numa única transação no banco
     const { error } = await supabase.rpc("excluir_manejo", { _autex: numero });
-    setBusyAutex("");
-    if (error) { toast.error(error.message); return; }
+    if (error) throw new Error(error.message);
     await Promise.all([qc.invalidateQueries({ queryKey: ["autex"] }), qc.invalidateQueries({ queryKey: ["arvores"] })]);
     toast.success("Manejo excluído");
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível excluir'); }
+    finally { setBusyAutex(''); }
   }
 
   // Mesma lógica das colunas EXPL. e VOL.EXPL da planilha

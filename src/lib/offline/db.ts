@@ -17,17 +17,33 @@ function abrir(): Promise<IDBDatabase> {
   });
 }
 
+export function transacionar<T>(db: IDBDatabase, store: string, mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let resultado: T;
+    let erro: unknown;
+    let t: IDBTransaction | undefined;
+    const falhou = () => {
+      db.close();
+      reject(erro ?? t?.error ?? new Error("A gravação local foi interrompida. Os dados não foram confirmados."));
+    };
+    try {
+      t = db.transaction(store, mode);
+      t.oncomplete = () => { db.close(); resolve(resultado); };
+      t.onabort = falhou;
+      t.onerror = () => { erro ??= t?.error; };
+      const req = run(t.objectStore(store));
+      req.onsuccess = () => { resultado = req.result; };
+      req.onerror = () => { erro = req.error; };
+    } catch (e) {
+      erro = e;
+      try { t?.abort(); } catch { /* Already completed/aborted. */ }
+      falhou();
+    }
+  });
+}
+
 function tx<T>(store: string, mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return abrir().then(
-    (db) =>
-      new Promise<T>((resolve, reject) => {
-        const t = db.transaction(store, mode);
-        const req = run(t.objectStore(store));
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-        t.oncomplete = () => db.close();
-      }),
-  );
+  return abrir().then(db => transacionar(db, store, mode, run));
 }
 
 export const idb = {

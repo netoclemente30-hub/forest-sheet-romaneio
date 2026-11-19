@@ -62,6 +62,30 @@ describe("fila offline", () => {
   });
 });
 
+it('resposta perdida após commit remoto reenvia o mesmo ID sem duplicar', async () => {
+  const f = criarFila(memoria());
+  const item = await f.enfileirar(opTora(7));
+  const commits = new Set<string>();
+  let perdeu = true;
+  const enviar = async (_op: Op, id?: string) => {
+    if (id) commits.add(id);
+    if (perdeu) { perdeu = false; throw new Error('Network response lost'); }
+  };
+  await sincronizar(f, enviar);
+  expect((await f.listar())[0]?.id).toBe(item.id);
+  await sincronizar(f, enviar);
+  expect([...commits]).toEqual([item.id]);
+  expect(await f.listar()).toHaveLength(0);
+});
+
+it('edição não reescreve uma intenção cujo envio pode ter sido confirmado', async () => {
+  const f = criarFila(memoria());
+  const item = await f.enfileirar(opTora(7));
+  await sincronizar(f, async () => { throw new Error('Network response lost'); });
+  await expect(f.substituir(item.id, opTora(8))).rejects.toThrow('envio iniciado');
+  expect((await f.listar())[0]?.op).toEqual(opTora(7));
+});
+
 describe("sincronizar", () => {
   it("envia tudo na ordem e esvazia a fila", async () => {
     const f = criarFila(memoria());

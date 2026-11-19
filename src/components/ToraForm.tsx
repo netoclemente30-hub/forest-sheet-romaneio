@@ -79,45 +79,36 @@ export function ToraForm({ toras, arvores, onSaved, saldo = [], origem = "serrar
       const repetida = toraDuplicada(pendentes, identidade);
       if (repetida) { toast.error(avisoDuplicidade(repetida)); setBusy(false); return; }
       if (pendentes.some((t) => t.empresa_id === empresa && t.plaqueta === plaqueta)) { toast.error(`Plaqueta ${plaqueta} já existe nos lançamentos offline`); setBusy(false); return; }
-      if (estaOnline()) {
-        const { data, error } = await supabase.from("toras").select("*").eq("empresa_id", empresa).eq("arvore", dados.arvore);
-        if (error) throw error;
-        const atual = toraDuplicada(data ?? [], identidade);
-        if (atual) { toast.error(avisoDuplicidade(atual)); setBusy(false); void qc.invalidateQueries({ queryKey: ["toras"] }); return; }
-      }
+      // The server revalidates duplicates at replay; loss of signal must not block local intent.
     } catch (erro) {
       setBusy(false);
       toast.error(erro instanceof Error ? erro.message : "Não foi possível verificar se a tora já existe. Tente novamente.");
       return;
     }
-    const log = await capturarLog("Tora lançada", `Tora ${plaqueta} · ${dados.especie} · árvore ${f.arvore} · secção ${f.secao || "–"}`);
-    if (!estaOnline()) {
+    try {
+      const log = await capturarLog("Tora lançada", `Tora ${plaqueta} · ${dados.especie} · árvore ${f.arvore} · secção ${f.secao || "–"}`);
       await fila().enfileirar({ tipo: "tora_insert", dados, log });
-      setBusy(false);
-      toast.success(`Tora ${plaqueta} salva offline — será enviada quando conectar`);
-    } else {
-      try { await registrarOperacao("tora_insert", empresa, dados, [], log); }
-      catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível salvar"); return; }
-      setBusy(false);
-      toast.success(`Tora ${plaqueta} salva — ${fmtM3(vol)} m³`);
+      toast.success(`Tora ${plaqueta} guardada neste aparelho — aguarda confirmação na nuvem`);
       await qc.invalidateQueries({ queryKey: ["toras"] });
-    }
-    onSaved(plaqueta);
-    setF({ ...f, plaqueta: String(plaqueta + 1), secao: secAtual ? String.fromCharCode(secAtual.charCodeAt(0) + 1) : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+      onSaved(plaqueta);
+      setF({ ...f, plaqueta: String(plaqueta + 1), secao: secAtual ? String.fromCharCode(secAtual.charCodeAt(0) + 1) : "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível guardar no aparelho. O formulário foi mantido.');
+    } finally { setBusy(false); }
   }
 
   async function medirSaldo(t: Tora) {
-    if (!estaOnline()) { toast.error("Precisa de internet para medir tora do saldo"); return; }
     setBusy(true);
     const dif = vol - Number(t.volume);
-    const log = await capturarLog("Tora do saldo medida", `Tora ${t.plaqueta} · ${t.especie} · árvore ${t.arvore}-${t.secao} · saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³ (${dif >= 0 ? "+" : ""}${fmtM3(dif)})`);
-    try { await registrarOperacao("tora_update", t.empresa_id, { ...medidas, volume: vol }, [t.plaqueta], log); }
-    catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível medir"); return; }
-    setBusy(false);
-    toast.success(`Tora ${t.plaqueta} medida — saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³`);
-    await qc.invalidateQueries({ queryKey: ["toras"] });
-    onSaved(t.plaqueta);
-    setF({ ...f, arvore: "", secao: "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+    try {
+      const log = await capturarLog("Tora do saldo medida", `Tora ${t.plaqueta} · ${t.especie} · árvore ${t.arvore}-${t.secao} · saldo ${fmtM3(Number(t.volume))} m³ · medido ${fmtM3(vol)} m³ (${dif >= 0 ? "+" : ""}${fmtM3(dif)})`);
+      await registrarOperacao("tora_update", t.empresa_id, { ...medidas, volume: vol }, [t.plaqueta], log);
+      toast.success(`Medidas da tora ${t.plaqueta} guardadas neste aparelho — aguardam confirmação na nuvem`);
+      await qc.invalidateQueries({ queryKey: ["toras"] });
+      onSaved(t.plaqueta);
+      setF({ ...f, arvore: "", secao: "", d_topo1: "", d_topo2: "", d_pe1: "", d_pe2: "", comprimento: "" });
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível medir"); }
+    finally { setBusy(false); }
   }
 
   const field = (k: keyof typeof f, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (

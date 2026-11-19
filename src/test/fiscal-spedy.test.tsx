@@ -135,7 +135,7 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", ()
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   }
   fireEvent.click(screen.getByText("Salvar alterações"));
-  expect(JSON.parse(sessionStorage.getItem(chave)!).historico).toEqual([
+  expect(JSON.parse(localStorage.getItem(chave + ':rascunhos') ?? '{}').historico).toEqual([
     { ...antigo, detalhes: expect.objectContaining({ modFrete: "9" }) },
   ]);
 });

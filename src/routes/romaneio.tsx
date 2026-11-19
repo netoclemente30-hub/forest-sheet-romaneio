@@ -95,9 +95,10 @@ function RomaneioPage() {
       return;
     }
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
-    const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
-    if (!estaOnline()) {
-      setBusy(true);
+    if (busy) return;
+    setBusy(true);
+    try {
+      const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
       await fila().enfileirar({
         tipo: "romaneio_salvar",
         cab,
@@ -107,18 +108,9 @@ function RomaneioPage() {
         empresa_id: empresa,
         log,
       });
-      setBusy(false);
       setItens([]);
-      toast.success("Romaneio salvo offline — será enviado quando conectar");
+      toast.success("Romaneio guardado neste aparelho — aguarda confirmação na nuvem");
       nav({ to: "/historico" });
-      return;
-    }
-    setBusy(true);
-    try {
-      const id = await salvarRomaneioNoBanco(cab, itens.map((t) => t.plaqueta), log, empresa);
-      await qc.invalidateQueries();
-      toast.success("Romaneio salvo");
-      nav({ to: "/historico/$id", params: { id } });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar o romaneio");
     } finally {

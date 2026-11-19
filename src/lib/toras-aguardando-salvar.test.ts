@@ -41,22 +41,21 @@ describe("marcar etiqueta de tora não identificada", () => {
     expect(d.gravar).not.toHaveBeenCalled();
   });
 
-  it("com internet: grava na hora e registra quem marcou", async () => {
+  it("com internet: persiste a intenção e auditoria antes do envio", async () => {
     const d = deps();
     d.online = vi.fn().mockReturnValue(true);
     const r = await marcarAguardandoImpressa([tora, { id: "t2", empresa_id: "RJ", numero: 4, especie: "Maçaranduba" }], true, d);
-    expect(r).toEqual({ offline: 0 });
-    expect(d.gravar).toHaveBeenCalledTimes(2);
-    expect(d.gravar).toHaveBeenCalledWith(expect.objectContaining({ id: "t1" }), true, expect.any(String));
-    expect(d.gravarLog).toHaveBeenCalledTimes(1);
-    expect(d.enfileirar).not.toHaveBeenCalled();
+    expect(r).toEqual({ offline: 2 });
+    expect(d.gravar).not.toHaveBeenCalled();
+    expect(d.gravarLog).not.toHaveBeenCalled();
+    expect(d.enfileirar).toHaveBeenCalledTimes(2);
   });
 
   it("desmarcar grava falsa e apaga a data", async () => {
     const d = deps();
     d.online = vi.fn().mockReturnValue(true);
     await marcarAguardandoImpressa([tora], false, d);
-    expect(d.gravar).toHaveBeenCalledWith(expect.objectContaining({ id: "t1" }), false, null);
+    expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ id: 't1', tipo: 'aguardando_impressa', imprimiu: false }));
   });
 
   it("desmarcar na fila mantém o mesmo lançamento e a mesma data", async () => {
@@ -64,7 +63,7 @@ describe("marcar etiqueta de tora não identificada", () => {
     const fila = [inserir({ id: "t1", empresa_id: "RJ", numero: 3, especie: "Ipê", etiqueta_impressa: true, etiqueta_impressa_em: "2026-11-12T10:00:00Z" })];
     d.listarFila = vi.fn().mockResolvedValue(fila);
     await marcarAguardandoImpressa([tora], false, d);
-    const op = (d.reescrever as unknown as { mock: { calls: [string, Op][] } }).mock.calls[0]![1];
+    const op = (d.reescrever as unknown as { mock: { calls: [string, Op][] } }).mock.calls[0]?.[1];
     expect(op).toMatchObject({ tipo: "aguardando_insert", dados: { etiqueta_impressa: false, etiqueta_impressa_em: null } });
   });
 
@@ -81,12 +80,12 @@ describe("editar tora não identificada", () => {
   const novos = { especie: "Cumaru", nome_cientifico: "Dipteryx odorata", d_topo1: 50, d_topo2: 48, d_pe1: 60, d_pe2: 58, comprimento: 5, volume: 1.15 };
   const dEd = () => { const { gravar: _g, ...b } = deps(); return { ...b, atualizar: vi.fn().mockResolvedValue(undefined) }; };
 
-  it("online: atualiza pelo id e empresa, registra auditoria e não enfileira", async () => {
+  it("online: guarda atualização pelo id e empresa com auditoria", async () => {
     const d = dEd(); d.online = vi.fn().mockReturnValue(true);
-    expect(await editarAguardando(tora, novos, "NI-3", d)).toEqual({ offline: false });
-    expect(d.atualizar).toHaveBeenCalledWith(tora, novos);
-    expect(d.gravarLog).toHaveBeenCalledTimes(1);
-    expect(d.enfileirar).not.toHaveBeenCalled();
+    expect(await editarAguardando(tora, novos, "NI-3", d)).toEqual({ offline: true });
+    expect(d.atualizar).not.toHaveBeenCalled();
+    expect(d.gravarLog).not.toHaveBeenCalled();
+    expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'aguardando_update', id: 't1', empresa_id: 'RJ', dados: { ...novos, numero: 3 } }));
   });
 
   it("lançamento ainda na fila: corrige o próprio item mantendo id, número, empresa e log", async () => {
@@ -106,9 +105,9 @@ describe("editar tora não identificada", () => {
     expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: "aguardando_update", id: "t1", empresa_id: "RJ", dados: { ...novos, numero: 3 } }));
   });
 
-  it("falha online não grava auditoria nem fila", async () => {
-    const d = dEd(); d.online = vi.fn().mockReturnValue(true); d.atualizar = vi.fn().mockRejectedValue(new Error("RLS"));
-    await expect(editarAguardando(tora, novos, "NI-3", d)).rejects.toThrow("RLS");
-    expect(d.gravarLog).not.toHaveBeenCalled(); expect(d.enfileirar).not.toHaveBeenCalled();
+  it("falha local não envia nem confirma edição", async () => {
+    const d = dEd(); d.online = vi.fn().mockReturnValue(true); d.enfileirar = vi.fn().mockRejectedValue(new Error('IndexedDB abort'));
+    await expect(editarAguardando(tora, novos, "NI-3", d)).rejects.toThrow('IndexedDB abort');
+    expect(d.gravarLog).not.toHaveBeenCalled(); expect(d.atualizar).not.toHaveBeenCalled();
   });
 });

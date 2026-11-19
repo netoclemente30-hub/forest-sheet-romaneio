@@ -6,6 +6,7 @@ import { empresaIdGravacao } from "./empresa";
 import { aparelhoAtual } from "./aparelho";
 
 export interface LogCapturado {
+  usuario_id?: string;
   operacao_id?: string;
   acao: string;
   detalhe: string;
@@ -31,11 +32,11 @@ function posicaoGps(): Promise<{ lat: number; lng: number } | null> {
 
 // Captura quem/quando/onde no momento do lançamento (funciona offline).
 export async function capturarLog(acao: string, detalhe: string): Promise<LogCapturado> {
-   const usuario = typeof navigator !== "undefined" && !navigator.onLine
-     ? supabase.auth.getSession().then(({ data }) => data.session?.user ?? null)
-     : supabase.auth.getUser().then(({ data }) => data.user);
+   // Audit captures the already established local session; replay reauthorizes remotely.
+   const usuario = supabase.auth.getSession().then(({ data }) => data.session?.user ?? null);
    const [u, gps, ap] = await Promise.all([usuario, posicaoGps(), aparelhoAtual()]);
   return {
+    ...(u ? { usuario_id: u.id } : {}),
     operacao_id: crypto.randomUUID(),
     acao,
     detalhe,

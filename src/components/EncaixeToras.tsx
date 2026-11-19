@@ -53,7 +53,7 @@ export function EncaixeToras({ linhas, toras, itens, empresa }: { linhas: LinhaS
       });
       setSalva(tora); setEscolhida(null); setMedidas(vazias);
       if (estaOnline()) await qc.invalidateQueries({ queryKey: ["toras"] });
-      toast.success(`Plaqueta ${tora.plaqueta} salva${estaOnline() ? "" : " offline — será enviada quando conectar"}`);
+      toast.success(`Plaqueta ${tora.plaqueta} guardada no aparelho — aguarda confirmação na nuvem`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar. Suas medidas foram mantidas."); }
     finally { setBusy(false); }
   }

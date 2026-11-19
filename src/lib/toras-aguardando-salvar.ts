@@ -57,25 +57,18 @@ export async function marcarAguardandoImpressa(
   const rest = new Map(alvos.map((t) => [t.id, t]));
 
   // 1) Tora ainda na fila de envio: a marcação via junto com o lançamento.
-  for (const item of await deps.listarFila().catch(() => [] as ItemFila[])) {
+  for (const item of await deps.listarFila()) {
     const op = item.op;
-    if (op.tipo !== "aguardando_insert") continue;
+    if (op.tipo !== "aguardando_insert" || item.envio_iniciado) continue;
     const id = String(op.dados["id"] ?? "");
-    if (!rest.has(id)) continue;
+    const alvo = rest.get(id);
+    if (!alvo || op.dados['empresa_id'] !== alvo.empresa_id) continue;
     await deps.reescrever(item.id, { ...op, dados: { ...op.dados, etiqueta_impressa: imprimiu, etiqueta_impressa_em: em } });
     rest.delete(id);
   }
 
   const restantes = [...rest.values()];
   if (!restantes.length) return { offline: 0 };
-
-  // 2) Com internet: grava direto e registra quem marcou.
-  if (deps.online()) {
-    for (const t of restantes) await deps.gravar(t, imprimiu, em);
-    const detalhe = restantes.map((t) => `${codigoAguardando(t.numero)} · ${t.especie}`).join(" | ");
-    await deps.gravarLog(await deps.capturar(acao(imprimiu), detalhe));
-    return { offline: 0 };
-  }
 
   // 3) Sem internet: cada marcação entra na fila, com a auditoria do momento.
   for (const t of restantes) {
@@ -115,17 +108,12 @@ export async function editarAguardando(
   deps: EditarAguardandoDeps = depsEditar(),
 ): Promise<{ offline: boolean }> {
   const acaoEd = "Tora não identificada editada";
-  for (const item of await deps.listarFila().catch(() => [] as ItemFila[])) {
+  for (const item of await deps.listarFila()) {
     const op = item.op;
-    if (op.tipo === "aguardando_insert" && String(op.dados["id"] ?? "") === t.id) {
+    if (op.tipo === "aguardando_insert" && !item.envio_iniciado && op.dados['empresa_id'] === t.empresa_id && String(op.dados["id"] ?? "") === t.id) {
       await deps.reescrever(item.id, { ...op, dados: { ...op.dados, ...dados } });
       return { offline: true };
     }
-  }
-  if (deps.online()) {
-    await deps.atualizar(t, dados);
-    await deps.gravarLog(await deps.capturar(acaoEd, detalhe));
-    return { offline: false };
   }
   await deps.enfileirar({ tipo: "aguardando_update", id: t.id, empresa_id: t.empresa_id, dados: { ...dados, numero: t.numero }, log: await deps.capturar(acaoEd, detalhe) });
   return { offline: true };

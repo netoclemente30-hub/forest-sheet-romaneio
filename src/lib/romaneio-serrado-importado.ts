@@ -3,6 +3,8 @@ import type { Json } from '@/integrations/supabase/types';
 import { capturarLog } from './registro';
 import { comCache } from './offline/cache';
 import { validarImportado, type CabImportado, type PecaImportada } from './romaneio-serrado-importar';
+import { guardarRascunho } from './offline/rascunho';
+import { fila } from './offline/fila';
 
 export type RomaneioImportado = {id:string;empresa_id:string;cab:CabImportado;itens:PecaImportada[];revisao:number;total_pecas:number;total_volume_m3:number};
 export function importadosQuery(empresa:string) {
@@ -14,13 +16,19 @@ export function importadosQuery(empresa:string) {
       rows.push(...(data??[]).map(r=>({...r,cab:r.cab as unknown as CabImportado,itens:r.itens as unknown as PecaImportada[]})));
       if((data?.length??0)<500)return rows;
     }
-  })};
+  }, empresa)};
 }
 export async function salvarImportado(empresa:string,id:string,revisao:number,cab:CabImportado,itens:PecaImportada[],operacao:string) {
   validarImportado(cab,itens);
-  if(!navigator.onLine)throw new Error('Conecte à internet para salvar este romaneio. Os dados continuam na tela.');
+  await guardarRascunho(`romaneio-importado:${id}`, { id, revisao, cab, itens, operacao, confirmado: false }, empresa);
   const log=await capturarLog(revisao?'Romaneio importado editado':'Romaneio serrado importado',cab.numero_carga);
-  const {data,error}=await supabase.rpc('salvar_romaneio_serrado_importado',{_empresa:empresa,_id:id,_revisao:revisao,_cab:cab as unknown as Json,_itens:itens as unknown as Json,_operacao:operacao,_log:log as unknown as Json});
-  if(error)throw new Error(error.message);
-  return data;
+  const f = fila();
+  const pendente = (await f.listar()).find(i => i.op.tipo === 'romaneio_importado_salvar' && i.op.documento_id === id && i.op.empresa_id === empresa);
+  const op = { tipo: 'romaneio_importado_salvar' as const, empresa_id: empresa, documento_id: id, revisao, cab, itens, operacao, log };
+  if (pendente) {
+    if (pendente.envio_iniciado) throw new Error('O envio deste romaneio já começou. Aguarde confirmação antes de editar.');
+    await f.substituir(pendente.id, op);
+    return pendente;
+  }
+  return f.enfileirar(op);
 }

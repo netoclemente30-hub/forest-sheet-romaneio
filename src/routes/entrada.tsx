@@ -111,7 +111,7 @@ function Entrada() {
       }
       await registrarOperacao("romaneio_recebido", empresa, { patio: p }, [id], log);
       await qc.invalidateQueries();
-      toast.success(`Entrada de ${q.data.itens.length} toras confirmada no ${p}`);
+      toast.success(`Entrada de ${q.data.itens.length} toras guardada — aguarda confirmação no ${p}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível receber");
     } finally {

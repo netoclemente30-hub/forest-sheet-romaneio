@@ -54,3 +54,4 @@ use the editor.
 - AppShell groups routes into nav sections with sub-tabs. Why: keep URLs/QR links.
 - Roles (pode_funcao) are enforced by DB policies/RPCs on every write and replay; client role only shapes navigation. Why: offline roles must not bypass checks.
 - Imported sawn-timber manifests are editable company-scoped documents, not stock dispatches; save via an audited, optimistic-concurrency RPC with stable operation IDs. Why: arbitrary imported lengths and corrections must not mutate immutable dispatched packages or duplicate inventory.
+- Field handlers persist queue intent before sending; IndexedDB writes acknowledge transaction completion, and replay retains a send-start marker and stable operation identity. Query bases stay separate from pending projections and capture user/company before requests. Why: network loss must not erase intent or leak another account's data.

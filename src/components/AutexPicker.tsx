@@ -9,8 +9,12 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Plus, X } from "lucide-react";
+import { fila } from '@/lib/offline/fila';
+import { capturarLog } from '@/lib/registro';
+import { useAuth } from '@/hooks/useAuth';
 
 export function AutexPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { empresaId } = useAuth();
   const q = useQuery(autexQuery);
   const qc = useQueryClient();
   const [novo, setNovo] = useState(false);
@@ -20,12 +24,15 @@ export function AutexPicker({ value, onChange }: { value: string; onChange: (v: 
   async function salvar() {
     if (!numero.trim()) { toast.error("Informe o número da AUTEX"); return; }
     setBusy(true);
-    const { error } = await supabase.from("autex").insert({ numero: numero.trim(), descricao: descricao.trim() || null, ...empresaIdGravacao() });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    await qc.invalidateQueries({ queryKey: ["autex"] });
-    onChange(numero.trim()); setNovo(false); setNumero(""); setDescricao("");
-    toast.success("AUTEX cadastrada");
+    try {
+      const empresa = empresaIdGravacao().empresa_id ?? empresaId;
+      if (!empresa) throw new Error('Escolha uma empresa');
+      await fila().enfileirar({ tipo: 'cadastro_upsert', tabela: 'autex', empresa_id: empresa, conflito: 'empresa_id,numero', dados: { numero: numero.trim(), descricao: descricao.trim() || null }, log: await capturarLog('AUTEX cadastrada', numero.trim()) });
+      await qc.invalidateQueries({ queryKey: ['autex'] });
+      onChange(numero.trim()); setNovo(false); setNumero(''); setDescricao('');
+      toast.success('AUTEX guardada no aparelho — aguarda confirmação na nuvem');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível guardar a AUTEX'); }
+    finally { setBusy(false); }
   }
   return <div className="space-y-2">
     <Label>AUTEX</Label>

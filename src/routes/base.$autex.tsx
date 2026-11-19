@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { fmtM3 } from "@/lib/volume";
+import { fila } from '@/lib/offline/fila';
+import { capturarLog } from '@/lib/registro';
 
 export const Route = createFileRoute("/base/$autex")({
   staticData: { sitemap: false },
@@ -40,15 +42,15 @@ function ManejoPage() {
   async function alternarEncerrado() {
     if (!isAdmin) return;
     if (!manejo || busy) return;
-    if (!navigator.onLine) { toast.error("Precisa de internet para encerrar ou reabrir o manejo"); return; }
     const acao = encerrado ? "reabrir" : "encerrar";
     if (!window.confirm(`Deseja ${acao} o manejo ${numero}? A ficha será preservada.`)) return;
     setBusy(true);
-    const { error } = await supabase.from("autex").update({ encerrado: !encerrado }).eq("numero", numero);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    await qc.invalidateQueries({ queryKey: ["autex"] });
-    toast.success(encerrado ? "Manejo reaberto" : "Manejo encerrado e arquivado");
+    try {
+      await fila().enfileirar({ tipo: 'campo_update', tabela: 'autex', chave: 'numero', alvo: numero, empresa_id: manejo.empresa_id, dados: { encerrado: !encerrado }, log: await capturarLog(`Manejo ${acao}`, numero) });
+      await qc.invalidateQueries({ queryKey: ['autex'] });
+      toast.success('Alteração do manejo guardada — aguarda confirmação na nuvem');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível guardar a alteração'); }
+    finally { setBusy(false); }
   }
 
   return (
