@@ -369,6 +369,18 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
             </Button>
           )}
           {previa.detalhes && <EmissaoHomologacao empresa={empresa} r={previa} />}
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (!window.confirm("Excluir este rascunho deste aparelho? Notas já enviadas em homologação continuam registradas no servidor.")) return;
+              if (salvar({ ...conta, historico: conta.historico.filter((r) => r !== previa) })) {
+                setAberto("");
+                toast.success("Rascunho excluído.");
+              }
+            }}
+          >
+            Excluir rascunho
+          </Button>
         </section>
       )}
     </main>
