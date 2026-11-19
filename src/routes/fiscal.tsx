@@ -33,6 +33,7 @@ import {
   type Rascunho,
 } from "@/lib/fiscal";
 import { verificarSpedy } from "@/lib/spedy.functions";
+import { DiagnosticoSpedy, EmissaoHomologacao, InutilizacaoHomologacao } from "@/components/HomologacaoSpedy";
 import type { DadosNfe } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/fiscal")({
@@ -169,8 +170,10 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           salvar({ ...conta, inutilizacoes: [r, ...(conta.inutilizacoes ?? [])] })
         }
       />
+      <InutilizacaoHomologacao empresa={empresa} cadastro={conta.cadastro} itens={conta.inutilizacoes ?? []} />
       <section className={painel}>
         <h2 className="text-xl font-bold">Emitente</h2>
+        <DiagnosticoSpedy empresa={empresa} cnpj={conta.cadastro.cnpj} />
         <small>Empresa do Gestor · {empresa}</small>
         <form
           className="grid gap-3"
@@ -363,6 +366,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               Simular assinatura digital
             </Button>
           )}
+          {previa.detalhes && <EmissaoHomologacao empresa={empresa} r={previa} />}
         </section>
       )}
     </main>

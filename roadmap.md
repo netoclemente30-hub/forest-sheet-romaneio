@@ -81,3 +81,6 @@
 - [x] 296 testes em 54 arquivos, verificação de tipos sem erros
 - [ ] Publicar — aguardando revisão do Neto
 - [ ] Atribuir cargos aos 5 usuários sem função — aguardando o Neto informar as funções
+
+- [x] Fiscal Spedy homologação (P01–P06): emissão/consulta/XML/DANFE/inutilização no servidor, bloqueio de produção, auditoria.
+- [ ] Validação real Spedy: aguarda chave SPEDY_SANDBOX_KEY_<UUID> por empresa, A1 e cadastro na conta sandbox.
