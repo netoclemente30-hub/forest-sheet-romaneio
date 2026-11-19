@@ -12,7 +12,7 @@ vi.mock("@/hooks/useAuth", () => ({
     papel: "admin_empresa",
   }),
 }));
-vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn() }));
+vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn(), diagnosticarSpedy: vi.fn(), emitirNfeHomologacao: vi.fn(), consultarNfeHomologacao: vi.fn(), baixarNfeHomologacao: vi.fn(), inutilizarHomologacao: vi.fn(), verificarCadastroSpedy: vi.fn(), cadastrarEmpresaSpedy: vi.fn(), enviarCertificadoSpedy: vi.fn() }));
 vi.mock("@/lib/fiscal-cargas", () => ({
   cargasFiscais: async () => [{ id: "toras/1", nome: "Carga 1" }],
   importarCarga: async () => ({
@@ -135,7 +135,7 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", ()
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   }
   fireEvent.click(screen.getByText("Salvar alterações"));
-  expect(JSON.parse(sessionStorage.getItem(chave)!).historico).toEqual([
+  expect(JSON.parse(localStorage.getItem(chave + ':rascunhos') ?? '{}').historico).toEqual([
     { ...antigo, detalhes: expect.objectContaining({ modFrete: "9" }) },
   ]);
 });
@@ -214,7 +214,7 @@ it("consulta somente o sandbox e usa exclusivamente a chave da empresa", async (
     "https://sandbox-api.spedy.com.br/v1/product-invoices?pageSize=1",
     expect.objectContaining({
       method: "GET",
-      redirect: "error",
+      redirect: "manual",
       headers: { "X-Api-Key": "fixture" },
     }),
   );

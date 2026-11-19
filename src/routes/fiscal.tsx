@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { CadastrosFiscais } from "@/components/CatalogoFiscal";
 import { GerenciamentoFiscal } from "@/components/GerenciamentoFiscal";
 import { ConsultaCnpjFiscal } from "@/components/ConsultaCnpjFiscal";
+import { OnboardingSpedy } from "@/components/OnboardingSpedy";
 import {
   documentoId,
   lerCatalogo,
@@ -33,10 +34,18 @@ import {
   type Rascunho,
 } from "@/lib/fiscal";
 import { verificarSpedy } from "@/lib/spedy.functions";
+import { DiagnosticoSpedy, EmissaoHomologacao, InutilizacaoHomologacao } from "@/components/HomologacaoSpedy";
 import type { DadosNfe } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/fiscal")({
   staticData: { sitemap: false },
+  head: () => ({ meta: [
+    { title: 'Fiscal — Gestor Florestal' },
+    { name: 'description', content: 'Cadastros e rascunhos fiscais por empresa no Gestor Florestal.' },
+    { property: 'og:title', content: 'Fiscal — Gestor Florestal' },
+    { property: 'og:description', content: 'Cadastros e rascunhos fiscais por empresa no Gestor Florestal.' },
+    { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' },
+  ] }),
   component: Fiscal,
 });
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -62,7 +71,7 @@ function Fiscal() {
 }
 function Painel({ empresa, chave }: { empresa: string; chave: string }) {
   const [conta, setConta] = useState<ContaFiscal>(() => {
-    const sessao: ContaFiscal = JSON.parse(sessionStorage.getItem(chave) || "null") ?? contaNova();
+    const sessao: ContaFiscal = JSON.parse(localStorage.getItem(chave + ':rascunhos') || sessionStorage.getItem(chave) || "null") ?? contaNova();
     return {
       ...sessao,
       cadastro: JSON.parse(localStorage.getItem(chave + ":emitente") || "null") ?? sessao.cadastro,
@@ -110,11 +119,11 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
   const previa = conta.historico.find((r) => idRascunho(r) === aberto);
   function salvar(proxima: ContaFiscal) {
     try {
-      sessionStorage.setItem(chave, JSON.stringify(proxima));
+      localStorage.setItem(chave + ':rascunhos', JSON.stringify(proxima));
       setConta(proxima);
       return true;
     } catch {
-      toast.error("Falha ao salvar nesta aba.");
+      toast.error("Falha ao guardar o rascunho neste aparelho.");
       return false;
     }
   }
@@ -139,7 +148,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
       {mostrarCadastros && <CadastrosFiscais catalogo={catalogo} gravar={gravar} />}
       <p>
         Homologação Spedy · Rascunhos sem valor fiscal. Clientes e produtos ficam neste navegador. O
-        histórico fica nesta aba durante a sessão.
+        histórico de rascunhos fica neste aparelho. Emissão e consulta fiscal exigem internet.
       </p>
       <GerenciamentoFiscal
         notas={conta.historico}
@@ -162,9 +171,12 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           salvar({ ...conta, inutilizacoes: [r, ...(conta.inutilizacoes ?? [])] })
         }
       />
+      <InutilizacaoHomologacao empresa={empresa} cadastro={conta.cadastro} itens={conta.inutilizacoes ?? []} />
       <section className={painel}>
         <h2 className="text-xl font-bold">Emitente</h2>
+        <DiagnosticoSpedy empresa={empresa} cnpj={conta.cadastro.cnpj} />
         <small>Empresa do Gestor · {empresa}</small>
+        <OnboardingSpedy empresa={empresa} cadastro={conta.cadastro} />
         <form
           className="grid gap-3"
           onSubmit={(e) => {
@@ -356,6 +368,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               Simular assinatura digital
             </Button>
           )}
+          {previa.detalhes && <EmissaoHomologacao empresa={empresa} r={previa} />}
         </section>
       )}
     </main>
