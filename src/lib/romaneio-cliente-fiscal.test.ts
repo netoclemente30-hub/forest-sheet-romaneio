@@ -23,7 +23,7 @@ describe("romaneio de toras → nota fiscal", () => {
 
 describe("chave Spedy", () => {
   it("usa a chave mestra quando a empresa não tem chave própria", () => {
-    expect(chaveSandbox(emp)).toBeUndefined();
+    expect(chaveSandbox("11111111-2222-3333-4444-555555555555")).toBeUndefined();
     process.env["SPEDY_SANDBOX_KEY"] = "mestra";
     expect(chaveSandbox(emp)).toBe("mestra");
   });
@@ -31,5 +31,12 @@ describe("chave Spedy", () => {
     process.env["SPEDY_SANDBOX_KEY"] = "mestra";
     process.env["SPEDY_SANDBOX_KEY_6D4582F7_B121_4D90_9708_E8C544591397"] = "propria";
     expect(chaveSandbox(emp)).toBe("propria");
+  });
+});
+
+describe("chave da Madenorte como mestra", () => {
+  it("outra empresa usa a chave da Madenorte quando não tem chave própria", () => {
+    process.env["SPEDY_SANDBOX_KEY_6D4582F7_B121_4D90_9708_E8C544591397"] = "madenorte";
+    expect(chaveSandbox("11111111-2222-3333-4444-555555555555")).toBe("madenorte");
   });
 });

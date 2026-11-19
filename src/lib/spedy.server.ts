@@ -25,8 +25,16 @@ export async function verificarSandbox(empresa: string) {
 }
 
 /** Chave da empresa tem prioridade; senão usa a chave mestra única da plataforma. */
+export const EMPRESA_MESTRA = "6d4582f7-b121-4d90-9708-e8c544591397";
+
 export function chaveSandbox(empresa: string): string | undefined {
-  return process.env[nomeSegredo(empresa)] || process.env["SPEDY_SANDBOX_KEY"] || undefined;
+  return (
+    process.env[nomeSegredo(empresa)] ||
+    process.env["SPEDY_SANDBOX_KEY"] ||
+    // Chave da conta integradora (Madenorte) serve de mestra para as demais empresas.
+    process.env[nomeSegredo(EMPRESA_MESTRA)] ||
+    undefined
+  );
 }
 
 // ---------- Emissão em homologação (somente servidor) ----------
