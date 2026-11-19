@@ -5,6 +5,11 @@ import type { Json } from "@/integrations/supabase/types";
 
 export type CabecalhoRomaneio = {
   placa: string; julieta: string; motorista: string; cpf: string; data: string;
+  cliente?: Record<string, string> | null;
+};
+export type ClienteRomaneio = {
+  nome: string; documento: string; logradouro: string; numero: string; complemento: string;
+  bairro: string; municipio: string; uf: string; cep: string;
 };
 
 /** A carga e a baixa das toras são realizadas pela mesma transação no banco. */

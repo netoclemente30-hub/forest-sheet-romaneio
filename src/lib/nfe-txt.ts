@@ -6,7 +6,7 @@ export type DadosNfe = {
   numero: string;
   data: string; // AAAA-MM-DD
   natureza?: string;
-  cliente?: { nome: string; documento: string } | null;
+  cliente?: { nome: string; documento: string; endereco?: Partial<Record<"logradouro"|"numero"|"complemento"|"bairro"|"municipio"|"uf"|"cep", string>> } | null;
   motorista?: { nome: string; cpf: string } | null;
   placa?: string | null;
   reboque?: string | null;

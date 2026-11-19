@@ -27,7 +27,7 @@ export type Op =
   | { tipo: "tora_delete"; plaqueta: number; empresa_id: string; log?: LogCapturado }
   | {
       tipo: "romaneio_salvar";
-      cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string };
+      cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string; cliente?: Record<string, string> | null };
       total_volume: number;
       qtd_toras: number;
       plaquetas: number[];

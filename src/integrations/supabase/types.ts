@@ -907,6 +907,7 @@ export type Database = {
       }
       romaneios: {
         Row: {
+          cliente: Json | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -923,6 +924,7 @@ export type Database = {
           total_volume: number
         }
         Insert: {
+          cliente?: Json | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -939,6 +941,7 @@ export type Database = {
           total_volume?: number
         }
         Update: {
+          cliente?: Json | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null

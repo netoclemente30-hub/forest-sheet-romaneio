@@ -44,7 +44,7 @@ export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
     const dados: Record<string, unknown> = { ...base, ...op.dados };
     return Object.fromEntries(camposTora.map(({ chave }) => [chave, String(dados[chave === "plaquetaNova" ? "plaqueta" : chave] ?? (chave === "plaquetaNova" && op.tipo === "tora_update" ? op.plaqueta : ""))]));
   }
-  if (op.tipo === "romaneio_salvar") return { ...op.cab };
+  if (op.tipo === "romaneio_salvar") { const { cliente: _c, ...cab } = op.cab; return cab; }
   if (op.tipo === "romaneio_recebido") return { patio: op.patio };
   if (op.tipo === "arvore_gps") return { latitude: String(op.dados.latitude), longitude: String(op.dados.longitude), gps_precisao: String(op.dados.gps_precisao ?? "") };
   if (op.tipo === "rastro_salvar" || op.tipo === "arrasto_arvore" || op.tipo === "transferencia_explanada" || op.tipo === "arrasto_toras" || op.tipo === "aguardando_insert" || op.tipo === "aguardando_update" || op.tipo === "aguardando_impressa") return {};
@@ -106,7 +106,7 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
       const motorista = valores["motorista"]?.trim();
       const data = valores["data"]?.trim();
       if (!placa || !motorista || !data) throw new Error("Preencha placa, motorista e data");
-      return { ...op, cab: { placa: placa.toUpperCase(), julieta: valores["julieta"]?.trim().toUpperCase() ?? "", motorista, cpf: valores["cpf"]?.trim() ?? "", data } };
+      return { ...op, cab: { placa: placa.toUpperCase(), julieta: valores["julieta"]?.trim().toUpperCase() ?? "", motorista, cpf: valores["cpf"]?.trim() ?? "", data, cliente: op.cab.cliente ?? null } };
     }
     default: throw new Error("Lançamento inválido");
   }

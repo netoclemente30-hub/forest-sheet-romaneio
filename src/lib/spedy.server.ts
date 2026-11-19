@@ -1,7 +1,7 @@
 export async function verificarSandbox(empresa: string) {
   if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(empresa))
     throw new Error("Empresa inválida.");
-  const chave = process.env["SPEDY_SANDBOX_KEY_" + empresa.replaceAll("-", "_").toUpperCase()];
+  const chave = chaveSandbox(empresa);
   if (!chave) return "Chave de homologação pendente no servidor.";
   try {
     const resposta = await fetch(
@@ -24,6 +24,11 @@ export async function verificarSandbox(empresa: string) {
   return "Consulta indisponível. Tente novamente.";
 }
 
+/** Chave da empresa tem prioridade; senão usa a chave mestra única da plataforma. */
+export function chaveSandbox(empresa: string): string | undefined {
+  return process.env[nomeSegredo(empresa)] || process.env["SPEDY_SANDBOX_KEY"] || undefined;
+}
+
 // ---------- Emissão em homologação (somente servidor) ----------
 import type { Documento, Http, Inutilizacao, Store } from "./fiscal-spedy.core";
 import { SPEDY_SANDBOX, TEMPO_TRAVA_MS } from "./fiscal-spedy.core";
@@ -33,7 +38,7 @@ export const nomeSegredo = (empresa: string) =>
 
 /** Cliente HTTP fixo no sandbox. Não existe caminho para a URL de produção. */
 export function httpSandbox(empresa: string, timeoutMs = 15000): Http | null {
-  const chave = process.env[nomeSegredo(empresa)];
+  const chave = chaveSandbox(empresa);
   if (!chave) return null;
   return async (caminho, init) => {
     const r = await fetch(SPEDY_SANDBOX + caminho, {
@@ -52,7 +57,7 @@ export function httpSandbox(empresa: string, timeoutMs = 15000): Http | null {
 }
 
 export async function baixarSandbox(empresa: string, caminho: string) {
-  const chave = process.env[nomeSegredo(empresa)];
+  const chave = chaveSandbox(empresa);
   if (!chave) throw new Error("Chave pendente.");
   const r = await fetch(SPEDY_SANDBOX + caminho, { headers: { "X-Api-Key": chave }, redirect: "manual", signal: AbortSignal.timeout(20000) });
   if (!r.ok) throw new Error("Arquivo indisponível na Spedy.");
@@ -132,7 +137,7 @@ import type { HttpForm, OnboardingStore } from "./spedy-onboarding.core";
 
 /** Envio multipart fixo no sandbox. Não define Content-Type: o FormData gera o boundary. Nunca registra o corpo. */
 export function formSandbox(empresa: string, timeoutMs = 30000): HttpForm | null {
-  const chave = process.env[nomeSegredo(empresa)];
+  const chave = chaveSandbox(empresa);
   if (!chave) return null;
   return async (caminho, form) => {
     const r = await fetch(SPEDY_SANDBOX + caminho, {

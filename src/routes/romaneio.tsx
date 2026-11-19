@@ -46,6 +46,8 @@ function RomaneioPage() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [cab, setCab] = useState({ placa: "", julieta: "", motorista: "", cpf: "", data: new Date().toISOString().slice(0, 10) });
+  const clienteVazio = { nome: "", documento: "", logradouro: "", numero: "", complemento: "", bairro: "", municipio: "", uf: "", cep: "" };
+  const [cliente, setCliente] = useState<typeof clienteVazio>(clienteVazio);
   const [itens, setItens] = useState<Tora[]>([]);
   const [plq, setPlq] = useState("");
   const [scan, setScan] = useState(false);
@@ -101,7 +103,7 @@ function RomaneioPage() {
       const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
       await fila().enfileirar({
         tipo: "romaneio_salvar",
-        cab,
+        cab: { ...cab, cliente: cliente.nome.trim() || cliente.documento.trim() ? cliente : null },
         total_volume: Math.round(total * 10000) / 10000,
         qtd_toras: itens.length,
         plaquetas: itens.map((t) => t.plaqueta),
@@ -146,6 +148,26 @@ function RomaneioPage() {
         {f("motorista", "Motorista", "text", "lista-motorista")}
         {f("cpf", "CPF")}
         <div className="col-span-2">{f("data", "Data", "date")}</div>
+      </div>
+      <datalist id="lista-cliente">{cad.data?.clientes.map((c) => <option key={c.nome} value={c.nome} />)}</datalist>
+      <div className="bg-card border rounded-xl p-3 space-y-2">
+        <p className="font-semibold text-sm">Cliente / destinatário (vai para a nota fiscal)</p>
+        {!!cad.data?.clientes.length && <div className="flex flex-wrap gap-1">
+          {cad.data.clientes.slice(0, 8).map((c) => <Button key={c.nome} size="sm" variant="outline" onClick={() => setCliente({ ...clienteVazio, ...c })}>{c.nome}</Button>)}
+        </div>}
+        <div className="grid grid-cols-2 gap-2">
+          {([["nome", "Nome / razão social", 2], ["documento", "CPF / CNPJ", 2], ["logradouro", "Endereço (rua)", 2], ["numero", "Número", 1], ["complemento", "Complemento", 1], ["bairro", "Bairro", 1], ["municipio", "Município", 1], ["uf", "UF", 1], ["cep", "CEP", 1]] as const).map(([k, label, span]) => (
+            <div key={k} className={span === 2 ? "col-span-2 space-y-1" : "space-y-1"}>
+              <Label className="text-xs">{label}</Label>
+              <Input aria-label={label} list={k === "nome" ? "lista-cliente" : undefined} value={cliente[k]} maxLength={k === "uf" ? 2 : undefined} className="h-11"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const salvo = k === "nome" ? cad.data?.clientes.find((c) => c.nome.toLowerCase() === v.trim().toLowerCase()) : undefined;
+                  setCliente(salvo ? { ...clienteVazio, ...salvo } : { ...cliente, [k]: k === "uf" ? v.toUpperCase() : v });
+                }} />
+            </div>
+          ))}
+        </div>
       </div>
       <details className="bg-card border rounded-xl p-3">
         <summary className="font-semibold cursor-pointer">Cadastros salvos (toque para preencher)</summary>

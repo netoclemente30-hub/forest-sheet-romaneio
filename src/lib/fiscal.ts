@@ -50,9 +50,10 @@ export function detalhesIniciais(carga: DadosNfe): DetalhesNota {
       municipio: "",
       uf: "",
       cep: "",
+      ...(carga.cliente?.endereco ?? {}),
     },
     modFrete: "",
-    infAdFisco: "",
+    infAdFisco: carga.reboque?.trim() ? `Reboque: ${carga.reboque.trim().toUpperCase()}` : "",
   };
 }
 export type InutilizacaoRascunho = {
