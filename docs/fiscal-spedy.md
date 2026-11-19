@@ -62,3 +62,12 @@ Tabelas: `fiscal_config`, `fiscal_documentos`, `fiscal_inutilizacoes`, `fiscal_e
 Pendente: validação real com chave de sandbox, A1 e cadastro da empresa; webhooks; cancelamento e carta de correção; assinatura do módulo real.
 
 [Idempotência](https://docs.spedy.com.br/start/idempotencia) · [Emissão de NF-e](https://docs.spedy.com.br/guides/emissao-nfe)
+
+## Onboarding em homologação: empresa e certificado A1
+
+Em **Fiscal → Emitente**, bloco "Spedy (homologação): empresa e certificado A1":
+- **Verificar CNPJ na Spedy**: busca paginada (`GET /companies?page=N&pageSize=100`) pelo CNPJ cadastrado da empresa no Gestor (`empresas.cnpj`). CNPJ do formulário diferente é recusado.
+- **Vincular**: grava em `fiscal_config` o id achado no servidor. Nada é alterado na Spedy.
+- **Cadastrar**: só se o CNPJ não existe; `POST /companies` com `id` = código da empresa no Gestor. A documentação aceita `id`, mas não promete idempotência; após timeout a tela exige nova verificação e o servidor bloqueia nova criação por 2 min. `apiCredentials` da resposta é descartado. A documentação diz que só a chave da empresa titular da conta cria empresas.
+- **Certificado A1**: `.pfx` até 100 KB, checagem estrutural PKCS#12 mínima (sem abrir o arquivo); senha, titular e validade são conferidos pela Spedy. Arquivo e senha ficam só na memória da tela e da requisição; nunca vão para banco, storage, cache ou fila. Com certificado ativo, exige confirmação de substituição. Timeout não reenvia.
+- Auditoria em `fiscal_eventos` (`spedy_empresa_*`, `spedy_certificado`) com resultado resumido.

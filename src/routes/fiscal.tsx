@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { CadastrosFiscais } from "@/components/CatalogoFiscal";
 import { GerenciamentoFiscal } from "@/components/GerenciamentoFiscal";
 import { ConsultaCnpjFiscal } from "@/components/ConsultaCnpjFiscal";
+import { OnboardingSpedy } from "@/components/OnboardingSpedy";
 import {
   documentoId,
   lerCatalogo,
@@ -175,6 +176,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
         <h2 className="text-xl font-bold">Emitente</h2>
         <DiagnosticoSpedy empresa={empresa} cnpj={conta.cadastro.cnpj} />
         <small>Empresa do Gestor · {empresa}</small>
+        <OnboardingSpedy empresa={empresa} cadastro={conta.cadastro} />
         <form
           className="grid gap-3"
           onSubmit={(e) => {

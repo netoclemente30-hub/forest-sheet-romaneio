@@ -126,3 +126,36 @@ export async function storeAdmin(): Promise<Store> {
     },
   };
 }
+
+// ---------- Onboarding: empresa e certificado A1 (sandbox) ----------
+import type { HttpForm, OnboardingStore } from "./spedy-onboarding.core";
+
+/** Envio multipart fixo no sandbox. Não define Content-Type: o FormData gera o boundary. Nunca registra o corpo. */
+export function formSandbox(empresa: string, timeoutMs = 30000): HttpForm | null {
+  const chave = process.env[nomeSegredo(empresa)];
+  if (!chave) return null;
+  return async (caminho, form) => {
+    const r = await fetch(SPEDY_SANDBOX + caminho, {
+      method: "POST", headers: { "X-Api-Key": chave }, body: form,
+      redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(timeoutMs),
+    });
+    const txt = await r.text();
+    let json: unknown = null;
+    try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
+    return { status: r.status >= 300 && r.status < 400 ? 502 : r.status, json };
+  };
+}
+
+export async function storeOnboarding(): Promise<OnboardingStore> {
+  const base = await storeAdmin();
+  const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+  return {
+    config: base.config, salvarConfig: base.salvarConfig, evento: base.evento,
+    async criacaoPendente(empresa, desde) {
+      const { data } = await db.from("fiscal_eventos").select("acao")
+        .eq("empresa_id", empresa).in("acao", ["spedy_empresa_criar_inicio", "spedy_empresa_criar"])
+        .gte("criado_em", desde.toISOString()).order("criado_em", { ascending: false }).limit(1);
+      return data?.[0]?.acao === "spedy_empresa_criar_inicio";
+    },
+  };
+}

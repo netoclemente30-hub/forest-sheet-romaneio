@@ -12,7 +12,7 @@ vi.mock("@/hooks/useAuth", () => ({
     papel: "admin_empresa",
   }),
 }));
-vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn(), diagnosticarSpedy: vi.fn(), emitirNfeHomologacao: vi.fn(), consultarNfeHomologacao: vi.fn(), baixarNfeHomologacao: vi.fn(), inutilizarHomologacao: vi.fn() }));
+vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn(), diagnosticarSpedy: vi.fn(), emitirNfeHomologacao: vi.fn(), consultarNfeHomologacao: vi.fn(), baixarNfeHomologacao: vi.fn(), inutilizarHomologacao: vi.fn(), verificarCadastroSpedy: vi.fn(), cadastrarEmpresaSpedy: vi.fn(), enviarCertificadoSpedy: vi.fn() }));
 vi.mock("@/lib/fiscal-cargas", () => ({
   cargasFiscais: async () => [{ id: "toras/1", nome: "Carga 1" }],
   importarCarga: async () => ({
