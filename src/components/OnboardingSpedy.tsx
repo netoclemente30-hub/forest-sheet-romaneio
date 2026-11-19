@@ -109,26 +109,35 @@ export function OnboardingSpedy({ empresa, cadastro }: { empresa: string; cadast
       <div className="space-y-2 border-t pt-3">
         <h4 className="font-medium">Certificado A1</h4>
         <p className="text-sm text-muted-foreground">O arquivo e a senha vão direto para a Spedy e não ficam guardados no Gestor nem neste aparelho. A senha e a validade são conferidas pela Spedy.</p>
-        <Input key={chaveInput} type="file" accept=".pfx" aria-label="Arquivo do certificado A1 (.pfx)" onChange={(e) => { setArquivo(e.target.files?.[0] ?? null); setSubstituir(null); setConfirmaSubst(false); }} />
-        <Input type="password" autoComplete="off" placeholder="Senha do certificado" aria-label="Senha do certificado" value={senha} onChange={(e) => setSenha(e.target.value)} />
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={confirmaEnvio} onChange={(e) => setConfirmaEnvio(e.target.checked)} />Confirmo o envio deste certificado à Spedy (homologação).</label>
+        <Input key={chaveInput} type="file" accept=".pfx" disabled={ocupado} aria-label="Arquivo do certificado A1 (.pfx)" onChange={(e) => { setArquivo(e.target.files?.[0] ?? null); setConfirmaEnvio(false); setSubstituir(null); setConfirmaSubst(false); }} />
+        <Input type="password" autoComplete="off" placeholder="Senha do certificado" aria-label="Senha do certificado" disabled={ocupado} value={senha} onChange={(e) => { setSenha(e.target.value); setConfirmaSubst(false); }} />
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={ocupado} checked={confirmaEnvio} onChange={(e) => setConfirmaEnvio(e.target.checked)} />Confirmo o envio deste certificado à Spedy (homologação).</label>
         {substituir && (
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={confirmaSubst} onChange={(e) => setConfirmaSubst(e.target.checked)} />
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={ocupado} checked={confirmaSubst} onChange={(e) => setConfirmaSubst(e.target.checked)} />
             Substituir o certificado ativo ({substituir.subject ?? "sem titular"} · validade {data(substituir.expirationAt)}).</label>
         )}
         <div className="flex gap-2">
           <Button disabled={!arquivo || !senha || !confirmaEnvio || (!!substituir && !confirmaSubst) || ocupado} onClick={() => travar(async () => {
             if (!arquivo) return;
-            const fd = new FormData();
-            fd.append("empresa", empresa); fd.append("confirmacao", "HOMOLOGACAO");
-            fd.append("arquivo", arquivo); fd.append("senha", senha);
-            if (substituir && confirmaSubst) fd.append("substituir", "1");
-            const r = (await enviar({ data: fd })) as Res & { certificado?: { expirationAt: string | null; subject: string | null } };
-            if (r.situacao === "confirmar_substituicao") { setSubstituir(r.atual ?? { expirationAt: null, subject: null }); setMsg(r.mensagem); return; }
-            setMsg(r.situacao === "enviado" ? `${r.mensagem} Titular: ${r.certificado?.subject ?? "—"} · validade ${data(r.certificado?.expirationAt)}.` : r.mensagem);
-            limparCertificado(); // nunca reenvia sozinho
+            let manter = false;
+            try {
+              const fd = new FormData();
+              fd.append("empresa", empresa); fd.append("confirmacao", "HOMOLOGACAO");
+              fd.append("arquivo", arquivo); fd.append("senha", senha);
+              if (substituir && confirmaSubst) fd.append("substituir", "1");
+              const r = (await enviar({ data: fd })) as Res & { certificado?: { expirationAt: string | null; subject: string | null } };
+              if (r.situacao === "confirmar_substituicao" && !substituir) {
+                manter = true; // mantém arquivo/senha só enquanto o usuário decide
+                setSubstituir(r.atual ?? { expirationAt: null, subject: null }); setMsg(r.mensagem); return;
+              }
+              setMsg(r.situacao === "enviado" ? `${r.mensagem} Titular: ${r.certificado?.subject ?? "—"} · validade ${data(r.certificado?.expirationAt)}.` : r.mensagem);
+            } catch {
+              setMsg("Falha na comunicação. Rode o Diagnóstico antes de enviar de novo.");
+            } finally {
+              if (!manter) limparCertificado(); // nunca reenvia sozinho
+            }
           })}>{ocupado ? "Enviando…" : "Enviar certificado"}</Button>
-          <Button variant="outline" disabled={ocupado} onClick={limparCertificado}>Limpar</Button>
+          <Button variant="outline" disabled={ocupado} onClick={() => { limparCertificado(); setMsg(""); }}>{substituir ? "Cancelar" : "Limpar"}</Button>
         </div>
       </div>
     </div>

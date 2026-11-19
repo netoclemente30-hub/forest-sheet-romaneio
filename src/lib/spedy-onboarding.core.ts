@@ -15,10 +15,14 @@ const lista = (x: unknown): Record<string, unknown>[] => {
 const corpo = (x: unknown) => { const o = obj(x); return o["result"] && !Array.isArray(o["result"]) ? obj(o["result"]) : o; };
 /** Remove sequências parecidas com chaves/tokens antes de mostrar mensagens da API. */
 export const sanitizar = (s: string) => s.replace(/[A-Za-z0-9_\-+/=]{24,}/g, "[omitido]").slice(0, 300);
-function mensagemApi(x: unknown) {
-  const o = obj(x);
-  const errs = Array.isArray(o["errors"]) ? (o["errors"] as unknown[]).map((e) => String(obj(e)["message"] ?? "")) : [];
-  return sanitizar(errs.filter(Boolean).join(" ") || String(o["message"] ?? o["title"] ?? "")) || "Resposta sem detalhe.";
+/** Mensagens fixas por status: nenhum texto da API é devolvido ao usuário. */
+export function mensagemCriacao(status: number) {
+  if (status === 400 || status === 422) return "A Spedy recusou os dados da empresa. Confira nome, razão social, CNPJ, endereço, código IBGE e regime.";
+  if (status === 401) return "A Spedy recusou a chave desta empresa.";
+  if (status === 403) return "A chave desta empresa não pode cadastrar empresas (é preciso a chave da empresa titular da conta Spedy).";
+  if (status === 409) return "A Spedy informou conflito: a empresa pode já existir. Use \"Verificar CNPJ na Spedy\".";
+  if (status === 429) return "Muitas tentativas na Spedy. Aguarde e verifique o CNPJ antes de tentar de novo.";
+  return "Spedy indisponível. Verifique o CNPJ antes de tentar de novo.";
 }
 
 export type HttpForm = (caminho: string, form: FormData) => Promise<Resposta>;
@@ -134,7 +138,7 @@ export async function criarEmpresa(ctx: Ctx, entrada: EmpresaSpedyEntrada) {
     return { situacao: "incerto" as const, mensagem: "Sem resposta da Spedy. Antes de repetir, use \"Verificar CNPJ na Spedy\": se a empresa aparecer, vincule-a." };
   }
   if (r.status >= 300) {
-    const msg = r.status === 403 ? "A chave desta empresa não pode cadastrar empresas (é preciso a chave da empresa titular da conta Spedy)." : mensagemApi(r.json);
+    const msg = mensagemCriacao(r.status);
     await ctx.store.evento({ empresa_id: ctx.empresa, acao: "spedy_empresa_criar", resultado: `erro:${r.status}`, usuario_id: ctx.usuario });
     return { situacao: "erro" as const, mensagem: msg };
   }

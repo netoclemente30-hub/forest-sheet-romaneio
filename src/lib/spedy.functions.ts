@@ -105,19 +105,17 @@ export const inutilizarHomologacao = createServerFn({ method: "POST" })
   });
 
 // ---------- Onboarding Spedy: empresa e certificado A1 ----------
-async function cnpjDaEmpresa(context: Ctx, empresa: string) {
+// Regras e tratamento de erro ficam em spedy-onboarding.wrapper.ts (sem console.error de exceções).
+function depsOnboarding(context: Ctx) {
   const sb = context.supabase as unknown as {
+    rpc: (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
     from: (t: string) => { select: (c: string) => { eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: { cnpj: string | null } | null }> } } };
   };
-  const { data } = await sb.from("empresas").select("cnpj").eq("id", empresa).maybeSingle();
-  return data?.cnpj ?? null;
-}
-async function ctxOnboarding(context: Ctx, empresa: string) {
-  await autorizar(context, empresa); // antes de qualquer segredo ou HTTP
-  const s = await import("./spedy.server");
   return {
-    s,
-    ctx: { http: s.httpSandbox(empresa), store: await s.storeOnboarding(), empresa, usuario: context.userId, cnpjAutorizado: await cnpjDaEmpresa(context, empresa) },
+    usuario: context.userId,
+    autorizar: async (empresa: string) => { const { data, error } = await sb.rpc("pode_fiscal", { _empresa: empresa }); return !error && data === true; },
+    cnpj: async (empresa: string) => (await sb.from("empresas").select("cnpj").eq("id", empresa).maybeSingle()).data?.cnpj ?? null,
+    servidor: () => import("./spedy.server"),
   };
 }
 
@@ -125,48 +123,23 @@ export const verificarCadastroSpedy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(base.extend({ cnpj: z.string().max(20) }))
   .handler(async ({ data, context }) => {
-    try {
-      const { ctx } = await ctxOnboarding(context as unknown as Ctx, data.empresa);
-      const { verificarCadastro } = await import("./spedy-onboarding.core");
-      return { ok: true as const, ...(await verificarCadastro(ctx, data.cnpj)) };
-    } catch (e) { return erro(e); }
+    const w = await import("./spedy-onboarding.wrapper");
+    return w.onboardingVerificar(depsOnboarding(context as unknown as Ctx), data.empresa, data.cnpj);
   });
 
 export const cadastrarEmpresaSpedy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(base.extend({
-    modo: z.enum(["criar", "vincular"]),
-    confirmacao: z.literal("HOMOLOGACAO"),
-    dados: z.unknown(),
-  }))
+  .inputValidator(base.extend({ modo: z.enum(["criar", "vincular"]), confirmacao: z.literal("HOMOLOGACAO"), dados: z.unknown() }))
   .handler(async ({ data, context }) => {
-    try {
-      const { ctx } = await ctxOnboarding(context as unknown as Ctx, data.empresa);
-      const m = await import("./spedy-onboarding.core");
-      const d = data.dados as import("./spedy-onboarding.core").EmpresaSpedyEntrada;
-      const r = data.modo === "vincular" ? await m.vincularEmpresa(ctx, String((d as { cnpj?: unknown })?.cnpj ?? "")) : await m.criarEmpresa(ctx, d);
-      return { ok: r.situacao !== "erro", situacao: r.situacao, mensagem: r.mensagem };
-    } catch (e) { return erro(e); }
+    const w = await import("./spedy-onboarding.wrapper");
+    return w.onboardingCadastrar(depsOnboarding(context as unknown as Ctx), data.empresa, data.modo, data.dados);
   });
 
 export const enviarCertificadoSpedy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((fd: unknown) => {
-    if (!(fd instanceof FormData)) throw new Error("Envio inválido.");
-    const arquivo = fd.get("arquivo");
-    const empresa = z.string().uuid().parse(fd.get("empresa"));
-    if (fd.get("confirmacao") !== "HOMOLOGACAO") throw new Error("Confirmação obrigatória.");
-    if (!(arquivo instanceof File)) throw new Error("Arquivo ausente.");
-    return { empresa, arquivo, senha: String(fd.get("senha") ?? ""), substituir: fd.get("substituir") === "1" };
-  })
+  // Não lança: erros de formato viram resposta segura no handler, sem log do corpo.
+  .inputValidator((fd: unknown) => (fd instanceof FormData ? fd : null))
   .handler(async ({ data, context }) => {
-    try {
-      const { s, ctx } = await ctxOnboarding(context as unknown as Ctx, data.empresa);
-      const { enviarCertificado, MAX_CERTIFICADO } = await import("./spedy-onboarding.core");
-      if (data.arquivo.size > MAX_CERTIFICADO) return { ok: false as const, codigo: "arquivo", mensagem: "Arquivo vazio ou maior que 100 KB." };
-      const bytes = new Uint8Array(await data.arquivo.arrayBuffer());
-      const r = await enviarCertificado({ ...ctx, form: s.formSandbox(data.empresa) }, { nome: data.arquivo.name, bytes }, data.senha, data.substituir);
-      bytes.fill(0);
-      return { ok: r.situacao === "enviado" || r.situacao === "confirmar_substituicao", ...r };
-    } catch (e) { return erro(e); }
+    const w = await import("./spedy-onboarding.wrapper");
+    return w.onboardingCertificado(depsOnboarding(context as unknown as Ctx), data);
   });
