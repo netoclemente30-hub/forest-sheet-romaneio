@@ -1,6 +1,6 @@
 # Tarefas
 - [x] Monitoramento: rejeições confirmadas da primeira transação liberam edição no mesmo ID; respostas perdidas continuam protegidas. 30 testes passaram; edição/salvamento pelo aviso de erro com sessão real e rejeição local conferidos, sem alterar estoque; não publicado.
-- [ ] Monitoramento: envio real de XML ao contador — confirmado ausente; aguarda configuração do domínio e aprovação do plano de envio seguro por links.
+- [ ] Monitoramento: envio real de XML ao contador — plano aprovado; opção indisponível até ativação, cadastro preservado. Implementação do envio e validação aguardam configuração do domínio pelo proprietário.
 - [x] Fiscal: Contador/Emitente recolhíveis, emitente salvo por empresa na nuvem e NF-e manual com cadastro de itens/unidade; 23 testes passaram. Cadastro de produto → prévia R$ 250 → reabertura → nova nota vazia verificados com sessão real sem alterar dados fiscais da empresa; gravação do emitente real/emissão não executadas.
 - [ ] Offline-first solicitado em 19/11: persistência antes do envio, transações IndexedDB, contexto usuário/empresa, projeções, reenvio seguro e testes; preservar histórico e não publicar.
 - [x] Primeira entrega offline-first: transações, fila antes do envio e projeções implantadas; validação e limitações em docs/offline-first-validacao.md. Não considerar cobertura completa: concorrência dos caminhos legados, recuperação de rascunhos e confirmação de exclusões especiais continuam abertas.

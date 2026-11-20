@@ -68,7 +68,8 @@ export function ContadorFiscal({ empresa }: { empresa: string }) {
         <label className="grid text-sm">Escritório / responsável<Input value={f.escritorio} onChange={(e) => setF({ ...f, escritorio: e.target.value })} /></label>
         <label className="grid text-sm">E-mail do contador<Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
       </div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.envio_automatico} onChange={(e) => setF({ ...f, envio_automatico: e.target.checked })} /> Enviar XML ao contador a cada nota autorizada</label>
+      <label className="flex items-center gap-2 text-sm text-muted-foreground"><input type="checkbox" checked={false} disabled aria-describedby="contador-email-pendente" /> Envio automático de XML indisponível</label>
+      <p id="contador-email-pendente" className="text-sm text-muted-foreground">E-mails ainda não ativados. Nenhum XML é enviado automaticamente; o cadastro do contador permanece salvo.</p>
       <Button onClick={salvar}>Salvar contador</Button>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="grid text-sm">De<Input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} /></label>
