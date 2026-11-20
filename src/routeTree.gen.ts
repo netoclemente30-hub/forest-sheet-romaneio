@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AjudaRouteImport } from './routes/ajuda'
 import { Route as ApresentacaoRouteImport } from './routes/apresentacao'
 import { Route as BaseRouteImport } from './routes/base'
 import { Route as CortadorRouteImport } from './routes/cortador'
@@ -36,6 +37,11 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AjudaRoute = AjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApresentacaoRoute = ApresentacaoRouteImport.update({
@@ -152,6 +158,7 @@ const LovableEmailTransactionalPreviewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ajuda': typeof AjudaRoute
   '/apresentacao': typeof ApresentacaoRoute
   '/base': typeof BaseRouteWithChildren
   '/cortador': typeof CortadorRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ajuda': typeof AjudaRoute
   '/apresentacao': typeof ApresentacaoRoute
   '/cortador': typeof CortadorRoute
   '/entrada': typeof EntradaRoute
@@ -202,6 +210,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ajuda': typeof AjudaRoute
   '/apresentacao': typeof ApresentacaoRoute
   '/base': typeof BaseRouteWithChildren
   '/cortador': typeof CortadorRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ajuda'
     | '/apresentacao'
     | '/base'
     | '/cortador'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ajuda'
     | '/apresentacao'
     | '/cortador'
     | '/entrada'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ajuda'
     | '/apresentacao'
     | '/base'
     | '/cortador'
@@ -304,6 +316,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AjudaRoute: typeof AjudaRoute
   ApresentacaoRoute: typeof ApresentacaoRoute
   BaseRoute: typeof BaseRouteWithChildren
   CortadorRoute: typeof CortadorRoute
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ajuda': {
+      id: '/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AjudaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/apresentacao': {
@@ -506,6 +526,7 @@ const BaseRouteWithChildren = BaseRoute._addFileChildren(BaseRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AjudaRoute: AjudaRoute,
   ApresentacaoRoute: ApresentacaoRoute,
   BaseRoute: BaseRouteWithChildren,
   CortadorRoute: CortadorRoute,

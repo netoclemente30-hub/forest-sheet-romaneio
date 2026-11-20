@@ -65,6 +65,7 @@ export function papelDoUsuario(
 
 export function rotaPermitida(papel: Papel, pathname: string): boolean {
   if (papel === "superadmin" || papel === "admin_empresa") return true;
+  if (pathname === "/ajuda") return true;
   if (pathname === "/") return papel === "gerente_escritorio";
   if (pathname === "/cortador" || pathname.startsWith("/cortador/")) return pode(papel, "mapa_ver");
   if (pathname === "/toras" || pathname.startsWith("/toras/")) return pode(papel, "toras_lancar") || papel === "gerente_escritorio";

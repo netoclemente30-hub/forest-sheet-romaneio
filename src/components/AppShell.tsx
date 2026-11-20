@@ -1,5 +1,5 @@
 import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
+import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, LifeBuoy, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { registrarLogin } from "@/lib/registro";
@@ -27,7 +27,9 @@ const nav = [
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ] as const;
 
-const navPorPapel = (papel: Papel) => {
+const navPorPapel = (papel: Papel) => [...navBase(papel), { to: "/ajuda" as const, label: "Ajuda", icon: LifeBuoy }];
+
+const navBase = (papel: Papel) => {
   const inicio = { to: "/" as const, label: "Início", icon: Home };
   const mapa = { to: "/cortador" as const, label: "Mapa", icon: MapPinned };
   const toras = { to: "/toras" as const, label: "Toras", icon: Scissors };
