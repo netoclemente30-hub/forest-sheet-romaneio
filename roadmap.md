@@ -1,4 +1,5 @@
 # Tarefas
+- [x] Preparar envio de e-mails de notify.gestorflorestal.com.br: serviço configurado, dependências e prévia protegida instaladas; envio aguarda verificação DNS. Nenhum envio fiscal ativado nesta etapa.
 - [x] Monitoramento: rejeições confirmadas da primeira transação liberam edição no mesmo ID; respostas perdidas continuam protegidas. 30 testes passaram; edição/salvamento pelo aviso de erro com sessão real e rejeição local conferidos, sem alterar estoque; não publicado.
 - [ ] Monitoramento: envio real de XML ao contador — plano aprovado; opção indisponível até ativação, cadastro preservado. Implementação do envio e validação aguardam configuração do domínio pelo proprietário.
 - [x] Fiscal: Contador/Emitente recolhíveis, emitente salvo por empresa na nuvem e NF-e manual com cadastro de itens/unidade; 23 testes passaram. Cadastro de produto → prévia R$ 250 → reabertura → nova nota vazia verificados com sessão real sem alterar dados fiscais da empresa; gravação do emitente real/emissão não executadas.
