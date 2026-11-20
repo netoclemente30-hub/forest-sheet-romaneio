@@ -71,7 +71,7 @@ function Fiscal() {
   const ativa = useSyncExternalStore(ouvir, getEmpresaAtiva, () => null);
   const empresa = isSuperAdmin ? ativa || empresaId : empresaId;
   if (permissoesCarregando) return <p>Carregando empresa…</p>;
-  if (!session || !["superadmin", "admin_empresa"].includes(papel))
+  if (!session || !["superadmin", "admin_empresa", "gerente_escritorio"].includes(papel))
     return <p>Acesso fiscal restrito à administração.</p>;
   if (!empresa) return <p>Selecione a empresa para abrir o Fiscal.</p>;
   const chave = chaveFiscal(session.user.id, empresa);

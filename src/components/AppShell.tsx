@@ -42,7 +42,7 @@ const navPorPapel = (papel: Papel) => {
   if (papel === "romaneador") return [toras, patios, mapa];
   if (papel === "motorista") return [carga, { to: "/historico" as const, label: "Cargas", icon: Truck }];
   if (papel === "gerente_patio") return [serraria, relatorios];
-  if (papel === "gerente_escritorio") return [...nav, registros];
+  if (papel === "gerente_escritorio") return [...nav, { to: "/fiscal" as const, label: "Fiscal", icon: ClipboardList }, registros];
   return [inicio];
 };
 
@@ -194,7 +194,7 @@ export function AppShell() {
         {!isSuperAdmin && situacao.data?.status === "demonstracao" && <AvisoDemonstracao s={situacao.data} />}
         <div className="mb-3 text-xs text-muted-foreground">Função: <strong>{nomePapel(papel)}</strong></div>
         {somenteLeitura && <p role="status" className="mb-3 rounded-md border p-2 text-sm">
-          Modo consulta: você pode visualizar informações, registros e gerar relatórios, mas não alterar lançamentos nem reverter operações.
+          Modo consulta: você pode visualizar informações, registros e gerar relatórios, mas não alterar lançamentos nem reverter operações. O módulo Fiscal está liberado.
         </p>}
         {papel === "sem_funcao" ? (
           <div role="alert" className="rounded-xl border p-4 text-sm">

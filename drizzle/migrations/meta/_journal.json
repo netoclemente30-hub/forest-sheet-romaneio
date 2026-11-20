@@ -316,6 +316,13 @@
       "when": 1795131483812,
       "tag": "0044_emitente_fiscal_salvo",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795141094416,
+      "tag": "0045_fiscal_gerente_escritorio",
+      "breakpoints": true
     }
   ]
 }

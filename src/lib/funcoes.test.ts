@@ -74,6 +74,8 @@ describe("funções individuais por empresa", () => {
     expect(rotaPermitida("gerente_escritorio", "/base")).toBe(true);
     expect(rotaPermitida("gerente_escritorio", "/explanadas")).toBe(true);
     expect(rotaPermitida("gerente_escritorio", "/importar")).toBe(false);
+    expect(rotaPermitida("gerente_escritorio", "/fiscal")).toBe(true);
+    expect(rotaPermitida("gerente_patio", "/fiscal")).toBe(false);
     expect(rotaPermitida("sem_funcao", "/cortador")).toBe(false);
     expect(rotaPermitida("cortador", "/")).toBe(false);
     expect(rotaPermitida("admin_empresa", "/usuarios")).toBe(true);
