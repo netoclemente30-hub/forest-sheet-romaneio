@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { criarFila, pertenceAoUsuario, type FilaStore, type ItemFila, type Op } from "./fila";
 import { sincronizar } from "./sync";
+import { erroDaTransacao, RejeicaoConfirmada } from './rejeicao';
 
 function memoria(): FilaStore & { itens: Map<string, ItemFila> } {
   const itens = new Map<string, ItemFila>();
@@ -87,6 +88,40 @@ it('edição não reescreve uma intenção cujo envio pode ter sido confirmado',
 });
 
 describe("sincronizar", () => {
+  it('permite corrigir plaqueta rejeitada sem recriar ID, empresa ou auditoria e exige nova tentativa', async () => {
+    const f = criarFila(memoria());
+    const log = { acao: 'Tora lançada', detalhe: 'Plaqueta 1861', user_email: 'campo@teste.com', lat: -3, lng: -60, criado_em: '2026-11-20T00:00:00Z', operacao_id: 'operacao-original' };
+    const original: Op = { tipo: 'tora_insert', dados: { plaqueta: 1861, empresa_id: 'empresa-a' }, log };
+    const item = await f.enfileirar(original);
+    await sincronizar(f, async () => { throw erroDaTransacao({ code: '23505', message: 'duplicate key' }); });
+    expect((await f.listar())[0]?.envio_iniciado).toBe(false);
+    const corrigida: Op = { ...original, dados: { ...original.dados, plaqueta: 1862 } };
+    await f.editarErro(item.id, corrigida);
+    expect((await f.listar())[0]).toMatchObject({ id: item.id, criadoEm: item.criadoEm, op: corrigida, erro: 'duplicate key' });
+    let chamadas = 0;
+    await sincronizar(f, async () => { chamadas++; });
+    expect(chamadas).toBe(0);
+    await f.limparErro(item.id);
+    await sincronizar(f, async (op, id) => { chamadas++; expect(id).toBe(item.id); expect(op).toEqual(corrigida); });
+    expect(chamadas).toBe(1);
+    expect(await f.listar()).toEqual([]);
+  });
+
+  it('não libera edição se uma resposta anterior foi perdida mesmo após rejeição', async () => {
+    const f = criarFila(memoria());
+    const item = await f.enfileirar(opTora(7));
+    await sincronizar(f, async () => { throw new Error('Network response lost'); });
+    await sincronizar(f, async () => { throw erroDaTransacao({ code: '42501', message: 'permission denied' }); });
+    await expect(f.editarErro(item.id, opTora(8))).rejects.toThrow('envio iniciado');
+    await f.limparErro(item.id);
+    expect((await f.listar())[0]?.envio_iniciado).toBe(true);
+  });
+
+  it('não trata falha genérica ou conexão interrompida como transação revertida', () => {
+    expect(erroDaTransacao({ code: '08006', message: 'connection lost' })).not.toBeInstanceOf(RejeicaoConfirmada);
+    expect(erroDaTransacao({ message: 'duplicate key' })).not.toBeInstanceOf(RejeicaoConfirmada);
+  });
+
   it("envia tudo na ordem e esvazia a fila", async () => {
     const f = criarFila(memoria());
     await f.enfileirar(opTora(1));

@@ -156,11 +156,11 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
       await store.put({ ...item, envio_iniciado: true });
       return item;
     },
-    async marcarErro(id: string, erro: string) {
+    async marcarErro(id: string, erro: string, rejeicaoConfirmada = false) {
       const itens = await store.all();
       const item = itens.find((i) => i.id === id);
       if (item) {
-        await store.put({ ...item, erro });
+        await store.put({ ...item, erro, ...(rejeicaoConfirmada ? { envio_iniciado: false } : {}) });
         onMudou();
       }
     },

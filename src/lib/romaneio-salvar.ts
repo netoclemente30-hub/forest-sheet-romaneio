@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "./empresa";
 import type { LogCapturado } from "./registro";
 import type { Json } from "@/integrations/supabase/types";
+import { erroDaTransacao } from './offline/rejeicao';
 
 export type CabecalhoRomaneio = {
   placa: string; julieta: string; motorista: string; cpf: string; data: string;
@@ -31,7 +32,7 @@ export async function salvarRomaneioNoBanco(
     _empresa: empresa, _cab: cab as unknown as Json,
     _plaquetas: plaquetas, _operacao: operacao, _log: log as unknown as Json,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw erroDaTransacao(error);
   if (!id) throw new Error("A carga não retornou identificador");
   // Cadastros auxiliares não podem provocar nova baixa de toras em uma repetição da fila.
   const veiculo = async (placa: string, tipo: string) => {

@@ -7,6 +7,7 @@ import { gravarRegistro, type LogCapturado } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
 import { enviarOperacao } from "@/lib/registro-operacao";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
+import { erroDaTransacao, RejeicaoConfirmada } from './rejeicao';
 
 export function estaOnline(): boolean {
   return typeof navigator === "undefined" ? true : navigator.onLine;
@@ -30,7 +31,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _operacao: op.log.operacao_id ?? operacao ?? "",
       _log: op.log,
     } as never);
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     return; // A RPC registra a auditoria na mesma transação.
   }
   if (op.tipo === "arrasto_arvore") {
@@ -46,7 +47,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _capturado_em: op.capturado_em,
       _operacao: op.log.operacao_id ?? operacao ?? "",
     } as never);
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     return; // Auditoria inserida atomicamente no Postgres.
   }
   if (op.tipo === "arrasto_toras") {
@@ -62,7 +63,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _capturado_em: op.capturado_em,
       _operacao: op.log.operacao_id ?? operacao ?? "",
     });
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     // O banco registra a auditoria atomicamente na mesma transação.
     return;
   }
@@ -96,7 +97,7 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
     case 'estoque_operacao': return;
     case 'romaneio_importado_salvar': {
       const { error } = await supabase.rpc('salvar_romaneio_serrado_importado', { _empresa: op.empresa_id, _id: op.documento_id, _revisao: op.revisao, _cab: op.cab as never, _itens: op.itens as never, _operacao: op.operacao, _log: op.log as never });
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case 'campo_update': {
@@ -243,7 +244,9 @@ export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string)
         const msg = e instanceof Error ? e.message : String(e);
         // Falha de rede: para e tenta de novo quando a internet voltar.
         if (!estaOnline() || /fetch|network|failed to fetch|timeout|timed out|connection|load failed|abort/i.test(msg)) break;
-        await f.marcarErro(item.id, msg);
+        // Only an explicit rollback of the first attempt permits rewriting.
+        // An earlier lost response may already have committed this stable ID.
+        await f.marcarErro(item.id, msg, e instanceof RejeicaoConfirmada && !item.envio_iniciado);
         erros++;
       }
     }

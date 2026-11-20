@@ -14,7 +14,7 @@ Checkout verificado: `feat/emissor-nfe-spedy`, base `33376ea`. Referência local
 ## Limitações ainda abertas
 - Não há integração comprovada à main; usar a prévia da branch indicada.
 - Atualizações diretas legadas de GPS/NI/cadastros ainda não têm comparação atômica de snapshots e auditoria na mesma transação. Não se garante concorrência/idempotência completa nesses caminhos.
-- Operações com envio iniciado e erro não são editáveis; exigem tentativa de confirmação. Fluxo para corrigir uma rejeição definitiva ainda precisa distinguir rejeição de resposta perdida.
+- Rejeições explícitas de transações atômicas na primeira tentativa liberam edição no mesmo ID, mantendo o erro até nova tentativa manual. Respostas perdidas, erros genéricos e operações legadas que podem ter gravações parciais continuam protegidos contra reescrita; lançamentos antigos já marcados como enviados precisam de confirmação antes de editar.
 - Rascunhos de expedição/upload/exclusões especiais persistem, mas recuperação automática e confirmação após resposta perdida não estão completas. Exclusões de árvore/manejo continuam essencialmente online.
 - Impressão de etiquetas de toras mantém marcador online legado. Cadastros fiscais/administrativos não foram convertidos integralmente à fila.
 - Abertura do documento totalmente sem rede depende do worker já existente no app publicado; worker não é registrado na prévia.

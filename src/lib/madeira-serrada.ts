@@ -5,6 +5,7 @@ import { capturarLog } from './registro';
 import type { LogCapturado } from './registro';
 import type { ItemFila } from './offline/fila';
 import { guardarRascunho } from './offline/rascunho';
+import { erroDaTransacao } from './offline/rejeicao';
 
 export const COMPRIMENTOS = Array.from({ length: 17 }, (_, i) => (1 + i * 0.5).toFixed(1));
 export type BitolaSerrada = { especie: string; tipo_peca: string; grossura: number; largura: number; distribuicao_pecas: Record<string, number> };
@@ -90,7 +91,7 @@ export function pacotesComFila(pacotes:PacoteSerrado[], fila:ItemFila[], empresa
 export async function enviarPacote(empresa:string,id:string,cab:CabPacote,itens:BitolaSerrada[],log:LogCapturado) {
   validarBitolas(itens);
   const { error } = await supabase.rpc('salvar_pacote_serrado', { _empresa: empresa, _id: id, _cab: cab, _itens: itens as unknown as Json, _log: log as unknown as Json });
-  if(error)throw new Error(error.message);
+  if(error)throw erroDaTransacao(error);
 }
 export async function salvarPacote(empresa: string, id: string, cab: CabPacote, itens: BitolaSerrada[]) {
   validarBitolas(itens);
