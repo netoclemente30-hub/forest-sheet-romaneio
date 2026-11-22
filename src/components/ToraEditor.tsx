@@ -63,6 +63,8 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
       toast.error(erro);
       return;
     }
+    setBusy(true);
+    try {
     const dados = dadosDaEdicao(e);
     const mudouPlaqueta = dados.plaqueta !== e.plaqueta;
     const log = await capturarLog(
@@ -97,13 +99,15 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
     setBusy(false);
     toast.success(mudouPlaqueta ? `Plaqueta ${e.plaqueta} alterada para ${dados.plaqueta}` : `Plaqueta ${e.plaqueta} alterada`);
     await refresh();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível salvar neste aparelho"); }
+    finally { setBusy(false); }
   }
 
   async function excluir() {
     setBusy(true);
-    const ok = await excluirTora(tora);
-    setBusy(false);
-    if (ok) await refresh();
+    try { const ok = await excluirTora(tora); if (ok) await refresh(); }
+    catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível excluir"); }
+    finally { setBusy(false); }
   }
 
   const campo = (k: keyof EdicaoTora, label: string, mode: "numeric" | "decimal" | "text" = "numeric") => (

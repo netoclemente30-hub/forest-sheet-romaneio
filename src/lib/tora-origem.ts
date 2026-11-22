@@ -20,12 +20,23 @@ export function patioDaTora(tora: Tora, romaneios: Romaneio[]): string | null {
 /** Project local operations without inserting duplicate rows into the inventory. */
 export function estoqueComFila(toras: Tora[], itens: ItemFila[], empresa: string | null): Tora[] {
   if (!empresa) return toras;
-  const lista = [...toras];
+  const lista = toras.filter(t => t.empresa_id === empresa);
   for (const t of torasEtiquetasOffline(itens, empresa)) {
     if (!lista.some((x) => x.empresa_id === empresa && x.plaqueta === t.plaqueta)) lista.push(t);
   }
   for (const { op } of itens) {
     if (!("empresa_id" in op) || op.empresa_id !== empresa) continue;
+    if (op.tipo === "tora_update") {
+      const i = lista.findIndex(t => t.empresa_id === empresa && t.plaqueta === op.plaqueta);
+      const anterior = lista[i];
+      if (anterior) lista[i] = { ...anterior, ...op.dados, empresa_id: empresa };
+    }
+    if (op.tipo === "romaneio_salvar") {
+      for (let i = 0; i < lista.length; i++) {
+        const t = lista[i];
+        if (t && op.plaquetas.includes(t.plaqueta)) lista[i] = { ...t, carregada: true };
+      }
+    }
     if (op.tipo === "tora_delete") {
       const i = lista.findIndex((t) => t.empresa_id === empresa && t.plaqueta === op.plaqueta);
       if (i >= 0) lista.splice(i, 1);

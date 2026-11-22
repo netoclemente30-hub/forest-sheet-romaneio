@@ -32,11 +32,17 @@ import {
   type ContaFiscal,
   type Rascunho,
 } from "@/lib/fiscal";
+import { redeDisponivel, comPrazo } from "@/lib/offline/conexao";
 import { verificarSpedy } from "@/lib/spedy.functions";
 import type { DadosNfe } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/fiscal")({
   staticData: { sitemap: false },
+  head: () => ({ meta: [
+    { title: "Fiscal — Gestor Florestal" }, { name: "description", content: "Cadastros fiscais, rascunhos e emissão de notas da empresa." },
+    { property: "og:title", content: "Fiscal — Gestor Florestal" }, { property: "og:description", content: "Cadastros fiscais, rascunhos e emissão de notas da empresa." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: Fiscal,
 });
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -119,9 +125,10 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
     }
   }
   async function testar() {
+    if (!redeDisponivel()) { setConexao("Indisponível sem conexão. Nenhuma consulta ou emissão foi realizada."); return; }
     setConexao("Consultando…");
     try {
-      setConexao(await verificarSpedy({ data: { empresa } }));
+      setConexao(await comPrazo(verificarSpedy({ data: { empresa } })));
     } catch {
       setConexao("Não foi possível verificar a conexão da empresa.");
     }

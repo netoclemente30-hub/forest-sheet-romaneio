@@ -18,6 +18,7 @@ import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MANEJO, secaoDaRota, ehRotaPublica } from "@/lib/nav";
 import { nomePapel, pode, rotaInicial, rotaPermitida, type Papel } from "@/lib/funcoes";
+import { comCache } from "@/lib/offline/cache";
 import { EscolherAparencia } from "@/components/Aparencia";
 
 const nav = [
@@ -48,27 +49,37 @@ const navPorPapel = (papel: Papel) => {
 
 export function AppShell() {
   const installation = useInstallApp();
-  const { session, loading, isSuperAdmin, papel, permissoesCarregando } = useAuth();
+  const { session, loading, isSuperAdmin, papel, permissoesCarregando, estadoPermissoes } = useAuth();
   const qc = useQueryClient();
   const contaAnterior = useRef<string | null>(null);
+  const [contextoPronto, setContextoPronto] = useState<string | null>(null);
   // React Query mantém dados em memória mesmo depois de logout/troca de usuário.
   useEffect(() => {
     const atual = session?.user.id ?? null;
     if (contaAnterior.current !== atual) {
       qc.clear();
-      setEmpresaAtiva(null);
-      setEmpresaSel("");
+      let selecao = "";
+      try { selecao = atual && isSuperAdmin ? localStorage.getItem(`empresa-selecionada:${atual}`) ?? "" : ""; } catch { /* use own company */ }
+      setEmpresaAtiva(selecao || null);
+      setEmpresaSel(selecao);
       contaAnterior.current = atual;
+      setContextoPronto(atual);
     }
-  }, [session?.user.id, qc]);
+  }, [session?.user.id, qc, isSuperAdmin]);
   async function sair() {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) { toast.error(error.message); return; }
     qc.clear();
     setEmpresaAtiva(null);
     setEmpresaSel("");
   }
-  const [empresaSel, setEmpresaSel] = useState<string>(() => getEmpresaAtiva() ?? "");
+  const [empresaSel, setEmpresaSel] = useState("");
+  useEffect(() => {
+    if (!session || permissoesCarregando) return;
+    let selecao = "";
+    if (isSuperAdmin) { try { selecao = localStorage.getItem(`empresa-selecionada:${session.user.id}`) ?? ""; } catch { /* cannot recover selection */ } }
+    setEmpresaAtiva(selecao || null); setEmpresaSel(selecao);
+  }, [session?.user.id, isSuperAdmin]);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const secao = secaoDaRota(pathname, papel);
   const manejo = secao === "manejo";
@@ -77,10 +88,10 @@ export function AppShell() {
   const [nomeAp, setNomeAp] = useState("");
   const [modeloAp, setModeloAp] = useState("");
   useEffect(() => {
-    if (session && sessionStorage.getItem("login-pendente")) {
+    try { if (session && sessionStorage.getItem("login-pendente")) {
       sessionStorage.removeItem("login-pendente");
-      void registrarLogin();
-    }
+      void registrarLogin().catch(() => {});
+    } } catch { /* blocked browser storage must not prevent access */ }
   }, [session]);
   async function abrirAparelho() {
     setNomeAp(nomeAparelho() ?? "");
@@ -92,12 +103,11 @@ export function AppShell() {
     setAparelhoAberto(false);
     toast.success(navigator.onLine ? "Nome do aparelho salvo." : "Nome salvo neste aparelho.");
   }
-  const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => listarEmpresas(), enabled: isSuperAdmin });
+  const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => comCache("empresas", () => listarEmpresas(), null), networkMode: "always", enabled: isSuperAdmin });
   const situacao = useSituacaoEmpresa(Boolean(session) && !isSuperAdmin);
   // Páginas públicas (QR da tora e apresentação) abrem sem login.
   if (ehRotaPublica(pathname)) return <Outlet />;
-  if (loading) return <div className="min-h-screen bg-forest" />;
-  if (session && permissoesCarregando) return <div className="min-h-screen bg-forest" />;
+  if (loading || (session && (permissoesCarregando || contextoPronto !== session.user.id))) return <div role="status" className="min-h-screen bg-background text-foreground grid place-items-center">Abrindo dados deste aparelho…</div>;
   // Quem ainda não entrou vê a apresentação do app e abre o login em "Acessar sistema".
   if (!session) return <ApresentacaoPagina />;
   if (!isSuperAdmin && (situacao.data?.status === "inativa" || situacao.data?.status === "pendente")) return <EmpresaInativa pendente={situacao.data.status === "pendente"} sair={sair} />;
@@ -149,6 +159,7 @@ export function AppShell() {
                 const proxima = e.target.value;
                 await qc.cancelQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
                 qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
+                try { localStorage.setItem(`empresa-selecionada:${session.user.id}`, proxima); } catch { /* selection remains in this tab */ }
                 setEmpresaAtiva(proxima || null);
                 setEmpresaSel(proxima);
                 void qc.invalidateQueries();
@@ -177,7 +188,7 @@ export function AppShell() {
           {installation.preview && <Button asChild><a href="https://forest-sheet-romaneio.lovable.app" target="_blank" rel="noopener noreferrer">Abrir aplicativo</a></Button>}
         </DialogContent>
       </Dialog>
-      <SyncStatus />
+      <SyncStatus key={session.user.id + ":" + empresaSel} />
       <main className="mx-auto max-w-3xl p-4">
         {manejo && (
           <nav aria-label="Manejo" className="no-print mb-4 flex flex-wrap gap-1 rounded-lg bg-muted p-1">
@@ -192,13 +203,13 @@ export function AppShell() {
           </nav>
         )}
         {!isSuperAdmin && situacao.data?.status === "demonstracao" && <AvisoDemonstracao s={situacao.data} />}
-        <div className="mb-3 text-xs text-muted-foreground">Função: <strong>{nomePapel(papel)}</strong></div>
+        <div className="mb-3 text-xs text-muted-foreground">Função: <strong>{papel === "sem_funcao" && estadoPermissoes !== "validado" ? "Aguardando validação" : nomePapel(papel)}</strong></div>
         {somenteLeitura && <p role="status" className="mb-3 rounded-md border p-2 text-sm">
           Modo consulta: você pode visualizar informações, registros e gerar relatórios, mas não alterar lançamentos nem reverter operações.
         </p>}
         {papel === "sem_funcao" ? (
           <div role="alert" className="rounded-xl border p-4 text-sm">
-            Sua conta ainda não tem uma função atribuída. Solicite ao administrador da empresa que defina seu cargo.
+            {estadoPermissoes === "validado" ? "Sua conta ainda não tem uma função atribuída. Solicite ao administrador da empresa que defina seu cargo." : "Não foi possível validar seu acesso e não há permissões confirmadas neste aparelho. Conecte-se à internet para validar sua conta."}
           </div>
         ) : !acessoPermitido && pathname === "/" ? (
           <Navigate to={rotaInicial(papel)} replace />

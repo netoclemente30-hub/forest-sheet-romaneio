@@ -78,3 +78,10 @@
 - [x] 296 testes em 54 arquivos, verificação de tipos sem erros
 - [ ] Publicar — aguardando revisão do Neto
 - [ ] Atribuir cargos aos 5 usuários sem função — aguardando o Neto informar as funções
+
+## Robustez offline — 22/11/2026 (sem publicação)
+- [x] Corrigir papel/sessão offline com isolamento e revalidação segura.
+- [x] Confirmar persistência IndexedDB, preservar fila/IDs/auditoria e respostas incertas.
+- [x] Verificar reconexão real, cache multiempresa e política PWA prioritária; ciclo instalado depende do aparelho.
+- [x] 423 testes passaram, tipos sem erros, compilação automática OK; lançamento local/reabertura/rotas conferidos sem escrita remota. Relatório em docs/OFFLINE_FIRST_VALIDACAO.md.
+- [ ] Validar PWA instalada em modo avião por horas e fechar/reabrir após bloqueio — depende de aparelho e versão publicada autorizada pelo Neto.

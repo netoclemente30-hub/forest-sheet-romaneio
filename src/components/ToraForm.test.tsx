@@ -4,12 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToraForm } from "./ToraForm";
 import type { Tora } from "@/lib/data";
 
-const mocks = vi.hoisted(() => ({ error: vi.fn(), insert: vi.fn(), listar: vi.fn(), enfileirar: vi.fn(), selectResult: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { error: mocks.error, success: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ success: vi.fn(), onSaved: vi.fn(), error: vi.fn(), insert: vi.fn(), listar: vi.fn(), enfileirar: vi.fn(), selectResult: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { error: mocks.error, success: mocks.success } }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ empresaId: "rj" }) }));
 vi.mock("./AutexPicker", () => ({ AutexPicker: () => null }));
 vi.mock("@/lib/empresa", () => ({ getEmpresaAtiva: () => null }));
 vi.mock("@/lib/offline/fila", () => ({ fila: () => ({ listar: mocks.listar, enfileirar: mocks.enfileirar }) }));
+vi.mock("@/lib/offline/sync", () => ({ estaOnline: () => true, sincronizar: vi.fn().mockResolvedValue({ enviados: 0, erros: 0 }) }));
 vi.mock("@/lib/registro", () => ({ capturarLog: vi.fn(), gravarRegistro: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: () => ({ insert: mocks.insert, select: () => ({ eq: () => ({ eq: mocks.selectResult }) }) }) } }));
 
@@ -17,7 +18,7 @@ const linha = { arvore: 1861, secao: "B", autex: "AUTEX-2011.2.2026.10587", espe
 const existente = { ...linha, plaqueta: 5009, empresa_id: "rj", comprimento: 6, d_topo1: 50, carregada: false } as Tora;
 
 function preencher(toras: Tora[]) {
-  render(<QueryClientProvider client={new QueryClient()}><ToraForm toras={toras} arvores={[]} saldo={[linha]} onSaved={vi.fn()} /></QueryClientProvider>);
+  render(<QueryClientProvider client={new QueryClient()}><ToraForm toras={toras} arvores={[]} saldo={[linha]} onSaved={mocks.onSaved} /></QueryClientProvider>);
   fireEvent.change(screen.getByLabelText("Nº árvore"), { target: { value: "1861" } });
   fireEvent.change(screen.getByLabelText("Secção (opcional)"), { target: { value: "b" } });
   for (const label of ["D. Topo 1 (cm)", "D. Topo 2 (cm)", "D. Pé 1 (cm)", "D. Pé 2 (cm)", "Comprimento (m)"]) {
@@ -51,5 +52,23 @@ describe("lançar novamente 1861-B do saldo", () => {
     preencher([]);
     await waitFor(() => expect(mocks.error).toHaveBeenCalledWith("Árvore 1861 já tem a secção B (plaqueta 5009)"));
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+});
+describe('gravação local confirmada', () => {
+  it('não diz salvo nem limpa formulário se o armazenamento falhar', async () => {
+    mocks.enfileirar.mockRejectedValue(new Error('Armazenamento cheio. O lançamento NÃO foi salvo.'));
+    preencher([]);
+    await waitFor(() => expect(mocks.error).toHaveBeenCalledWith('Armazenamento cheio. O lançamento NÃO foi salvo.'));
+    expect(mocks.success).not.toHaveBeenCalled(); expect(mocks.onSaved).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Nº árvore')).toHaveValue('1861');
+  });
+  it('confirma somente depois da fila resolver', async () => {
+    let concluir: (() => void) | undefined;
+    mocks.enfileirar.mockReturnValue(new Promise<void>(r => { concluir = r; }));
+    preencher([]);
+    await waitFor(() => expect(mocks.enfileirar).toHaveBeenCalled());
+    expect(mocks.success).not.toHaveBeenCalled();
+    concluir?.();
+    await waitFor(() => expect(mocks.success).toHaveBeenCalledWith(expect.stringContaining('salva neste aparelho')));
   });
 });

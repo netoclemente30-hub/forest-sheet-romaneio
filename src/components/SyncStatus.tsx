@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CloudOff, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Pencil } from "lucide-react";
+import { CloudOff, RefreshCw, AlertTriangle, Trash2, Pencil } from "lucide-react";
 import { fila, assinarFila, type ItemFila, type Op } from "@/lib/offline/fila";
 import { sincronizar, estaOnline } from "@/lib/offline/sync";
+import { verificarBackend } from "@/lib/offline/conexao";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ function explicar(erro: string): string {
 
 export function SyncStatus() {
   const qc = useQueryClient();
+  const ocupada = useRef(false);
+  const [armazenamentoErro, setArmazenamentoErro] = useState("");
   const [online, setOnline] = useState(true);
   const [itens, setItens] = useState<ItemFila[]>([]);
   const [sync, setSync] = useState(false);
@@ -50,31 +53,39 @@ export function SyncStatus() {
 
   const atualizar = useCallback(async () => {
     setOnline(estaOnline());
-    setItens(await fila().listar());
+    try { setItens(await fila().listar()); setArmazenamentoErro(""); }
+    catch (e) { setArmazenamentoErro(e instanceof Error ? e.message : "Armazenamento indisponível; não feche lançamentos não confirmados."); }
   }, []);
 
   const tentarSync = useCallback(async () => {
-    await atualizar();
-    if (!estaOnline()) return;
-    setEnviando((await fila().listar()).filter((i) => !i.erro).length);
-    setSync(true);
-    const r = await sincronizar(fila());
-    setSync(false);
-    await atualizar();
-    if (r.enviados > 0) {
-      toast.success(`${r.enviados} lançamento(s) offline enviados para a nuvem`);
-      qc.invalidateQueries();
-    }
-    if (r.erros > 0) toast.error(`${r.erros} lançamento(s) com erro — toque no aviso laranja para ver`);
+    if (ocupada.current) return;
+    ocupada.current = true;
+    try {
+      await atualizar();
+      const disponivel = await verificarBackend();
+      setOnline(disponivel);
+      if (!disponivel) return;
+      setEnviando((await fila().listar()).filter(i => !i.erro).length);
+      setSync(true);
+      const r = await sincronizar(fila(), undefined, async () => disponivel);
+      if (r.enviados > 0) { toast.success(`${r.enviados} lançamento(s) enviados para a nuvem`); void qc.invalidateQueries(); }
+      if (r.erros > 0) toast.error(`${r.erros} lançamento(s) com erro — toque no aviso para corrigir`);
+    } catch (e) { setArmazenamentoErro(e instanceof Error ? e.message : "Não foi possível acessar os lançamentos locais."); }
+    finally { setSync(false); ocupada.current = false; await atualizar(); }
   }, [atualizar, qc]);
 
   useEffect(() => {
     const desassinar = assinarFila(() => void atualizar());
     window.addEventListener("online", tentarSync);
     window.addEventListener("offline", atualizar);
-    const intervalo = window.setInterval(() => { if (estaOnline()) void tentarSync(); }, 30000);
+    const retomar = () => { if (document.visibilityState !== "hidden") void tentarSync(); };
+    document.addEventListener("visibilitychange", retomar);
+    window.addEventListener("focus", retomar);
+    const intervalo = window.setInterval(retomar, 30000);
     void tentarSync();
     return () => {
+      document.removeEventListener("visibilitychange", retomar);
+      window.removeEventListener("focus", retomar);
       window.clearInterval(intervalo);
       desassinar();
       window.removeEventListener("online", tentarSync);
@@ -83,20 +94,19 @@ export function SyncStatus() {
   }, [atualizar, tentarSync]);
 
   async function tentarDeNovo(id: string) {
-    await fila().limparErro(id);
-    await tentarSync();
+    try { await fila().limparErro(id); await tentarSync(); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível tentar novamente"); }
   }
 
   async function descartar(item: ItemFila) {
     if (!window.confirm(`Descartar este lançamento? Ele não será enviado.\n\n${descrever(item.op)}`)) return;
-    await fila().remover(item.id);
-    toast.success("Lançamento descartado");
+    try { await fila().remover(item.id); toast.success("Lançamento descartado"); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível descartar"); }
   }
 
   useEffect(() => {
     if (aberto && erros === 0) setAberto(false);
   }, [aberto, erros]);
 
+  if (armazenamentoErro) return <p role="alert" className="p-3 text-sm text-destructive">{armazenamentoErro}</p>;
   if (online && !pendentes && !erros && !sync) return null;
 
   return (
@@ -113,20 +123,20 @@ export function SyncStatus() {
         {erros && !sync ? (
           <><AlertTriangle className="size-3.5 shrink-0" /> {erros} lançamento(s) com erro ao enviar — toque para ver</>
         ) : !online ? (
-          <><CloudOff className="size-3.5" /> Sem internet — {pendentes} lançamento(s) serão enviados quando conectar</>
+          <><CloudOff className="size-3.5" /> Servidor indisponível — {pendentes} lançamento(s) guardados neste aparelho; envio após reconexão</>
         ) : sync ? (
           <><RefreshCw className="size-3.5 animate-spin" /> {enviando > 0 ? `Sincronizando ${enviando} ${enviando === 1 ? "item" : "itens"}…` : "Sincronizando…"}</>
         ) : erros ? (
           <><AlertTriangle className="size-3.5" /> {erros} lançamento(s) com erro ao enviar — toque para ver</>
         ) : (
-          <><CheckCircle2 className="size-3.5" /> Tudo sincronizado</>
+          <><RefreshCw className="size-3.5" /> {pendentes} lançamento(s) guardados — aguardando envio</>
         )}
       </Button>
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Lançamentos com erro</DialogTitle>
-            <DialogDescription>Estes lançamentos ficaram guardados neste aparelho e não foram para a nuvem.</DialogDescription>
+            <DialogDescription>Estes lançamentos estão guardados neste aparelho. Envios sem confirmação serão consultados na próxima tentativa, sem alterar seus dados.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {comErro.map((i) => (
@@ -136,7 +146,7 @@ export function SyncStatus() {
                 <div className="text-sm text-destructive break-words">{explicar(i.erro ?? "")}</div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={sync} onClick={() => tentarDeNovo(i.id)}><RefreshCw /> Tentar de novo</Button>
-                  {i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
+                  {!i.envio_iniciado && i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
                   <Button size="sm" variant="destructive" disabled={sync} onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
                 </div>
               </div>

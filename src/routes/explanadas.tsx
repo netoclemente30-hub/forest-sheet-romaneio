@@ -18,6 +18,11 @@ import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/explanadas")({
   staticData: { sitemap: false },
+  head: () => ({ meta: [
+    { title: "Explanadas — Gestor Florestal" }, { name: "description", content: "Consulta de toras, arrastos e transferências por explanada." },
+    { property: "og:title", content: "Explanadas — Gestor Florestal" }, { property: "og:description", content: "Consulta de toras, arrastos e transferências por explanada." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ExplanadasPage,
 });
 

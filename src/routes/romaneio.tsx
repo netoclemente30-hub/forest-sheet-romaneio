@@ -4,7 +4,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
 import { fmtM3, fmtM3Sinal } from "@/lib/volume";
@@ -13,9 +12,11 @@ import { totaisComerciais } from "@/lib/medida-comercial";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { empresaDaOperacao, listarCadastrosRomaneio } from "@/lib/cadastros-empresa";
+import { estoqueComFila } from "@/lib/tora-origem";
+import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { fila } from "@/lib/offline/fila";
-import { estaOnline } from "@/lib/offline/sync";
-import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { sincronizar } from "@/lib/offline/sync";
+import { capturarLog } from "@/lib/registro";
 import { plaquetaDoQr } from "@/lib/tora-qr";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,8 @@ function RomaneioPage() {
 
   const cad = useQuery({
     queryKey: ["cadastros-romaneio", empresa],
-    queryFn: () => listarCadastrosRomaneio(empresa!),
+    queryFn: () => empresa ? listarCadastrosRomaneio(empresa) : Promise.resolve({ motoristas: [], veiculos: [] }),
+    networkMode: "always",
     enabled: !!empresa,
   });
   const setMotorista = (nome: string) => {
@@ -62,7 +64,9 @@ function RomaneioPage() {
     setCab((c) => ({ ...c, motorista: nome, cpf: m?.cpf ?? "" }));
   };
 
-  const mapa = useMemo(() => new Map((toras.data ?? []).filter((t) => empresa && t.empresa_id === empresa).map((t) => [t.plaqueta, t])), [toras.data, empresa]);
+  const pendentes = useFilaOffline();
+  const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
+  const mapa = useMemo(() => new Map(estoque.filter((t) => empresa && t.empresa_id === empresa).map((t) => [t.plaqueta, t])), [estoque, empresa]);
 
   const adicionar = useCallback(
     (raw: string) => {
@@ -94,36 +98,20 @@ function RomaneioPage() {
       toast.error("Há toras de outra empresa nesta carga. Refaça a seleção.");
       return;
     }
+    if (!cab.placa.trim()) { toast.error("Preencha a placa do caminhão"); return; }
     if (!itens.length) { toast.error("Adicione plaquetas"); return; }
-    const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
-    if (!estaOnline()) {
-      setBusy(true);
-      await fila().enfileirar({
-        tipo: "romaneio_salvar",
-        cab,
-        total_volume: Math.round(total * 10000) / 10000,
-        qtd_toras: itens.length,
-        plaquetas: itens.map((t) => t.plaqueta),
-        empresa_id: empresa,
-        log,
-      });
-      setBusy(false);
-      setItens([]);
-      toast.success("Romaneio salvo offline — será enviado quando conectar");
-      nav({ to: "/historico" });
-      return;
-    }
+    if (busy) return;
     setBusy(true);
     try {
-      const id = await salvarRomaneioNoBanco(cab, itens.map((t) => t.plaqueta), log, empresa);
-      await qc.invalidateQueries();
-      toast.success("Romaneio salvo");
-      nav({ to: "/historico/$id", params: { id } });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o romaneio");
-    } finally {
-      setBusy(false);
-    }
+      const log = await capturarLog("Romaneio salvo", `${itens.length} toras · ${fmtM3(total)} m³ · placa ${cab.placa || "–"}`);
+      await fila().enfileirar({ tipo: 'romaneio_salvar', cab, total_volume: Math.round(total * 10000) / 10000,
+        qtd_toras: itens.length, plaquetas: itens.map(t => t.plaqueta), empresa_id: empresa, log });
+      toast.success('Romaneio salvo neste aparelho — aguardando envio');
+      void sincronizar(fila()).then(r => { if (r.enviados) void qc.invalidateQueries(); }).catch(() => {});
+      setItens([]);
+      void nav({ to: '/historico' });
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o romaneio'); }
+    finally { setBusy(false); }
   }
 
   const f = (k: keyof typeof cab, label: string, type = "text", list?: string) => (

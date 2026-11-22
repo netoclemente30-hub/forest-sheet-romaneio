@@ -2,11 +2,12 @@
 // contas que compartilharam este aparelho ou entre diferentes empresas.
 import { idb } from "./db";
 import { getEmpresaAtiva, lerEmpresaSalva } from "@/lib/empresa";
-import { supabase } from "@/integrations/supabase/client";
+import { sessaoDoAparelho } from "./sessao";
+import { comPrazo, erroDeRede, informarConexao, redeDisponivel } from "./conexao";
 
 async function chave(nome: string, empresa: string | null): Promise<string | null> {
-  const { data } = await supabase.auth.getSession();
-  const usuario = data.session?.user.id;
+  const session = await sessaoDoAparelho();
+  const usuario = session?.user.id;
   if (!usuario) return null;
   const contexto = empresa ?? lerEmpresaSalva(usuario) ?? "sem-vinculo";
   return usuario + ":" + contexto + ":" + nome;
@@ -33,21 +34,28 @@ export async function lerCache<T>(nome: string, empresa = getEmpresaAtiva()): Pr
   }
 }
 
-export async function comCache<T>(nome: string, buscar: () => Promise<T[]>): Promise<T[]> {
-  const empresa = getEmpresaAtiva();
-  if (typeof navigator !== "undefined" && !navigator.onLine) {
-    const cache = await lerCache<T>(nome, empresa);
-    if (cache) return cache;
-    console.warn("Sem internet e sem dados autorizados em cache para esta conta.");
-    return [];
-  }
+export async function comCache<T>(nome: string, buscar: () => Promise<T[]>, empresa = getEmpresaAtiva()): Promise<T[]> {
+  // Capture identity BEFORE starting network work; late replies cannot become another user's cache.
+  const escopo = await chave(nome, empresa);
+  const local = async (): Promise<T[]> => {
+    try {
+      if (!escopo || await chave(nome, empresa) !== escopo) return [];
+      const reg = await idb.get<{ dados: T[] }>('cache', escopo);
+      return reg?.dados ?? [];
+    } catch { return []; }
+  };
+  if (!escopo) return [];
+  if (!redeDisponivel()) return local();
   try {
-    const dados = await buscar();
-    await salvarCache(nome, dados, empresa);
+    const dados = await comPrazo(buscar(), 10000);
+    if (!escopo || await chave(nome, empresa) !== escopo) return [];
+    informarConexao(true);
+    try { await idb.put('cache', { dados, salvoEm: Date.now() }, escopo); }
+    catch { console.warn('Consulta disponível online, mas não foi possível guardar uma cópia neste aparelho.'); }
     return dados;
   } catch (e) {
-    const cache = await lerCache<T>(nome, empresa);
-    if (cache) return cache;
-    throw e;
+    if (!erroDeRede(e)) throw e; // An authorization failure is NOT permission to show stale private data.
+    informarConexao(false);
+    return local(); // No cached rows means an honest empty list, never invented inventory.
   }
 }

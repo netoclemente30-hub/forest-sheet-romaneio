@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { comCache } from "@/lib/offline/cache";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { WHATS_ACESSO } from "@/components/FormularioLogin";
@@ -9,11 +10,15 @@ export function useSituacaoEmpresa(ativo: boolean) {
   return useQuery({
     queryKey: ["situacao-empresa"],
     enabled: ativo,
+    networkMode: "always",
     staleTime: 60_000,
     queryFn: async (): Promise<Situacao> => {
-      const { data, error } = await supabase.rpc("minha_empresa_situacao");
-      if (error) throw error;
-      return (data?.[0] as Situacao) ?? null;
+      const rows = await comCache<NonNullable<Situacao>>('situacao-empresa', async () => {
+        const { data, error } = await supabase.rpc("minha_empresa_situacao");
+        if (error) throw error;
+        return data ?? [];
+      });
+      return rows[0] ?? null;
     },
   });
 }

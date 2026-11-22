@@ -13,7 +13,7 @@ it('preserva pacote, empresa e auditoria ao editar e sincronizar offline',async(
  const projected=pacotesComFila([],await f.listar(),'empresa');
  expect(projected[0]?.autex).toBe('ALTERADA');expect(projected[0]?.itens[0]?.volume_m3).toBe(0.45);
  expect(pacotesComFila([],await f.listar(),'outra')).toEqual([]);
- await sincronizar(f,executarOp);
+ await sincronizar(f,executarOp,async()=>true);
  expect(rpc).toHaveBeenCalledWith('salvar_pacote_serrado',expect.objectContaining({_empresa:'empresa',_id:'pacote',_log:expect.objectContaining({operacao_id:'audit',lat:1,lng:2})}));
  expect(await f.listar()).toEqual([]);
 });

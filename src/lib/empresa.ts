@@ -5,13 +5,15 @@ export const EVENTO_EMPRESA = "empresa-ativa-changed";
 
 export function getEmpresaAtiva(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(KEY);
+  try { return window.localStorage.getItem(KEY); } catch { return null; }
 }
 
 export function setEmpresaAtiva(id: string | null) {
   if (typeof window === "undefined") return;
-  if (id) window.localStorage.setItem(KEY, id);
-  else window.localStorage.removeItem(KEY);
+  try {
+    if (id) window.localStorage.setItem(KEY, id);
+    else window.localStorage.removeItem(KEY);
+  } catch { /* unavailable storage cannot select another company */ }
   window.dispatchEvent(new Event(EVENTO_EMPRESA));
 }
 

@@ -27,3 +27,16 @@ describe("separação de manejo e serraria", () => {
     expect(estoqueComFila([], itens, "OUTRA")).toEqual([]);
   });
 });
+describe('projeção offline de estoque', () => {
+  it('mostra medida pendente, oculta carga pendente e nunca mistura empresas', () => {
+    const rj = { ...tora(39, 'manejo'), volume: 1, carregada: false } as Tora;
+    const outra = { ...rj, empresa_id: 'OUTRA' } as Tora;
+    const itens = [
+      { id: 'a', criadoEm: 1, op: { tipo: 'tora_update' as const, plaqueta: 39, empresa_id: 'RJ', autex: null, dados: { volume: 2.5 } } },
+      { id: 'b', criadoEm: 2, op: { tipo: 'romaneio_salvar' as const, cab: { placa: 'ABC', julieta: '', motorista: '', cpf: '', data: '2026-11-22' }, total_volume: 2.5, qtd_toras: 1, plaquetas: [39], empresa_id: 'RJ' } },
+    ];
+    const r = estoqueComFila([rj, outra], itens, 'RJ');
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ empresa_id: 'RJ', volume: 2.5, carregada: true });
+  });
+});

@@ -24,16 +24,19 @@ export function somenteDaEmpresa<T extends { empresa_id: string }>(
 
 export async function listarCadastrosRomaneio(empresa: string) {
   if (!empresa) return { motoristas: [], veiculos: [] };
-  const [m, v] = await Promise.all([
-    supabase.from("motoristas").select("nome,cpf,empresa_id").eq("empresa_id", empresa).order("nome"),
-    supabase.from("veiculos").select("placa,tipo,empresa_id").eq("empresa_id", empresa).order("placa"),
+  const [motoristas, veiculos] = await Promise.all([
+    comCache(`motoristas:${empresa}`, async () => {
+      const { data, error } = await supabase.from('motoristas').select('nome,cpf,empresa_id').eq('empresa_id', empresa).order('nome');
+      if (error) throw error;
+      return somenteDaEmpresa(data, empresa);
+    }, empresa),
+    comCache(`veiculos:${empresa}`, async () => {
+      const { data, error } = await supabase.from('veiculos').select('placa,tipo,empresa_id').eq('empresa_id', empresa).order('placa');
+      if (error) throw error;
+      return somenteDaEmpresa(data, empresa);
+    }, empresa),
   ]);
-  if (m.error) throw new Error("Erro ao carregar motoristas: " + m.error.message);
-  if (v.error) throw new Error("Erro ao carregar veículos: " + v.error.message);
-  return {
-    motoristas: somenteDaEmpresa(m.data, empresa),
-    veiculos: somenteDaEmpresa(v.data, empresa),
-  };
+  return { motoristas, veiculos };
 }
 
 export async function listarPatiosSerraria(empresa: string): Promise<{ nome: string; empresa_id: string }[]> {

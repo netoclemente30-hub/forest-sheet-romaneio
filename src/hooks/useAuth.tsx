@@ -1,34 +1,13 @@
-import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-import { lerEmpresaSalva, salvarEmpresaDoUsuario } from "@/lib/empresa";
-import { papelDoUsuario, funcaoValida, type FuncaoFuncionario } from "@/lib/funcoes";
+import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { lerEmpresaSalva, salvarEmpresaDoUsuario } from '@/lib/empresa';
+import { papelDoUsuario, funcaoValida, type FuncaoFuncionario } from '@/lib/funcoes';
+import { lerSessaoLocal } from '@/lib/offline/sessao';
+import { lerPermissoes, salvarPermissoes, invalidarPermissoes, type PermissoesSalvas } from '@/lib/offline/permissoes';
+import { comPrazo, erroDeRede, informarConexao } from '@/lib/offline/conexao';
 
-async function checarAdmin(userId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (error) throw error;
-  return data === true;
-}
-
-async function checarSuperAdmin(userId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "superadmin" });
-  if (error) throw error;
-  return data === true;
-}
-
-/** A função é sempre consultada no banco; metadados editáveis do usuário não autorizam ações. */
-async function checarFuncao(): Promise<FuncaoFuncionario | null> {
-  const { data, error } = await supabase.rpc("minha_funcao" as never);
-  if (error) return null; // Antes da ativação do banco: negar acesso operacional.
-  return funcaoValida(data) ? data : null;
-}
-
-async function checarEmpresa(): Promise<string | null> {
-  const { data, error } = await supabase.rpc("minha_empresa");
-  if (error) throw error;
-  return (data as string | null) ?? null;
-}
-
+type EstadoPermissoes = 'validando' | 'validado' | 'offline' | 'indisponivel';
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -37,96 +16,103 @@ export function useAuth() {
   const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissoesCarregando, setPermissoesCarregando] = useState(true);
+  const [estadoPermissoes, setEstadoPermissoes] = useState<EstadoPermissoes>('validando');
   useEffect(() => {
     let ativo = true;
     let versao = 0;
     let usuario: string | null = null;
     let recebeuEvento = false;
     let agendada: ReturnType<typeof setTimeout> | undefined;
-    let tentativa: ReturnType<typeof setTimeout> | undefined;
-
-    function atualizar(id: string, atual: number) {
-      const vigente = () => ativo && usuario === id && versao === atual;
-      // Rechecagens (reconexão) mantêm as permissões atuais na tela até o
-      // servidor responder, para não desmontar a página nem perder formulários.
-      // Cópia por usuário apenas para trabalhar sem sinal. O servidor continua
-      // validando o cargo atual ao sincronizar; nunca autoriza pela cópia local.
-      if (!navigator.onLine) {
-        try {
-          const salva = JSON.parse(localStorage.getItem("permissoes-offline:" + id) ?? "null");
-          if (salva?.usuario === id) {
-            setIsAdmin(salva.admin === true);
-            setIsSuperAdmin(salva.superadmin === true);
-            setFuncao(funcaoValida(salva.funcao) ? salva.funcao : null);
-          }
-        } catch { /* sem cópia válida: negar */ }
-        setEmpresaId(lerEmpresaSalva(id));
-        setPermissoesCarregando(false);
-        return;
-      }
-      // Empresa e permissões são independentes: uma consulta lenta de cargo
-      // não pode impedir lançamentos de campo.
-      const buscarEmpresa = () => void checarEmpresa().catch(() => null).then((empresa) => {
-        if (!vigente()) return;
-        const salva = empresa ?? lerEmpresaSalva(id);
-        if (empresa) salvarEmpresaDoUsuario(id, empresa);
-        setEmpresaId(salva);
-        // Só a empresa é consultada de novo; permissões e tela ficam intactas.
-        if (!salva) tentativa = setTimeout(() => {
-          if (vigente()) buscarEmpresa();
-        }, 10000);
-      });
-      buscarEmpresa();
-      void Promise.all([checarAdmin(id), checarSuperAdmin(id), checarFuncao()])
-        .then(([a, sa, f]) => { if (vigente()) { setIsAdmin(a); setIsSuperAdmin(sa); setFuncao(f); try { localStorage.setItem("permissoes-offline:" + id, JSON.stringify({ usuario: id, admin: a, superadmin: sa, funcao: f })); } catch { /* armazenamento indisponível */ } } })
-        .catch(() => { if (vigente()) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); } })
-        .finally(() => { if (vigente()) setPermissoesCarregando(false); });
+    let copia: PermissoesSalvas | null = null;
+    const limpar = () => { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); };
+    function aplicar(p: PermissoesSalvas) {
+      setIsAdmin(p.admin); setIsSuperAdmin(p.superadmin); setFuncao(p.funcao); setEmpresaId(p.empresa);
     }
-
-    function receberSessao(s: Session | null) {
+    function usarCopia(id: string) {
+      copia = lerPermissoes(id, lerEmpresaSalva(id));
+      if (copia) aplicar(copia);
+      else { limpar(); setEmpresaId(lerEmpresaSalva(id)); }
+      setEstadoPermissoes(copia ? 'offline' : 'indisponivel');
+      setPermissoesCarregando(false);
+    }
+    async function consultar<T>(nome: string, args?: Record<string, unknown>): Promise<T> {
+      const { data, error } = await comPrazo((args ? supabase.rpc(nome as never, args as never) : supabase.rpc(nome as never)));
+      if (error) throw error;
+      return data as T;
+    }
+    async function atualizar(id: string, atual: number) {
+      const vigente = () => ativo && usuario === id && versao === atual;
+      if (!navigator.onLine) { usarCopia(id); return; }
+      // Restore confirmed permissions immediately, even if Wi-Fi has no internet.
+      // Each successful revalidation replaces the entire snapshot, including null roles.
+      const empresaPromise = consultar<string | null>('minha_empresa');
+      void empresaPromise.then(empresa => {
+        if (!vigente()) return;
+        if (empresa) { salvarEmpresaDoUsuario(id, empresa); setEmpresaId(empresa); }
+      }).catch(() => {});
+      try {
+        const [empresa, admin, superadmin, cargo] = await Promise.all([
+          empresaPromise,
+          consultar<boolean>('has_role', { _user_id: id, _role: 'admin' }),
+          consultar<boolean>('has_role', { _user_id: id, _role: 'superadmin' }),
+          consultar<unknown>('minha_funcao'),
+        ]);
+        if (!vigente()) return;
+        informarConexao(true);
+        invalidarPermissoes(id); // revoke old company/role snapshots before replacement
+        copia = empresa ? { usuario: id, empresa, admin: admin === true, superadmin: superadmin === true,
+          funcao: funcaoValida(cargo) ? cargo : null, validadoEm: Date.now() } : null;
+        if (copia) { salvarEmpresaDoUsuario(id, copia.empresa); salvarPermissoes(copia); aplicar(copia); }
+        else { limpar(); setEmpresaId(null); }
+        setEstadoPermissoes('validado');
+      } catch (e) {
+        if (!vigente()) return;
+        if (erroDeRede(e)) { informarConexao(false); usarCopia(id); }
+        else { invalidarPermissoes(id); copia = null; limpar(); setEmpresaId(null); setEstadoPermissoes('indisponivel'); }
+      } finally { if (vigente()) setPermissoesCarregando(false); }
+    }
+    function receberSessao(s: Session | null, revogada = false) {
       if (!ativo) return;
       clearTimeout(agendada);
-      clearTimeout(tentativa);
       const atual = ++versao;
       const id = s?.user.id ?? null;
-      const trocouUsuario = id !== usuario;
-      if (trocouUsuario) { setIsAdmin(false); setIsSuperAdmin(false); setFuncao(null); }
-      usuario = id;
-      setSession(s);
-      setLoading(false);
-      if (trocouUsuario) {
-        setEmpresaId(lerEmpresaSalva(id));
+      if (revogada && usuario) invalidarPermissoes(usuario);
+      if (id !== usuario) {
+        limpar(); copia = null; setEmpresaId(lerEmpresaSalva(id));
         setPermissoesCarregando(Boolean(id));
+        if (id) usarCopia(id);
       }
-      if (id) {
-        // O aviso de autenticação mantém o lock da sessão até retornar.
-        // Adiar as consultas evita que esperem pelo próprio aviso de login.
-        agendada = setTimeout(() => atualizar(id, atual), 0);
-      }
+      usuario = id; setSession(s); setLoading(false);
+      if (!id) { setEmpresaId(null); setPermissoesCarregando(false); }
+      else agendada = setTimeout(() => { void atualizar(id, atual); }, 0);
     }
-
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
+    // The SDK may try refreshing an expired token before getSession resolves.
+    // Read its existing local session without waiting; never reconstruct credentials.
+    const local = lerSessaoLocal();
+    if (local) receberSessao(local);
+    const { data } = supabase.auth.onAuthStateChange((evento, s) => {
       recebeuEvento = true;
-      receberSessao(s);
+      if (!s && evento !== 'SIGNED_OUT' && local) return;
+      receberSessao(s, evento === 'SIGNED_OUT');
     });
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!recebeuEvento) receberSessao(data.session);
-    }).catch(() => { if (ativo && !recebeuEvento) receberSessao(null); });
+    void comPrazo(supabase.auth.getSession()).then(({ data }) => {
+      if (!recebeuEvento && !local) receberSessao(data.session);
+    }).catch(() => { if (ativo && !recebeuEvento && !local) receberSessao(null); });
     const reconectar = () => {
-      if (!usuario) return;
+      if (!usuario || document.visibilityState === 'hidden') return;
       clearTimeout(agendada);
-      clearTimeout(tentativa);
-      atualizar(usuario, ++versao);
+      void atualizar(usuario, ++versao);
     };
-    window.addEventListener("online", reconectar);
+    window.addEventListener('online', reconectar);
+    window.addEventListener('focus', reconectar);
+    document.addEventListener('visibilitychange', reconectar);
+    const timer = setInterval(reconectar, 30000);
     return () => {
-      ativo = false;
-      clearTimeout(agendada);
-      clearTimeout(tentativa);
-      window.removeEventListener("online", reconectar);
-      data.subscription.unsubscribe();
+      ativo = false; clearTimeout(agendada); clearInterval(timer);
+      window.removeEventListener('online', reconectar); window.removeEventListener('focus', reconectar);
+      document.removeEventListener('visibilitychange', reconectar); data.subscription.unsubscribe();
     };
   }, []);
   const papel = papelDoUsuario(isSuperAdmin, isAdmin, funcao);
-  return { session, loading, permissoesCarregando, isAdmin, isSuperAdmin, empresaId, funcao, papel };
+  return { session, loading, permissoesCarregando, estadoPermissoes, isAdmin, isSuperAdmin, empresaId, funcao, papel };
 }

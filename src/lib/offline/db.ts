@@ -6,7 +6,9 @@ const DB_VERSION = 1;
 
 function abrir(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { reject(new Error("Armazenamento indisponível. O lançamento não foi salvo neste aparelho.")); return; }
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onblocked = () => reject(new Error("Armazenamento bloqueado. Feche outras abas e tente salvar novamente."));
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains("fila")) db.createObjectStore("fila", { keyPath: "id" });
@@ -17,17 +19,24 @@ function abrir(): Promise<IDBDatabase> {
   });
 }
 
+function falhaArmazenamento(e: unknown): Error {
+  const nome = (e as { name?: string } | null)?.name;
+  return new Error(nome === "QuotaExceededError"
+    ? "Armazenamento cheio. O lançamento NÃO foi salvo. Libere espaço sem apagar os dados do aplicativo e tente novamente."
+    : "Não foi possível confirmar a gravação neste aparelho. O lançamento NÃO foi salvo; mantenha o formulário aberto e tente novamente.");
+}
 function tx<T>(store: string, mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return abrir().then(
-    (db) =>
-      new Promise<T>((resolve, reject) => {
-        const t = db.transaction(store, mode);
-        const req = run(t.objectStore(store));
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-        t.oncomplete = () => db.close();
-      }),
-  );
+  return abrir().then(db => new Promise<T>((resolve, reject) => {
+    try {
+      const t = db.transaction(store, mode);
+      let resultado: T;
+      const req = run(t.objectStore(store));
+      req.onsuccess = () => { resultado = req.result; };
+      // A successful request can still be rolled back by quota/abort at commit.
+      t.oncomplete = () => { db.close(); resolve(resultado); };
+      t.onabort = t.onerror = () => { db.close(); reject(falhaArmazenamento(t.error ?? req.error)); };
+    } catch (e) { db.close(); reject(falhaArmazenamento(e)); }
+  }));
 }
 
 export const idb = {

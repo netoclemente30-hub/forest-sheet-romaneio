@@ -7,7 +7,9 @@ import { capturarLog } from "@/lib/registro";
 import { useMemo, useState } from "react";
 import { RelatorioToras } from "@/components/RelatorioToras";
 import { SinaflorCsvExportacao } from "@/components/SinaflorCsvExportacao";
-import { torasDeManejo } from "@/lib/tora-origem";
+import { getEmpresaAtiva } from "@/lib/empresa";
+import { useFilaOffline } from "@/hooks/useFilaOffline";
+import { torasDeManejo, estoqueComFila } from "@/lib/tora-origem";
 import { ordenarToras, type Ordem } from "@/lib/relatorio";
 import { torasQuery, arvoresQuery, type Tora } from "@/lib/data";
 import { fmtM3, fmtM3Sinal } from "@/lib/volume";
@@ -63,15 +65,18 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
   const [modo, setModo] = useState<ModoMedida>("fisica");
   const [edit, setEdit] = useState<Tora | null>(null);
+  const { papel, empresaId } = useAuth();
+  const pendentes = useFilaOffline();
+  const empresa = getEmpresaAtiva() ?? empresaId;
+  const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
   const lista = useMemo(() => {
-    const t = torasDeManejo(toras.data ?? []).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
+    const t = torasDeManejo(estoque).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
     const s = q.trim().toLowerCase();
     const f = !s ? t : t.filter((x) => String(x.plaqueta) === s || String(x.arvore) === s || (x.especie ?? "").toLowerCase().includes(s));
     return ordenarToras(f, ordem);
-  }, [toras.data, q, filtro, dia, autex, ordem]);
+  }, [estoque, q, filtro, dia, autex, ordem]);
 
-  const tora = toras.data?.find((t) => t.plaqueta === qr);
-  const { papel } = useAuth();
+  const tora = estoque.find((t) => t.plaqueta === qr);
   const administrador = papel === "admin_empresa" || papel === "superadmin";
   const podeLancar = pode(papel, "toras_lancar");
   const podeRelatorios = pode(papel, "relatorios");
@@ -120,7 +125,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       </div>
       <SeletorMedida valor={modo} onChange={setModo} />
       <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" medida={modo} ocultarSinaflor />
-      <SinaflorCsvExportacao arvores={arvores.data ?? []} toras={toras.data ?? []} />
+      <SinaflorCsvExportacao arvores={arvores.data ?? []} toras={estoque} />
       <div className="rounded-lg bg-secondary p-3 space-y-1 text-sm">
         <div className="flex justify-between gap-2"><span>{lista.length} toras · {modo === "comercial" ? "comercial" : "físico"}</span><b>{fmtM3(modo === "comercial" ? totais.comercial : totais.fisico)} m³</b></div>
         <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Físico: {fmtM3(totais.fisico)} m³</span><span>Comercial: {fmtM3(totais.comercial)} m³</span><span>Dif.: {fmtM3Sinal(totais.diferenca)} m³</span></div>
@@ -158,7 +163,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Lançar tora de manejo</SheetTitle></SheetHeader>
           <div className="p-4 pt-0">
-            <ToraForm origem="manejo" toras={toras.data ?? []} arvores={arvores.data ?? []} onSaved={(p) => { setNovas((n) => [...n, p]); }} />
+            <ToraForm origem="manejo" toras={estoque} arvores={arvores.data ?? []} onSaved={(p) => { setNovas((n) => [...n, p]); }} />
           </div>
         </SheetContent>
       </Sheet>
@@ -166,7 +171,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       <Sheet open={edit !== null} onOpenChange={(o) => !o && setEdit(null)}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
-          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={toras.data ?? []} onDone={() => setEdit(null)} /></div>}
+          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={estoque} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
 

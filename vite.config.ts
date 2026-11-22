@@ -27,7 +27,8 @@ export default defineConfig({
           // O build SSR é examinado a partir do diretório pai, mas a hospedagem
           // serve client/ na raiz. Não precachear URLs /client/assets inexistentes.
           modifyURLPrefix: { "client/": "" },
-           globPatterns: ["**/*.{js,css,woff2,png,webmanifest}", "**/offline.html"],
+           globPatterns: ["**/*.{js,css,woff,woff2,png,jpg,jpeg,svg,ico,webmanifest}", "**/offline.html"],
+          maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
           globIgnores: ["**/server/**", "**/sw.js", "**/workbox-*.js"],
            clientsClaim: true,
            skipWaiting: true,

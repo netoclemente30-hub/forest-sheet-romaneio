@@ -4,6 +4,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "./empresa";
 import { aparelhoAtual } from "./aparelho";
+import { sessaoDoAparelho } from "./offline/sessao";
 
 export interface LogCapturado {
   operacao_id?: string;
@@ -31,9 +32,7 @@ function posicaoGps(): Promise<{ lat: number; lng: number } | null> {
 
 // Captura quem/quando/onde no momento do lançamento (funciona offline).
 export async function capturarLog(acao: string, detalhe: string): Promise<LogCapturado> {
-   const usuario = typeof navigator !== "undefined" && !navigator.onLine
-     ? supabase.auth.getSession().then(({ data }) => data.session?.user ?? null)
-     : supabase.auth.getUser().then(({ data }) => data.user);
+   const usuario = sessaoDoAparelho().then(s => s?.user ?? null);
    const [u, gps, ap] = await Promise.all([usuario, posicaoGps(), aparelhoAtual()]);
   return {
     operacao_id: crypto.randomUUID(),

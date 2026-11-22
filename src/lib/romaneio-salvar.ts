@@ -1,3 +1,4 @@
+import { erroDaTransacao } from "./offline/rejeicao";
 import { supabase } from "@/integrations/supabase/client";
 import { empresaIdGravacao } from "./empresa";
 import type { LogCapturado } from "./registro";
@@ -16,7 +17,7 @@ export async function salvarRomaneioNoBanco(
   let empresa = empresaConfigurada;
   if (!empresa) {
     const { data, error } = await supabase.rpc("minha_empresa");
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     empresa = data ?? undefined;
   }
   if (!empresa) throw new Error("Escolha uma empresa antes de criar a carga");
@@ -26,7 +27,7 @@ export async function salvarRomaneioNoBanco(
     _empresa: empresa, _cab: cab as unknown as Json,
     _plaquetas: plaquetas, _operacao: operacao, _log: log as unknown as Json,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw erroDaTransacao(error);
   if (!id) throw new Error("A carga não retornou identificador");
   // Cadastros auxiliares não podem provocar nova baixa de toras em uma repetição da fila.
   const veiculo = async (placa: string, tipo: string) => {

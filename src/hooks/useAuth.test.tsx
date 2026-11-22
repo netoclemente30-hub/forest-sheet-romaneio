@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { salvarPermissoes } from "@/lib/offline/permissoes";
 import { useAuth } from "./useAuth";
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getSession: vi.fn(), unsubscribe: vi.fn(), authCallback: undefined as undefined | ((event: string, session: { user: { id: string } } | null) => void) }));
@@ -23,6 +24,7 @@ beforeEach(() => {
 afterEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("empresa do usuário no aparelho", () => {
@@ -84,7 +86,7 @@ describe("empresa do usuário no aparelho", () => {
 
 
 describe("revogação de permissões", () => {
-  it("não mantém cargo anterior quando a revalidação falha", async () => {
+  it("mantém o cargo validado quando somente a rede falha", async () => {
     mocks.rpc.mockImplementation((nome: string) => Promise.resolve({
       data: nome === "minha_empresa" ? "empresa-rj" : nome === "minha_funcao" ? "cortador" : false, error: null,
     }));
@@ -92,8 +94,8 @@ describe("revogação de permissões", () => {
     await waitFor(() => expect(result.current.papel).toBe("cortador"));
     mocks.rpc.mockRejectedValue(new Error("Falha de rede"));
     act(() => window.dispatchEvent(new Event("online")));
-    // A rechecagem não volta a "carregando" (a tela não é desmontada); o cargo cai ao falhar.
-    await waitFor(() => expect(result.current.papel).toBe("sem_funcao"));
+    await waitFor(() => expect(result.current.estadoPermissoes).toBe("offline"));
+    expect(result.current.papel).toBe("cortador");
     expect(result.current.permissoesCarregando).toBe(false);
   });
   it("não aceita resposta de cargo administrativo acompanhada de erro", async () => {
@@ -109,7 +111,8 @@ describe("revogação de permissões", () => {
 
 it("reabre offline com cargo confirmado da própria conta sem consultar rede", async () => {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
-  localStorage.setItem("permissoes-offline:usuario-rj", JSON.stringify({ usuario: "usuario-rj", admin: false, superadmin: false, funcao: "cortador" }));
+  localStorage.setItem("encaixe-empresa:usuario-rj", "empresa-rj");
+  salvarPermissoes({ usuario: "usuario-rj", empresa: "empresa-rj", admin: false, superadmin: false, funcao: "cortador", validadoEm: 1 });
   const { result } = renderHook(useAuth);
   await waitFor(() => expect(result.current.papel).toBe("cortador"));
   expect(mocks.rpc).not.toHaveBeenCalled();
@@ -122,4 +125,54 @@ it("não usa cargo offline de outra conta", async () => {
   await waitFor(() => expect(result.current.permissoesCarregando).toBe(false));
   expect(result.current.papel).toBe("sem_funcao");
   vi.restoreAllMocks();
+});
+
+function cargoConfirmado() {
+  mocks.rpc.mockImplementation((nome: string) => Promise.resolve({ data: nome === 'minha_empresa' ? 'empresa-rj' : nome === 'minha_funcao' ? 'romaneador' : false, error: null }));
+}
+it('substitui cargo revogado por ausência real após resposta válida ao reconectar', async () => {
+  cargoConfirmado();
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.papel).toBe('romaneador'));
+  mocks.rpc.mockImplementation((nome: string) => Promise.resolve({ data: nome === 'minha_empresa' ? 'empresa-rj' : null, error: null }));
+  act(() => window.dispatchEvent(new Event('online')));
+  await waitFor(() => expect(result.current.papel).toBe('sem_funcao'));
+  expect(result.current.estadoPermissoes).toBe('validado');
+  expect(JSON.parse(localStorage.getItem('permissoes-validadas-v2:usuario-rj:empresa-rj') ?? '{}').funcao).toBeNull();
+});
+it('nega acesso e invalida cópia diante de resposta de autorização negada', async () => {
+  cargoConfirmado();
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.papel).toBe('romaneador'));
+  mocks.rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied' } });
+  act(() => window.dispatchEvent(new Event('online')));
+  await waitFor(() => expect(result.current.papel).toBe('sem_funcao'));
+  expect(localStorage.getItem('permissoes-validadas-v2:usuario-rj:empresa-rj')).toBeNull();
+});
+it('não transfere cargo nem empresa ao trocar para outra conta offline', async () => {
+  cargoConfirmado();
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.papel).toBe('romaneador'));
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  act(() => mocks.authCallback?.('SIGNED_IN', { user: { id: 'outra-conta' } }));
+  await waitFor(() => expect(result.current.papel).toBe('sem_funcao'));
+  expect(result.current.empresaId).toBeNull();
+  expect(result.current.estadoPermissoes).toBe('indisponivel');
+});
+it('não usa cargo validado para outra empresa da mesma conta', async () => {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  localStorage.setItem('encaixe-empresa:usuario-rj', 'empresa-nova');
+  salvarPermissoes({ usuario: 'usuario-rj', empresa: 'empresa-antiga', admin: true, superadmin: false, funcao: null, validadoEm: 1 });
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.permissoesCarregando).toBe(false));
+  expect(result.current.papel).toBe('sem_funcao');
+});
+it('retoma depois de tela oculta sem apagar cargo em falha de rede', async () => {
+  cargoConfirmado();
+  const { result } = renderHook(useAuth);
+  await waitFor(() => expect(result.current.papel).toBe('romaneador'));
+  mocks.rpc.mockRejectedValue(new TypeError('Failed to fetch'));
+  act(() => document.dispatchEvent(new Event('visibilitychange')));
+  await waitFor(() => expect(result.current.estadoPermissoes).toBe('offline'));
+  expect(result.current.papel).toBe('romaneador');
 });

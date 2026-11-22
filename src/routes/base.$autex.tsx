@@ -7,6 +7,7 @@ import { arvoresQuery, autexQuery } from "@/lib/data";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { estaOnline } from "@/lib/offline/sync";
 import { fmtM3 } from "@/lib/volume";
 
 export const Route = createFileRoute("/base/$autex")({
@@ -40,7 +41,7 @@ function ManejoPage() {
   async function alternarEncerrado() {
     if (!isAdmin) return;
     if (!manejo || busy) return;
-    if (!navigator.onLine) { toast.error("Precisa de internet para encerrar ou reabrir o manejo"); return; }
+    if (!estaOnline()) { toast.error("Precisa de internet para encerrar ou reabrir o manejo"); return; }
     const acao = encerrado ? "reabrir" : "encerrar";
     if (!window.confirm(`Deseja ${acao} o manejo ${numero}? A ficha será preservada.`)) return;
     setBusy(true);

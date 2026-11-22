@@ -7,9 +7,11 @@ import { gravarRegistro, type LogCapturado } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
 import { registrarOperacao } from "@/lib/registro-operacao";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
+import { comPrazo, erroDeRede, informarConexao, redeDisponivel, verificarBackend } from "./conexao";
+import { rejeicaoConfirmada, erroDaTransacao } from "./rejeicao";
 
 export function estaOnline(): boolean {
-  return typeof navigator === "undefined" ? true : navigator.onLine;
+  return redeDisponivel();
 }
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
@@ -26,7 +28,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _operacao: op.log.operacao_id ?? operacao ?? "",
       _log: op.log,
     } as never);
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     return; // A RPC registra a auditoria na mesma transação.
   }
   if (op.tipo === "arrasto_arvore") {
@@ -42,7 +44,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _capturado_em: op.capturado_em,
       _operacao: op.log.operacao_id ?? operacao ?? "",
     } as never);
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     return; // Auditoria inserida atomicamente no Postgres.
   }
   if (op.tipo === "arrasto_toras") {
@@ -58,7 +60,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
       _capturado_em: op.capturado_em,
       _operacao: op.log.operacao_id ?? operacao ?? "",
     });
-    if (error) throw new Error(error.message);
+    if (error) throw erroDaTransacao(error);
     // O banco registra a auditoria atomicamente na mesma transação.
     return;
   }
@@ -91,7 +93,7 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
     case 'pacote_serrado_salvar': return;
     case "tora_insert": {
       const { error } = await supabase.from("toras").insert(op.dados as never);
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "tora_update": {
@@ -103,14 +105,14 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
             onConflict: "empresa_id,numero",
             ignoreDuplicates: true,
           });
-        if (ea) throw new Error(ea.message);
+        if (ea) throw erroDaTransacao(ea);
       }
       const { error } = await supabase
         .from("toras")
         .update(op.dados as never)
         .eq("plaqueta", op.plaqueta)
         .eq("empresa_id", op.empresa_id);
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "tora_delete": {
@@ -119,7 +121,7 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
         .delete()
         .eq("plaqueta", op.plaqueta)
         .eq("empresa_id", op.empresa_id);
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "romaneio_salvar": {
@@ -136,13 +138,13 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
       const { error: patioError } = await supabase
         .from("patios")
         .upsert({ nome: op.patio, ...emp } as never, { onConflict: "empresa_id,nome", ignoreDuplicates: true });
-      if (patioError) throw new Error(patioError.message);
+      if (patioError) throw erroDaTransacao(patioError);
       const { error } = await supabase
         .from("romaneios")
         .update({ recebido_em: new Date().toISOString(), patio: op.patio } as never)
         .eq("id", op.id)
         .eq("empresa_id", op.empresa_id ?? "");
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "toras_serradas": {
@@ -151,7 +153,7 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
         .update({ serrada_em: op.desfazer ? null : new Date().toISOString() } as never)
         .in("plaqueta", op.plaquetas)
         .eq("empresa_id", op.empresa_id ?? "");
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "arvore_gps": {
@@ -161,19 +163,19 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
         .eq("id", op.id)
         .eq("empresa_id", op.empresa_id)
         .eq("autex", op.autex);
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "aguardando_insert": {
       // Stable id makes replay idempotent; a numero clash is a marked conflict.
       const { error } = await supabase.from("toras_aguardando").upsert(op.dados as never, { onConflict: "id", ignoreDuplicates: true });
-      if (error) throw new Error(error.code === "23505" ? `Código NI-${op.dados["numero"]} já usado em outro aparelho` : error.message);
+      if (error) throw erroDaTransacao({ message: error.code === "23505" ? `Código NI-${op.dados["numero"]} já usado em outro aparelho` : error.message, code: error.code });
       return;
     }
     case "aguardando_update": {
       // Same id + company; replay of identical values is harmless (idempotent).
       const { error } = await supabase.from("toras_aguardando").update(op.dados as never).eq("id", op.id).eq("empresa_id", op.empresa_id);
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "aguardando_impressa": {
@@ -182,14 +184,14 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
         .update({ etiqueta_impressa: op.imprimiu, etiqueta_impressa_em: op.imprimiu ? new Date().toISOString() : null } as never)
         .eq("id", op.id)
         .eq("empresa_id", op.empresa_id);
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
     case "rastro_salvar": {
       const { error } = await supabase
         .from("rastros_gps")
         .upsert(op.pontos, { onConflict: "id", ignoreDuplicates: true });
-      if (error) throw new Error(error.message);
+      if (error) throw erroDaTransacao(error);
       return;
     }
   }
@@ -197,31 +199,44 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
 
 let sincronizando = false;
 
-// Envia a fila na ordem; para no primeiro erro de rede, mas marca conflitos
-// (ex.: plaqueta duplicada) e segue para os próximos.
-export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string) => Promise<void> = executarOp): Promise<{ enviados: number; erros: number }> {
-  if (sincronizando || !estaOnline()) return { enviados: 0, erros: 0 };
+export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string) => Promise<void> = executarOp,
+  verificar: () => Promise<boolean> = executar === executarOp ? verificarBackend : async () => true,
+): Promise<{ enviados: number; erros: number }> {
+  const vazio = { enviados: 0, erros: 0 };
+  if (sincronizando || (typeof navigator !== 'undefined' && !navigator.onLine)) return vazio;
   sincronizando = true;
-  let enviados = 0;
-  let erros = 0;
-  try {
+  const enviar = async () => {
+    let enviados = 0;
+    let erros = 0;
+    if (!await verificar()) return vazio;
+    informarConexao(true);
     for (const item of await f.listar()) {
       if (!estaOnline()) break;
       if (item.erro) continue;
+      // Ensure another tab / account change has not removed or changed this entry.
+      const atual = (await f.listar()).find(i => i.id === item.id);
+      if (!atual || atual.erro) continue;
+      await f.iniciarEnvio(item.id); // persisted BEFORE the request, including uncertain response protection
       try {
-        await executar(item.op, item.id);
-        await f.remover(item.id);
-        enviados++;
+        await comPrazo(executar(atual.op, atual.id), 20000);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        // Falha de rede: para e tenta de novo quando a internet voltar.
-        if (!estaOnline() || /fetch|network|failed to fetch|timeout|timed out|connection|load failed|abort/i.test(msg)) break;
-        await f.marcarErro(item.id, msg);
+        if (erroDeRede(e) || (typeof navigator !== 'undefined' && !navigator.onLine)) { informarConexao(false); break; }
+        await f.marcarErro(item.id, e instanceof Error ? e.message : String(e), rejeicaoConfirmada(e));
         erros++;
+        continue;
       }
+      // Persist receipt before cleanup. Cleanup failures must not replay an acknowledged write.
+      await f.confirmarEnvio(item.id);
+      enviados++;
+      try { await f.remover(item.id); } catch { /* receipt retained, never resent */ }
     }
-  } finally {
-    sincronizando = false;
-  }
-  return { enviados, erros };
+    return { enviados, erros };
+  };
+  try {
+    // Cross-tab exclusion as well as the in-process guard. No forced takeover on reconnect.
+    if (typeof navigator !== 'undefined' && navigator.locks) {
+      return await navigator.locks.request('gestor-fila-sync', { ifAvailable: true }, lock => lock ? enviar() : Promise.resolve(vazio));
+    }
+    return await enviar();
+  } finally { sincronizando = false; }
 }

@@ -128,7 +128,8 @@ function Serraria() {
     for (const t of selecionadas) porEmpresa.set(t.empresa_id, [...(porEmpresa.get(t.empresa_id) ?? []), t.plaqueta]);
     if (!estaOnline()) {
       setBusy(true);
-      for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log });
+      try { for (const [empresa_id, plaquetas] of porEmpresa) await fila().enfileirar({ tipo: "toras_serradas", plaquetas, desfazer, empresa_id, log }); }
+      catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível guardar a baixa neste aparelho"); return; }
       setBusy(false);
       setToraLida(null);
       if(!desfazer)irParaAba('serradas');else setSel([]);

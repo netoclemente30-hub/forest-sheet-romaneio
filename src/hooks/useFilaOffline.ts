@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EVENTO_EMPRESA } from "@/lib/empresa";
 import { assinarFila, fila, type ItemFila } from "@/lib/offline/fila";
 
 /** Reads persistent operations on mount and reacts to saves, errors and discards. */
@@ -19,8 +20,9 @@ export function useFilaOffline() {
       }
     };
     const cancelar = assinarFila(() => void atualizar());
+    window.addEventListener(EVENTO_EMPRESA, atualizar);
     void atualizar();
-    return () => { ativo = false; cancelar(); };
+    return () => { ativo = false; cancelar(); window.removeEventListener(EVENTO_EMPRESA, atualizar); };
   }, []);
   return { itens, carregando, erro };
 }

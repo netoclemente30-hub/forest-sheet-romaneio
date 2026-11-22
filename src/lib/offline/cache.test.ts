@@ -1,5 +1,6 @@
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getSession: vi.fn() } } }));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { informarConexao } from "./conexao";
 import { comCache } from "./cache";
 import { idb } from "./db";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,7 @@ afterEach(() => { vi.restoreAllMocks(); localStorage.removeItem("empresa_ativa")
 // Cada gravação/leitura do IndexedDB identifica a sessão atual, também offline.
 let idUsuario = "usuario-a";
 beforeEach(() => {
+  informarConexao(true);
   idUsuario = "usuario-a";
   vi.spyOn(supabase.auth, "getSession").mockImplementation(async () => ({
     data: { session: idUsuario ? { user: { id: idUsuario } } : null }, error: null,
@@ -21,6 +23,7 @@ it("resposta atrasada da RJ não grava toras no cache da empresa selecionada dep
   localStorage.setItem("empresa_ativa", "rj");
   let resolver: ((dados: { plaqueta: number }[]) => void) | undefined;
   const pendente = comCache("toras", () => new Promise<{ plaqueta: number }[]>((resolve) => { resolver = resolve; }));
+  await vi.waitFor(() => expect(resolver).toBeTypeOf("function"));
   localStorage.setItem("empresa_ativa", "ricardo");
   resolver?.([{ plaqueta: 273 }]);
   await pendente;
@@ -56,7 +59,8 @@ describe("isolamento de contas no cache", () => {
   it("não entrega o estoque offline de uma conta a outra no mesmo celular", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     const get = vi.spyOn(idb, "get").mockResolvedValue(undefined);
-    idUsuario = "usuario-a";
+    informarConexao(true);
+  idUsuario = "usuario-a";
     await comCache("toras", vi.fn());
     expect(get).toHaveBeenCalledWith("cache", "usuario-a:sem-vinculo:toras");
     idUsuario = "usuario-b";
@@ -70,4 +74,23 @@ describe("isolamento de contas no cache", () => {
     expect(await comCache("toras", vi.fn())).toEqual([]);
     expect(get).not.toHaveBeenCalled();
   });
+});
+
+it('não guarda resposta iniciada por uma conta na conta que entrou depois', async () => {
+  const put = vi.spyOn(idb, 'put').mockResolvedValue(undefined);
+  let resolver: ((rows: { plaqueta: number }[]) => void) | undefined;
+  const p = comCache('toras', () => new Promise<{ plaqueta: number }[]>(resolve => { resolver = resolve; }));
+  await vi.waitFor(() => expect(resolver).toBeTypeOf('function'));
+  idUsuario = 'usuario-b'; resolver?.([{ plaqueta: 39 }]);
+  expect(await p).toEqual([]);
+  expect(put).not.toHaveBeenCalled();
+});
+it('Wi-Fi sem backend e sem cache devolve lista vazia, sem inventar dados', async () => {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+  vi.spyOn(idb, 'get').mockResolvedValue(undefined);
+  expect(await comCache('toras', async () => { throw new TypeError('Failed to fetch'); })).toEqual([]);
+});
+it('nega cache privado quando servidor responde permissão revogada', async () => {
+  vi.spyOn(idb, 'get').mockResolvedValue({ dados: [{ plaqueta: 39 }] });
+  await expect(comCache('toras', async () => { throw new Error('permission denied'); })).rejects.toThrow('permission denied');
 });

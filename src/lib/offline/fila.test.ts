@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { criarFila, pertenceAoUsuario, type FilaStore, type ItemFila, type Op } from "./fila";
+import { describe, expect, it, vi } from "vitest";
+import { criarFila, pertenceAoContexto, pertenceAoUsuario, type FilaStore, type ItemFila, type Op } from "./fila";
 import { sincronizar } from "./sync";
 
 function memoria(): FilaStore & { itens: Map<string, ItemFila> } {
@@ -43,7 +43,7 @@ describe("fila offline", () => {
     await f.marcarErro(a.id, "plaqueta duplicada");
     await f.editarErro(a.id, opTora(1862));
     const [item] = await f.listar();
-    expect(item).toEqual({ ...a, op: opTora(1862), erro: "plaqueta duplicada" });
+    expect(item).toEqual({ ...a, op: opTora(1862), erro: "plaqueta duplicada", estado: "erro" });
     const enviadas: Op[] = [];
     await sincronizar(f, async (op) => { enviadas.push(op); });
     expect(enviadas).toHaveLength(0);
@@ -131,4 +131,60 @@ it("preserva a fila após timeout mesmo quando o navegador indica conexão", asy
   expect(r).toEqual({ enviados: 0, erros: 0 });
   expect((await f.listar()).every(i => !i.erro)).toBe(true);
   expect(await f.listar()).toHaveLength(2);
+});
+
+it('não notifica salvo quando persistência falha por quota', async () => {
+  const store = memoria(); store.put = async () => { throw new DOMException('Quota', 'QuotaExceededError'); };
+  const avisar = vi.fn(); const f = criarFila(store, avisar);
+  await expect(f.enfileirar(opTora(39))).rejects.toThrow('Quota');
+  expect(avisar).not.toHaveBeenCalled();
+  expect(await f.listar()).toEqual([]);
+});
+it('não envia com Wi-Fi ativo mas backend inacessível', async () => {
+  const f = criarFila(memoria()); await f.enfileirar(opTora(39));
+  const enviar = vi.fn();
+  expect(await sincronizar(f, enviar, async () => false)).toEqual({ enviados: 0, erros: 0 });
+  expect(enviar).not.toHaveBeenCalled(); expect(await f.listar()).toHaveLength(1);
+});
+it('resposta perdida retenta o mesmo ID e não permite reescrever payload', async () => {
+  const f = criarFila(memoria()); const item = await f.enfileirar(opTora(39));
+  const ids: (string | undefined)[] = [];
+  await sincronizar(f, async (_op, id) => { ids.push(id); throw new Error('Failed to fetch'); });
+  await expect(f.substituir(item.id, opTora(422))).rejects.toThrow('Envio sem confirmação');
+  await sincronizar(f, async (_op, id) => { ids.push(id); });
+  expect(ids).toEqual([item.id, item.id]); expect(await f.listar()).toEqual([]);
+});
+it('rollback confirmado libera correção mantendo ID empresa e auditoria', async () => {
+  const f = criarFila(memoria());
+  const log = { acao: 'Tora lançada', detalhe: '39A', user_email: 'operador@teste.com', lat: -10, lng: -63, criado_em: '2026-11-22T10:00:00Z' };
+  const original: Op = { tipo: 'tora_insert', dados: { empresa_id: 'RJ', plaqueta: 39 }, log };
+  const item = await f.enfileirar(original);
+  await sincronizar(f, async () => { throw Object.assign(new Error('duplicate key'), { code: '23505' }); });
+  await f.editarErro(item.id, { ...original, dados: { empresa_id: 'RJ', plaqueta: 422 }, log: { ...log, criado_em: '2026-11-23T10:00:00Z' } });
+  expect((await f.listar())[0]).toMatchObject({ id: item.id, erro: 'duplicate key', envio_iniciado: false, op: { log, dados: { empresa_id: 'RJ', plaqueta: 422 } } });
+  await expect(f.editarErro(item.id, { ...original, dados: { empresa_id: 'OUTRA', plaqueta: 39 } })).rejects.toThrow('trocar a empresa');
+});
+it('falha na limpeza após confirmação não reenvia operação enviada', async () => {
+  const store = memoria(); store.del = async () => { throw new Error('disco'); };
+  const f = criarFila(store); const item = await f.enfileirar(opTora(39));
+  const enviar = vi.fn().mockResolvedValue(undefined);
+  await sincronizar(f, enviar); await sincronizar(f, enviar);
+  expect(enviar).toHaveBeenCalledTimes(1); expect(store.itens.get(item.id)?.estado).toBe('enviado');
+});
+it('dois pedidos de sincronização simultâneos não enviam a mesma entrada duas vezes', async () => {
+  const f = criarFila(memoria()); await f.enfileirar(opTora(39));
+  let liberar: (() => void) | undefined;
+  const enviar = vi.fn(() => new Promise<void>(resolve => { liberar = resolve; }));
+  const primeira = sincronizar(f, enviar);
+  await vi.waitFor(() => expect(enviar).toHaveBeenCalledTimes(1));
+  expect(await sincronizar(f, enviar)).toEqual({ enviados: 0, erros: 0 });
+  liberar?.(); await primeira; expect(enviar).toHaveBeenCalledTimes(1);
+});
+
+it('fila isola conta e empresa e não revela entradas sem empresa selecionada', () => {
+  const item: ItemFila = { id: '39', criadoEm: 1, usuario_id: 'user-rj', op: { tipo: 'tora_insert', dados: { empresa_id: 'RJ', plaqueta: 39 } } };
+  expect(pertenceAoContexto(item, { id: 'user-rj', email: null }, 'RJ')).toBe(true);
+  expect(pertenceAoContexto(item, { id: 'user-rj', email: null }, 'OUTRA')).toBe(false);
+  expect(pertenceAoContexto(item, { id: 'user-outro', email: null }, 'RJ')).toBe(false);
+  expect(pertenceAoContexto(item, { id: 'user-rj', email: null }, null)).toBe(false);
 });
