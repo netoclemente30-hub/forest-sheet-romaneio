@@ -1393,6 +1393,10 @@ export type Database = {
         Args: { _empresa: string; _id: string; _log: Json }
         Returns: undefined
       }
+      excluir_romaneio_serrado_importado: {
+        Args: { _empresa: string; _id: string; _log: Json }
+        Returns: undefined
+      }
       excluir_romaneio_toras: {
         Args: { _empresa: string; _id: string; _log: Json }
         Returns: undefined

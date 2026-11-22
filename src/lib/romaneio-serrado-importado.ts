@@ -23,4 +23,9 @@ export async function salvarImportado(empresa:string,id:string,revisao:number,ca
   const {data,error}=await supabase.rpc('salvar_romaneio_serrado_importado',{_empresa:empresa,_id:id,_revisao:revisao,_cab:cab as unknown as Json,_itens:itens as unknown as Json,_operacao:operacao,_log:log as unknown as Json});
   if(error)throw new Error(error.message);
   return data;
+}export async function excluirImportado(empresa:string,id:string,numero:string) {
+  if(!navigator.onLine)throw new Error('Conecte à internet para excluir este romaneio.');
+  const log=await capturarLog('Romaneio importado excluído',numero);
+  const {error}=await supabase.rpc('excluir_romaneio_serrado_importado',{_empresa:empresa,_id:id,_log:log as unknown as Json});
+  if(error)throw new Error(error.message);
 }

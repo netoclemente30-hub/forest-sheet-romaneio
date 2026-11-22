@@ -288,6 +288,13 @@
       "when": 1794936901634,
       "tag": "0040_romaneios_serrados_importados",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795366243280,
+      "tag": "0041_excluir_romaneio_serrado_importado",
+      "breakpoints": true
     }
   ]
 }
