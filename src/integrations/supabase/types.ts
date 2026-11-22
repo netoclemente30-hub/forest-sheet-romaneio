@@ -222,6 +222,64 @@ export type Database = {
           },
         ]
       }
+      empresa_contador: {
+        Row: {
+          atualizado_em: string
+          email: string
+          empresa_id: string
+          envio_automatico: boolean
+          escritorio: string
+        }
+        Insert: {
+          atualizado_em?: string
+          email?: string
+          empresa_id: string
+          envio_automatico?: boolean
+          escritorio?: string
+        }
+        Update: {
+          atualizado_em?: string
+          email?: string
+          empresa_id?: string
+          envio_automatico?: boolean
+          escritorio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_contador_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresa_emitente: {
+        Row: {
+          atualizado_em: string
+          cadastro: Json
+          empresa_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          cadastro?: Json
+          empresa_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          cadastro?: Json
+          empresa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_emitente_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresa_usuarios: {
         Row: {
           created_at: string
@@ -253,6 +311,7 @@ export type Database = {
           cnpj: string | null
           created_at: string
           id: string
+          ie: string | null
           nome: string
           status: string
         }
@@ -260,6 +319,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           id?: string
+          ie?: string | null
           nome: string
           status?: string
         }
@@ -267,6 +327,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           id?: string
+          ie?: string | null
           nome?: string
           status?: string
         }
@@ -306,6 +367,220 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "explanadas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_config: {
+        Row: {
+          atualizado_em: string
+          cnpj: string | null
+          empresa_id: string
+          spedy_company_id: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          cnpj?: string | null
+          empresa_id: string
+          spedy_company_id?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          cnpj?: string | null
+          empresa_id?: string
+          spedy_company_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_documentos: {
+        Row: {
+          ambiente: string
+          atualizado_em: string
+          chave_acesso: string | null
+          criado_em: string
+          empresa_id: string
+          enviado_por: string | null
+          id: string
+          mensagem: string | null
+          numero: string | null
+          origem: string | null
+          payload_hash: string | null
+          protocolo: string | null
+          rascunho_id: string
+          serie: string | null
+          spedy_id: string | null
+          status: string
+          tentativa_em: string | null
+        }
+        Insert: {
+          ambiente?: string
+          atualizado_em?: string
+          chave_acesso?: string | null
+          criado_em?: string
+          empresa_id: string
+          enviado_por?: string | null
+          id?: string
+          mensagem?: string | null
+          numero?: string | null
+          origem?: string | null
+          payload_hash?: string | null
+          protocolo?: string | null
+          rascunho_id: string
+          serie?: string | null
+          spedy_id?: string | null
+          status?: string
+          tentativa_em?: string | null
+        }
+        Update: {
+          ambiente?: string
+          atualizado_em?: string
+          chave_acesso?: string | null
+          criado_em?: string
+          empresa_id?: string
+          enviado_por?: string | null
+          id?: string
+          mensagem?: string | null
+          numero?: string | null
+          origem?: string | null
+          payload_hash?: string | null
+          protocolo?: string | null
+          rascunho_id?: string
+          serie?: string | null
+          spedy_id?: string | null
+          status?: string
+          tentativa_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_eventos: {
+        Row: {
+          acao: string
+          criado_em: string
+          documento_id: string | null
+          empresa_id: string
+          id: string
+          inutilizacao_id: string | null
+          resultado: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          criado_em?: string
+          documento_id?: string | null
+          empresa_id: string
+          id?: string
+          inutilizacao_id?: string | null
+          resultado?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          criado_em?: string
+          documento_id?: string | null
+          empresa_id?: string
+          id?: string
+          inutilizacao_id?: string | null
+          resultado?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_eventos_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_eventos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_eventos_inutilizacao_id_fkey"
+            columns: ["inutilizacao_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_inutilizacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_inutilizacoes: {
+        Row: {
+          ambiente: string
+          atualizado_em: string
+          criado_em: string
+          empresa_id: string
+          enviado_por: string | null
+          fim: number
+          id: string
+          inicio: number
+          justificativa: string
+          mensagem: string | null
+          protocolo: string | null
+          serie: number
+          spedy_id: string | null
+          status: string
+          tentativa_em: string | null
+        }
+        Insert: {
+          ambiente?: string
+          atualizado_em?: string
+          criado_em?: string
+          empresa_id: string
+          enviado_por?: string | null
+          fim: number
+          id?: string
+          inicio: number
+          justificativa: string
+          mensagem?: string | null
+          protocolo?: string | null
+          serie: number
+          spedy_id?: string | null
+          status?: string
+          tentativa_em?: string | null
+        }
+        Update: {
+          ambiente?: string
+          atualizado_em?: string
+          criado_em?: string
+          empresa_id?: string
+          enviado_por?: string | null
+          fim?: number
+          id?: string
+          inicio?: number
+          justificativa?: string
+          mensagem?: string | null
+          protocolo?: string | null
+          serie?: number
+          spedy_id?: string | null
+          status?: string
+          tentativa_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_inutilizacoes_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -693,6 +968,7 @@ export type Database = {
       }
       romaneios: {
         Row: {
+          cliente: Json | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -709,6 +985,7 @@ export type Database = {
           total_volume: number
         }
         Insert: {
+          cliente?: Json | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -725,6 +1002,7 @@ export type Database = {
           total_volume?: number
         }
         Update: {
+          cliente?: Json | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -1141,6 +1419,7 @@ export type Database = {
       }
       minha_funcao: { Args: never; Returns: string }
       origem_tora_legada: { Args: { d: Json }; Returns: string }
+      pode_fiscal: { Args: { _empresa: string }; Returns: boolean }
       pode_funcao: {
         Args: { _acao: string; _empresa: string }
         Returns: boolean
