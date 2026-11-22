@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { autexSerradasQuery } from '@/lib/madeira-serrada';
-import { lerRomaneioExcel, totaisImportados, type AbaRomaneio, type CabImportado, type PecaImportada } from '@/lib/romaneio-serrado-importar';
+import { adicionarToraSerrada, lerRomaneioExcel, type ToraSerradaRef, totaisImportados, type AbaRomaneio, type CabImportado, type PecaImportada } from '@/lib/romaneio-serrado-importar';
 import { importadosQuery, salvarImportado, type RomaneioImportado } from '@/lib/romaneio-serrado-importado';
 
 function RomaneioEditor({empresa,documento,abas,onCancelar,onSalvo}:{empresa:string;documento?:RomaneioImportado;abas:AbaRomaneio[];onCancelar:()=>void;onSalvo:()=>void}) {
@@ -17,12 +17,15 @@ function RomaneioEditor({empresa,documento,abas,onCancelar,onSalvo}:{empresa:str
   const inicial=abas.find(a=>a.nome===aba);
   const [itens,setItens]=useState<PecaImportada[]>(()=>documento?documento.itens.map(i=>({...i})):inicial?.itens.map(i=>({...i}))??[]);
   const [cab,setCab]=useState<CabImportado>(()=>documento?{...documento.cab}:{numero_carga:inicial?.nome??'',data:new Date().toLocaleDateString('en-CA'),cliente_nome:inicial?.cliente??'',cliente_documento:'',motorista_nome:'',motorista_cpf:'',placa_veiculo:'',placa_reboque:'',observacoes:''});
+  const [toras,setToras]=useState<ToraSerradaRef[]>(()=>(documento?.cab.toras_serradas??[]).map(t=>({...t})));
+  const [novaAutex,setNovaAutex]=useState('');const [novaTora,setNovaTora]=useState('');const [erroTora,setErroTora]=useState('');
+  function adicionarTora(){try{setToras(adicionarToraSerrada(toras,novaAutex,novaTora));setNovaTora('');setErroTora('');}catch(e){setErroTora(e instanceof Error?e.message:'Referência inválida');}}
   const [busy,setBusy]=useState(false);
   const autex=useQuery(autexSerradasQuery(empresa));
   const totals=totaisImportados(itens);
   function alterar(id:string,valor:Partial<PecaImportada>){setItens(s=>s.map(i=>i.id===id?{...i,...valor}:i));}
   function escolher(nome:string){if(!confirm('Trocar de aba descarta as alterações ainda não salvas. Continuar?'))return;const a=abas.find(a=>a.nome===nome);if(!a)return;setAba(nome);setItens(a.itens.map(i=>({...i})));setCab(s=>({...s,numero_carga:a.nome,cliente_nome:a.cliente}));}
-  async function salvar(e:React.FormEvent){e.preventDefault();if(busy)return;setBusy(true);try{const conteudo=JSON.stringify({cab,itens});if(tentativa.current?.conteudo!==conteudo)tentativa.current={conteudo,operacao:crypto.randomUUID()};const envio=tentativa.current;if(!envio)return;await salvarImportado(empresa,id,documento?.revisao??0,cab,itens,envio.operacao);toast.success('Romaneio importado salvo');onSalvo();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível salvar');}finally{setBusy(false);}}
+  async function salvar(e:React.FormEvent){e.preventDefault();if(busy)return;setBusy(true);try{const {toras_serradas:_antigas,...base}=cab;const final:CabImportado=toras.length||documento?.cab.toras_serradas!==undefined?{...base,toras_serradas:toras}:base;const conteudo=JSON.stringify({cab:final,itens});if(tentativa.current?.conteudo!==conteudo)tentativa.current={conteudo,operacao:crypto.randomUUID()};const envio=tentativa.current;if(!envio)return;await salvarImportado(empresa,id,documento?.revisao??0,final,itens,envio.operacao);toast.success('Romaneio importado salvo');onSalvo();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível salvar');}finally{setBusy(false);}}
   return <form className="space-y-4" onSubmit={salvar}>
     {!documento&&<label className="block text-sm">Aba da planilha<select aria-label="Aba da planilha" className="h-10 w-full border rounded-md bg-background px-2" value={aba} disabled={busy} onChange={e=>escolher(e.target.value)}>{abas.map(a=><option key={a.nome} value={a.nome}>{a.nome} · {a.itens.reduce((n,i)=>n+i.quantidade,0)} peças</option>)}</select></label>}
     {!documento&&abas.find(a=>a.nome===aba)?.avisos.map(a=><p key={a} className="text-sm text-destructive">{a}</p>)}
@@ -41,6 +44,17 @@ function RomaneioEditor({empresa,documento,abas,onCancelar,onSalvo}:{empresa:str
       </div><p className="text-sm text-right">{(i.grossura*i.largura*i.comprimento*i.quantidade/10000).toFixed(4).replace('.',',')} m³</p>
     </div>)}</fieldset>
     <Button type="button" variant="outline" disabled={busy} onClick={()=>{const p=itens.at(-1);setItens(s=>[...s,{id:crypto.randomUUID(),especie:p?.especie??'',nome_cientifico:p?.nome_cientifico??'',autex:p?.autex??'',tipo_peca:p?.tipo_peca??'Outro',grossura:p?.grossura??0,largura:p?.largura??0,comprimento:1,quantidade:1}]);}}><Plus/>Adicionar peças</Button>
+    <section className="border rounded-md p-3 space-y-2" aria-label="Toras já serradas">
+      <h3 className="font-semibold">Toras já serradas</h3>
+      <p className="text-xs text-muted-foreground">Apenas referência no documento: não altera estoque, pacotes nem situação de serragem.</p>
+      <fieldset disabled={busy} className="flex flex-wrap items-end gap-2">
+        <label className="text-xs">AUTEX<Input aria-label="AUTEX da tora serrada" list="autex-romaneio-importado" value={novaAutex} onChange={e=>setNovaAutex(e.target.value)}/></label>
+        <label className="text-xs">Número da tora<Input aria-label="Número da tora serrada" placeholder="Ex.: 39A" value={novaTora} onChange={e=>setNovaTora(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();adicionarTora();}}}/></label>
+        <Button type="button" variant="outline" onClick={adicionarTora}><Plus/>Adicionar tora</Button>
+      </fieldset>
+      {erroTora&&<p role="alert" className="text-sm text-destructive">{erroTora}</p>}
+      {toras.length>0&&<ul className="flex flex-wrap gap-2">{toras.map(t=><li key={`${t.autex}|${t.numero}`} className="flex items-center gap-1 border rounded-md pl-2 text-sm">AUTEX {t.autex} · Tora {t.numero}<Button type="button" variant="ghost" size="icon" disabled={busy} aria-label={`Remover tora ${t.numero} da AUTEX ${t.autex}`} onClick={()=>setToras(l=>l.filter(x=>x!==t))}><Trash2/></Button></li>)}</ul>}
+    </section>
     <label className="block text-sm">Observações<Textarea disabled={busy} aria-label="Observações do romaneio importado" value={cab.observacoes} onChange={e=>setCab(s=>({...s,observacoes:e.target.value}))}/></label>
     <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={busy} onClick={onCancelar}>Cancelar</Button><Button type="submit" disabled={busy||!itens.length}><Save/>{busy?'Salvando…':'Salvar romaneio importado'}</Button></div>
   </form>;
@@ -57,7 +71,7 @@ export function RomaneiosSerradosImportados({empresa,podeOperar,q}:{empresa:stri
     <input ref={input} hidden type="file" accept=".xlsx,.xls" aria-label="Planilha de romaneio serrado" onChange={e=>{const file=e.target.files?.[0];if(file)void ler(file);}}/>
     {query.isPending&&<p className="text-sm text-muted-foreground">Carregando romaneios importados…</p>}
     {query.error&&<p className="text-sm text-destructive">Não foi possível carregar os romaneios importados. <Button variant="outline" size="sm" onClick={()=>void query.refetch()}>Tentar novamente</Button></p>}
-    <div className="divide-y">{(query.data??[]).filter(r=>r.empresa_id===empresa&&`${r.cab.numero_carga} ${r.cab.cliente_nome} ${r.cab.placa_veiculo} ${r.itens.map(i=>`${i.especie} ${i.nome_cientifico} ${i.autex}`).join(' ')}`.toLowerCase().includes(q.toLowerCase())).map(r=><div key={r.id} className="py-3 space-y-2"><div className="flex flex-wrap justify-between gap-2"><div><h4 className="font-bold text-lg">{r.cab.numero_carga}</h4><p className="text-sm break-words">{r.cab.cliente_nome} · {[...new Set(r.itens.map(i=>i.especie))].join(', ')}</p></div><strong>{Number(r.total_volume_m3).toFixed(4).replace('.',',')} m³</strong></div><div className="flex flex-wrap justify-between items-center gap-2"><p className="text-xs text-muted-foreground">{r.total_pecas} peças · {r.cab.data.split('-').reverse().join('/')} · Importado · Sem expedição</p>{podeOperar&&<Button size="sm" variant="outline" onClick={()=>{setEdit(r);setAbas([]);setOpen(true);}}><Pencil/>Editar romaneio</Button>}</div></div>)}</div>
+    <div className="divide-y">{(query.data??[]).filter(r=>r.empresa_id===empresa&&`${r.cab.numero_carga} ${r.cab.cliente_nome} ${r.cab.placa_veiculo} ${(r.cab.toras_serradas??[]).map(t=>`${t.autex} ${t.numero}`).join(' ')} ${r.itens.map(i=>`${i.especie} ${i.nome_cientifico} ${i.autex}`).join(' ')}`.toLowerCase().includes(q.toLowerCase())).map(r=><div key={r.id} className="py-3 space-y-2"><div className="flex flex-wrap justify-between gap-2"><div><h4 className="font-bold text-lg">{r.cab.numero_carga}</h4><p className="text-sm break-words">{r.cab.cliente_nome} · {[...new Set(r.itens.map(i=>i.especie))].join(', ')}</p></div><strong>{Number(r.total_volume_m3).toFixed(4).replace('.',',')} m³</strong></div><div className="flex flex-wrap justify-between items-center gap-2"><p className="text-xs text-muted-foreground">{r.total_pecas} peças · {r.cab.data.split('-').reverse().join('/')} · Importado · Sem expedição</p>{!!r.cab.toras_serradas?.length&&<p className="text-xs basis-full break-words">Toras já serradas: {r.cab.toras_serradas.map(t=>`AUTEX ${t.autex} · ${t.numero}`).join('; ')}</p>}{podeOperar&&<Button size="sm" variant="outline" onClick={()=>{setEdit(r);setAbas([]);setOpen(true);}}><Pencil/>Editar romaneio</Button>}</div></div>)}</div>
     <Dialog open={podeOperar&&open} onOpenChange={v=>{if(!v)setOpen(false);}}><DialogContent className="sm:max-w-4xl max-h-[90dvh] overflow-y-auto"><DialogHeader><DialogTitle>{edit?'Editar romaneio importado':'Importar romaneio de madeira serrada'}</DialogTitle><DialogDescription>{edit?edit.cab.numero_carga:'Conferência da planilha'}</DialogDescription></DialogHeader>{open&&podeOperar&&<RomaneioEditor key={edit?.id??abas.map(a=>a.nome).join('|')} empresa={empresa} {...(edit?{documento:edit}:{})} abas={abas} onCancelar={()=>setOpen(false)} onSalvo={()=>void salvo()}/>}</DialogContent></Dialog>
   </div>;
 }

@@ -54,3 +54,4 @@ use the editor.
 - AppShell groups routes into nav sections with sub-tabs. Why: keep URLs/QR links.
 - Roles (pode_funcao) are enforced by DB policies/RPCs on every write and replay; client role only shapes navigation. Why: offline roles must not bypass checks.
 - Imported sawn-timber manifests are editable company-scoped documents, not stock dispatches; save via an audited, optimistic-concurrency RPC with stable operation IDs. Why: arbitrary imported lengths and corrections must not mutate immutable dispatched packages or duplicate inventory.
+- Sawn-timber imported manifests may carry optional historical text references to already-sawn logs in cab.toras_serradas [{autex,numero}], normalized and deduplicated; they never touch stock, packages or sawing state. Why: documents cite sawn logs without a second stock write.

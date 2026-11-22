@@ -1,7 +1,17 @@
 import * as XLSX from 'xlsx';
 
 export type PecaImportada = { id:string; especie:string; nome_cientifico:string; autex:string; tipo_peca:string; grossura:number; largura:number; comprimento:number; quantidade:number };
-export type CabImportado = { numero_carga:string; data:string; cliente_nome:string; cliente_documento:string; motorista_nome:string; motorista_cpf:string; placa_veiculo:string; placa_reboque:string; observacoes:string };
+export type CabImportado = { numero_carga:string; data:string; cliente_nome:string; cliente_documento:string; motorista_nome:string; motorista_cpf:string; placa_veiculo:string; placa_reboque:string; observacoes:string; toras_serradas?:ToraSerradaRef[] };
+/** Referência histórica textual a uma tora já serrada; não liga estoque nem pacote. */
+export type ToraSerradaRef = { autex:string; numero:string };
+export const normalizarRef = (v:string) => v.replace(/\s+/g,' ').trim().toUpperCase();
+export function adicionarToraSerrada(lista:ToraSerradaRef[], autex:string, numero:string):ToraSerradaRef[] {
+  const ref={autex:normalizarRef(autex),numero:normalizarRef(numero)};
+  if(!ref.autex||!ref.numero)throw new Error('Informe a AUTEX e o número da tora');
+  if(ref.autex.length>60||ref.numero.length>30)throw new Error('AUTEX ou número da tora muito longo');
+  if(lista.some(t=>normalizarRef(t.autex)===ref.autex&&normalizarRef(t.numero)===ref.numero))throw new Error(`Tora ${ref.numero} da AUTEX ${ref.autex} já foi adicionada`);
+  return [...lista,ref];
+}
 export type AbaRomaneio = { nome:string; cliente:string; itens:PecaImportada[]; avisos:string[] };
 const texto = (v:unknown) => String(v??'').trim();
 const normalizar = (v:unknown) => texto(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
@@ -46,5 +56,7 @@ export function validarImportado(cab:CabImportado,itens:PecaImportada[]) {
     if(!Number.isFinite(i.grossura)||i.grossura<=0||i.grossura>1000||!Number.isFinite(i.largura)||i.largura<=0||i.largura>1000||!Number.isFinite(i.comprimento)||i.comprimento<=0||i.comprimento>100)throw new Error('Preencha medidas positivas: grossura/largura até 1000 cm e comprimento até 100 m');
     if(!Number.isSafeInteger(i.quantidade)||i.quantidade<1||i.quantidade>1000000)throw new Error('Quantidade deve ser inteira entre 1 e 1000000');
   }
+  const refs=cab.toras_serradas;
+  if(refs!==undefined){if(!Array.isArray(refs)||refs.length>2000)throw new Error('Lista de toras serradas inválida');refs.reduce<ToraSerradaRef[]>((l,t)=>adicionarToraSerrada(l,String(t?.autex??''),String(t?.numero??'')),[]);}
   if(totaisImportados(itens).pecas>2147483647)throw new Error('Quantidade de peças excede o limite');
 }

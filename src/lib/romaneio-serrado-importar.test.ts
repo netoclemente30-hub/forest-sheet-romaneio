@@ -11,4 +11,11 @@ describe('romaneio importado',()=>{
   it('permite nome científico e AUTEX manual e recalcula após edição',()=>{const i=lerRomaneioExcel(arquivo())[0]?.itens[0];if(!i)throw new Error('fixture ausente');const edit={...i,especie:'Outra madeira',nome_cientifico:'Nome informado',autex:'AUTEX LIVRE',largura:10,comprimento:3,quantidade:4};expect(()=>validarImportado(cab,[edit])).not.toThrow();expect(totaisImportados([edit])).toEqual({pecas:4,volume:0.03});});
   it('não aceita quantidade fracionária',()=>{const i=lerRomaneioExcel(arquivo())[0]?.itens[0];if(!i)throw new Error('fixture ausente');expect(()=>validarImportado(cab,[{...i,quantidade:1.5}])).toThrow('Quantidade');});
   it('não salva medidas ausentes ou nome da madeira vazio',()=>{const i=lerRomaneioExcel(arquivo())[0]?.itens[0];if(!i)throw new Error('fixture ausente');expect(()=>validarImportado(cab,[{...i,grossura:0}])).toThrow('medidas');expect(()=>validarImportado(cab,[{...i,especie:''}])).toThrow('nome da madeira');});
+});import { adicionarToraSerrada } from './romaneio-serrado-importar';
+describe('toras já serradas no romaneio importado',()=>{
+  it('aceita 39A e 422B na AUTEX 41234, normalizando espaços e maiúsculas',()=>{expect(adicionarToraSerrada(adicionarToraSerrada([],' 41234 ',' 39a '),'41234','422b')).toEqual([{autex:'41234',numero:'39A'},{autex:'41234',numero:'422B'}]);});
+  it('preserva zeros à esquerda',()=>{expect(adicionarToraSerrada([],'007','0039')).toEqual([{autex:'007',numero:'0039'}]);});
+  it('rejeita campo vazio',()=>{expect(()=>adicionarToraSerrada([],'41234','  ')).toThrow('Informe a AUTEX e o número');expect(()=>adicionarToraSerrada([],'','39A')).toThrow('Informe a AUTEX e o número');});
+  it('rejeita duplicada após normalizar',()=>{expect(()=>adicionarToraSerrada([{autex:'41234',numero:'39A'}],'41234',' 39a')).toThrow('já foi adicionada');});
+  it('documento legado sem lista continua válido e lista duplicada é recusada ao salvar',()=>{const i=lerRomaneioExcel(arquivo())[0]?.itens[0];if(!i)throw new Error('fixture ausente');expect(()=>validarImportado(cab,[i])).not.toThrow();expect(()=>validarImportado({...cab,toras_serradas:[{autex:'1',numero:'2'},{autex:'1',numero:' 2'}]},[i])).toThrow('já foi adicionada');});
 });

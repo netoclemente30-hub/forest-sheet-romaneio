@@ -23,4 +23,25 @@ it('edita peça, nome científico e AUTEX livre preservando documento, peça, em
 });
 it('cancelar não escreve nem modifica o documento original',async()=>{abrir();fireEvent.click(await screen.findByRole('button',{name:'Editar romaneio'}));fireEvent.change(screen.getByLabelText('Quantidade peças 1'),{target:{value:'20'}});fireEvent.click(screen.getByRole('button',{name:'Cancelar'}));expect(mocks.salvar).not.toHaveBeenCalled();expect(fixture.itens[0]?.quantidade).toBe(2);});
 it('não apresenta documento de outra empresa mesmo se a resposta contiver o registro',async()=>{abrir('empresa-B');await vi.waitFor(()=>expect(screen.queryByText('Carregando romaneios importados…')).not.toBeInTheDocument());expect(screen.queryByRole('button',{name:'Editar romaneio'})).not.toBeInTheDocument();expect(screen.queryByText('JAIR7')).not.toBeInTheDocument();});
-it('consulta sem operação não oferece importação ou edição',async()=>{abrir('empresa-A',false);await screen.findByText('JAIR7');expect(screen.queryByRole('button',{name:'Editar romaneio'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Importar romaneio'})).not.toBeInTheDocument();});
+it('consulta sem operação não oferece importação ou edição',async()=>{abrir('empresa-A',false);await screen.findByText('JAIR7');expect(screen.queryByRole('button',{name:'Editar romaneio'})).not.toBeInTheDocument();expect(screen.queryByRole('button',{name:'Importar romaneio'})).not.toBeInTheDocument();});const editar=async()=>{abrir();fireEvent.click(await screen.findByRole('button',{name:'Editar romaneio'}));};
+const add=(a:string,n:string)=>{fireEvent.change(screen.getByLabelText('AUTEX da tora serrada'),{target:{value:a}});fireEvent.change(screen.getByLabelText('Número da tora serrada'),{target:{value:n}});fireEvent.click(screen.getByRole('button',{name:'Adicionar tora'}));};
+const enviar=async()=>{await act(async()=>{fireEvent.submit(screen.getByRole('button',{name:'Salvar romaneio importado'}).closest('form') as HTMLFormElement);});};
+it('inclui e remove toras já serradas e salva no cabeçalho sem mexer em peças',async()=>{
+ await editar();add('41234','39a');add('41234','422B');add('41234','99');
+ fireEvent.click(screen.getByRole('button',{name:'Remover tora 99 da AUTEX 41234'}));
+ await enviar();await vi.waitFor(()=>expect(mocks.salvar).toHaveBeenCalledTimes(1));
+ const [emp,id,rev,cab,itens]=mocks.salvar.mock.calls[0]??[];
+ expect([emp,id,rev]).toEqual(['empresa-A','documento-estavel',1]);
+ expect(cab).toEqual({...fixture.cab,toras_serradas:[{autex:'41234',numero:'39A'},{autex:'41234',numero:'422B'}]});
+ expect(itens).toEqual(fixture.itens);
+});
+it('mostra erro para duplicada e campo vazio sem adicionar',async()=>{
+ await editar();add('41234','39A');add('41234',' 39a ');expect(screen.getByRole('alert')).toHaveTextContent('já foi adicionada');
+ add('41234','');expect(screen.getByRole('alert')).toHaveTextContent('Informe a AUTEX');
+ expect(screen.getAllByRole('button',{name:/Remover tora/})).toHaveLength(1);
+});
+it('falha ao salvar mantém as toras no formulário',async()=>{
+ mocks.salvar.mockRejectedValueOnce(new Error('sem rede'));await editar();add('41234','39A');await enviar();
+ await vi.waitFor(()=>expect(mocks.salvar).toHaveBeenCalledTimes(1));
+ expect(screen.getByRole('button',{name:'Remover tora 39A da AUTEX 41234'})).toBeInTheDocument();
+});
