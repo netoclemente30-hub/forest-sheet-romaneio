@@ -11,6 +11,8 @@ import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { autexSerradasQuery } from '@/lib/madeira-serrada';
 import { adicionarToraSerrada, lerRomaneioExcel, type ToraSerradaRef, totaisImportados, type AbaRomaneio, type CabImportado, type PecaImportada } from '@/lib/romaneio-serrado-importar';
+import { fila } from '@/lib/offline/fila';
+import { sincronizar } from '@/lib/offline/sync';
 import { excluirImportado, importadosQuery, salvarImportado, type RomaneioImportado } from '@/lib/romaneio-serrado-importado';
 
 function RomaneioEditor({empresa,documento,abas,onCancelar,onSalvo}:{empresa:string;documento?:RomaneioImportado;abas:AbaRomaneio[];onCancelar:()=>void;onSalvo:()=>void}) {
@@ -28,7 +30,7 @@ function RomaneioEditor({empresa,documento,abas,onCancelar,onSalvo}:{empresa:str
   const totals=totaisImportados(itens);
   function alterar(id:string,valor:Partial<PecaImportada>){setItens(s=>s.map(i=>i.id===id?{...i,...valor}:i));}
   function escolher(nome:string){if(!confirm('Trocar de aba descarta as alterações ainda não salvas. Continuar?'))return;const a=abas.find(a=>a.nome===nome);if(!a)return;setAba(nome);setItens(a.itens.map(i=>({...i})));setCab(s=>({...s,numero_carga:a.nome,cliente_nome:a.cliente}));}
-  async function salvar(e:React.FormEvent){e.preventDefault();if(busy)return;setBusy(true);try{const {toras_serradas:_antigas,...base}=cab;const final:CabImportado=toras.length||documento?.cab.toras_serradas!==undefined?{...base,toras_serradas:toras}:base;const conteudo=JSON.stringify({cab:final,itens});if(tentativa.current?.conteudo!==conteudo)tentativa.current={conteudo,operacao:crypto.randomUUID()};const envio=tentativa.current;if(!envio)return;await salvarImportado(empresa,id,documento?.revisao??0,final,itens,envio.operacao);toast.success('Romaneio importado salvo');onSalvo();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível salvar');}finally{setBusy(false);}}
+  async function salvar(e:React.FormEvent){e.preventDefault();if(busy)return;setBusy(true);try{const {toras_serradas:_antigas,...base}=cab;const final:CabImportado=toras.length||documento?.cab.toras_serradas!==undefined?{...base,toras_serradas:toras}:base;const conteudo=JSON.stringify({cab:final,itens});if(tentativa.current?.conteudo!==conteudo)tentativa.current={conteudo,operacao:crypto.randomUUID()};const envio=tentativa.current;if(!envio)return;await salvarImportado(empresa,id,documento?.revisao??0,final,itens,envio.operacao);toast.success('Romaneio guardado neste aparelho — aguarda confirmação na nuvem');void sincronizar(fila()).catch(()=>{});onSalvo();}catch(e){toast.error(e instanceof Error?e.message:'Não foi possível salvar');}finally{setBusy(false);}}
   return <form className="space-y-4" onSubmit={salvar}>
     {!documento&&<label className="block text-sm">Aba da planilha<select aria-label="Aba da planilha" className="h-10 w-full border rounded-md bg-background px-2" value={aba} disabled={busy} onChange={e=>escolher(e.target.value)}>{abas.map(a=><option key={a.nome} value={a.nome}>{a.nome} · {a.itens.reduce((n,i)=>n+i.quantidade,0)} peças</option>)}</select></label>}
     {!documento&&abas.find(a=>a.nome===aba)?.avisos.map(a=><p key={a} className="text-sm text-destructive">{a}</p>)}
