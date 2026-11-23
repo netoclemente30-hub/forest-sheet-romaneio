@@ -58,3 +58,4 @@ use the editor.
 
 - Offline persistence resolves only after IndexedDB transaction completion; queue send markers/receipts preserve payloads after uncertain responses, confirmed rollbacks unlock correction, and sync probes authenticated backend under a cross-tab Web Lock. Why: network hints and request success cannot prove durable storage or a safe retry.
 - Offline session recovery reads only the SDK existing storage key; it never duplicates tokens or grants server authority from local role copies. Why: expired refresh requests must not block field access while every replay still passes RLS/RPC authorization.
+- The generated worker's page cache uses `paginaOfflinePlugin` (src/lib/pwa-policy.ts): HTML is stored/served only when all its /assets files are in Cache Storage, and redirected responses are re-wrapped. Why: an old worker saving a new page caused offline cold starts to hit missing chunks and the generic error screen.

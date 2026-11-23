@@ -38,37 +38,50 @@ function NotFoundComponent() {
   );
 }
 
+// Missing JS chunk (stale cache/update) or no server: explain in the field's
+// language and offer the self-contained offline page instead of a dead end.
+function erroDeCarregamento(error: unknown): boolean {
+  const msg = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+  return /dynamically imported module|Importing a module script failed|module script|ChunkLoadError|Failed to fetch|NetworkError|Load failed/i.test(msg);
+}
+
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+  const carregamento = erroDeCarregamento(error);
+  const detalhe = error instanceof Error ? error.message : String(error);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          {carregamento ? "Esta tela não abriu sem conexão" : "Esta tela não abriu"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {carregamento
+            ? "Parte do aplicativo não estava salva neste aparelho. Seus lançamentos continuam guardados. Abra a página offline ou tente novamente quando houver sinal."
+            : "Ocorreu um erro inesperado. Seus lançamentos guardados neste aparelho não foram apagados."}
         </p>
+        <p className="mt-2 break-words text-xs text-muted-foreground">Detalhe: {detalhe}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
+              if (carregamento) { window.location.reload(); return; }
               router.invalidate();
               reset();
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Tentar novamente
           </button>
           <a
-            href="/"
+            href={carregamento ? "/offline.html" : "/"}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            {carregamento ? "Abrir página offline" : "Ir para o início"}
           </a>
         </div>
       </div>

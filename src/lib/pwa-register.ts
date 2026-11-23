@@ -61,6 +61,17 @@ export async function registrarServiceWorker() {
          if (navigator.serviceWorker.controller) concluir();
        });
      }
+     // A new worker taking over (update) re-prepares pages for ITS precache.
+     navigator.serviceWorker.addEventListener("controllerchange", () => { void prepararPaginas(); });
+     await prepararPaginas();
+  } catch {
+    // falha de registro não pode quebrar o app
+  }
+}
+
+let preparando: Promise<void> | null = null;
+function prepararPaginas(): Promise<void> {
+  preparando ??= (async () => {
      if (navigator.serviceWorker.controller && navigator.onLine) {
         // Requisições sequenciais de HTML (sem renderizar outro app/iframe).
         // O worker gerado é quem grava paginas; assets/fallback são precacheados
@@ -78,7 +89,6 @@ export async function registrarServiceWorker() {
           }
         }
      }
-  } catch {
-    // falha de registro não pode quebrar o app
-  }
+  })().finally(() => { preparando = null; });
+  return preparando;
 }

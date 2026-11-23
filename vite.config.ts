@@ -6,7 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
-import { navegacaoOffline } from "./src/lib/pwa-policy";
+import { navegacaoOffline, paginaOfflinePlugin } from "./src/lib/pwa-policy";
 
 export default defineConfig({
   tanstackStart: {
@@ -47,6 +47,7 @@ export default defineConfig({
                  networkTimeoutSeconds: 3,
                  cacheableResponse: { statuses: [200] },
                  precacheFallback: { fallbackURL: "/offline.html" },
+                 plugins: [paginaOfflinePlugin],
                },
             },
             {
