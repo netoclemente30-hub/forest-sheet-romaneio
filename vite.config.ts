@@ -6,7 +6,14 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
+import { loadEnv } from "vite";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { navegacaoOffline, paginaOfflinePlugin } from "./src/lib/pwa-policy";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Variáveis de servidor (sem prefixo VITE_) só em process.env; nunca no bundle do cliente.
+Object.assign(process.env, loadEnv(process.env['NODE_ENV'] ?? "development", process.cwd(), ""));
 
 export default defineConfig({
   tanstackStart: {
@@ -15,6 +22,13 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    resolve: {
+      alias: [
+        { find: "entities/lib/decode.js", replacement: path.resolve(__dirname, "node_modules/entities/lib/decode.js") },
+        { find: "entities/lib/encode.js", replacement: path.resolve(__dirname, "node_modules/entities/lib/encode.js") },
+        { find: /^entities$/, replacement: path.resolve(__dirname, "node_modules/entities") },
+      ],
+    },
     plugins: [
       VitePWA({
         strategies: "generateSW",

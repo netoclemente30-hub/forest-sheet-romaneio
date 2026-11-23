@@ -22,16 +22,6 @@ export async function transferirToraExplanada(
     destino_id: destino.id,
     log,
   };
-  if (estaOnline()) {
-    try {
-      await executarOp(op);
-      return { offline: false };
-    } catch (e) {
-      // Permissões, concorrência e falta de pátio NÃO podem virar sucesso offline.
-      if (estaOnline() && !/fetch|network|failed to fetch|timeout|connection/i.test(
-        e instanceof Error ? e.message : String(e))) throw e;
-    }
-  }
   await fila().enfileirar(op);
   return { offline: true };
 }

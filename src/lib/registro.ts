@@ -7,6 +7,7 @@ import { aparelhoAtual } from "./aparelho";
 import { sessaoDoAparelho } from "./offline/sessao";
 
 export interface LogCapturado {
+  usuario_id?: string;
   operacao_id?: string;
   acao: string;
   detalhe: string;
@@ -35,6 +36,7 @@ export async function capturarLog(acao: string, detalhe: string): Promise<LogCap
    const usuario = sessaoDoAparelho().then(s => s?.user ?? null);
    const [u, gps, ap] = await Promise.all([usuario, posicaoGps(), aparelhoAtual()]);
   return {
+    ...(u ? { usuario_id: u.id } : {}),
     operacao_id: crypto.randomUUID(),
     acao,
     detalhe,

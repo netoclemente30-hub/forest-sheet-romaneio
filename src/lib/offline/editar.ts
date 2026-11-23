@@ -21,6 +21,7 @@ const camposTora: CampoFila[] = [
 
 export function camposDaFila(op: Op): CampoFila[] {
   switch (op.tipo) {
+    case 'estoque_operacao': case 'aguardando_delete': case 'cadastro_upsert': case 'romaneio_importado_salvar': case 'campo_update': return [];
     case 'pacote_serrado_salvar': return [{chave:'numero',rotulo:'Número do pacote'},{chave:'autex',rotulo:'AUTEX'},{chave:'data',rotulo:'Data'},{chave:'observacoes',rotulo:'Observações'}];
     case "tora_insert": case "tora_update": return camposTora;
     case "tora_delete": return [{ chave: "plaqueta", rotulo: "Plaqueta azul", mode: "numeric" }];
@@ -36,18 +37,19 @@ export function camposDaFila(op: Op): CampoFila[] {
 }
 
 export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
+  if (['estoque_operacao', 'aguardando_delete', 'cadastro_upsert', 'romaneio_importado_salvar', 'campo_update'].includes(op.tipo)) return {};
   if(op.tipo==='pacote_serrado_salvar')return {...op.cab};
   if (op.tipo === "tora_insert" || op.tipo === "tora_update") {
     const base = op.tipo === "tora_update" ? toras.find((t) => t.empresa_id === op.empresa_id && t.plaqueta === op.plaqueta) : undefined;
     const dados: Record<string, unknown> = { ...base, ...op.dados };
     return Object.fromEntries(camposTora.map(({ chave }) => [chave, String(dados[chave === "plaquetaNova" ? "plaqueta" : chave] ?? (chave === "plaquetaNova" && op.tipo === "tora_update" ? op.plaqueta : ""))]));
   }
-  if (op.tipo === "romaneio_salvar") return { ...op.cab };
+  if (op.tipo === "romaneio_salvar") { const { cliente: _c, ...cab } = op.cab; return cab; }
   if (op.tipo === "romaneio_recebido") return { patio: op.patio };
   if (op.tipo === "arvore_gps") return { latitude: String(op.dados.latitude), longitude: String(op.dados.longitude), gps_precisao: String(op.dados.gps_precisao ?? "") };
   if (op.tipo === "rastro_salvar" || op.tipo === "arrasto_arvore" || op.tipo === "transferencia_explanada" || op.tipo === "arrasto_toras" || op.tipo === "aguardando_insert" || op.tipo === "aguardando_update" || op.tipo === "aguardando_impressa") return {};
   if (op.tipo === "tora_delete") return { plaqueta: String(op.plaqueta) };
-  return { plaquetas: op.plaquetas.join(", ") };
+  return { plaquetas: 'plaquetas' in op ? op.plaquetas.join(', ') : '' };
 }
 
 export function edicaoDaFila(op: Op, valores: Record<string, string>): EdicaoTora | null {
@@ -104,7 +106,7 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
       const motorista = valores["motorista"]?.trim();
       const data = valores["data"]?.trim();
       if (!placa || !motorista || !data) throw new Error("Preencha placa, motorista e data");
-      return { ...op, cab: { placa: placa.toUpperCase(), julieta: valores["julieta"]?.trim().toUpperCase() ?? "", motorista, cpf: valores["cpf"]?.trim() ?? "", data } };
+      return { ...op, cab: { placa: placa.toUpperCase(), julieta: valores["julieta"]?.trim().toUpperCase() ?? "", motorista, cpf: valores["cpf"]?.trim() ?? "", data, cliente: op.cab.cliente ?? null } };
     }
     default: throw new Error("Lançamento inválido");
   }

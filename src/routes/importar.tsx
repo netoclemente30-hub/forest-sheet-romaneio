@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileSpreadsheet, Download } from "lucide-react";
+import { guardarRascunho, lerRascunho, contextoLocal } from '@/lib/offline/rascunho';
 
 export const Route = createFileRoute("/importar")({
   staticData: { sitemap: false },
@@ -41,6 +42,13 @@ function Importar() {
   const [busy, setBusy] = useState(false);
   const [preparado, setPreparado] = useState<{ arvores: ArvoreBase[]; calc: Row[]; invalidas: number; repetidas: number; arquivo: string } | null>(null);
   const [autexPadrao, setAutexPadrao] = useState("");
+  useEffect(() => {
+    let ativo = true;
+    void lerRascunho<{ preparado: NonNullable<typeof preparado>; autexPadrao: string }>('ficha-importacao').then(r => {
+      if (ativo && r) { setPreparado(r.preparado); setAutexPadrao(r.autexPadrao); }
+    }).catch(() => {});
+    return () => { ativo = false; };
+  }, []);
 
   useEffect(() => {
     if (!loading && !permissoesCarregando && !podeImportar) {
@@ -75,7 +83,9 @@ function Importar() {
         if (calculos) calc = XLSX.utils.sheet_to_json<Row>(calculos, { header: 1 }).slice(1);
       }
       if (!resultado.arvores.size) throw new Error("Nenhuma árvore reconhecida. Confira as colunas número e nome popular/espécie.");
-      setPreparado({ arvores: [...resultado.arvores.values()], calc, invalidas: resultado.invalidas, repetidas: resultado.repetidas, arquivo: file.name });
+      const previa = { arvores: [...resultado.arvores.values()], calc, invalidas: resultado.invalidas, repetidas: resultado.repetidas, arquivo: file.name };
+      await guardarRascunho('ficha-importacao', { preparado: previa, autexPadrao });
+      setPreparado(previa);
       setStatus("");
     } catch (e) { toast.error((e as Error).message); setStatus(""); }
     finally { setBusy(false); }
@@ -83,12 +93,10 @@ function Importar() {
 
   async function confirmar() {
     if (!preparado) return;
-    if (!navigator.onLine) {
-      toast.error("A importação de planilha precisa de internet");
-      return;
-    }
     setBusy(true);
     try {
+      await guardarRascunho('ficha-importacao', { preparado, autexPadrao });
+      if (!navigator.onLine) throw new Error('Ficha guardada neste aparelho. Conecte à internet para validar e importar no manejo.');
       const arvores = preparado.arvores.map((a) => ({ ...a, autex: a.autex || autexPadrao.trim() }));
       if (arvores.some((a) => !a.autex)) {
         toast.error("Informe a AUTEX para vincular a ficha ao manejo e ao mapa exploratório");
@@ -116,13 +124,7 @@ function Importar() {
       const av = [...arvores.values()];
       const autexes = [...new Set(av.map((a) => a.autex).filter(Boolean))];
       const tv = [...toras.values()];
-      const empresaConfigurada = empresaIdGravacao().empresa_id;
-      let empresa = empresaConfigurada;
-      if (!empresa) {
-        const { data, error } = await supabase.rpc("minha_empresa");
-        if (error) throw error;
-        empresa = data ?? undefined;
-      }
+      const { empresa } = await contextoLocal();
       if (!empresa) throw new Error("Selecione uma empresa para a importação.");
       setStatus("Validando a ficha e gravando todas as árvores e toras em uma transação…");
       const { error } = await supabase.rpc("importar_ficha_manejo", {
@@ -136,13 +138,13 @@ function Importar() {
       setStatus(`Pronto! ${av.length} árvores e ${tv.length} toras importadas.${dup ? ` ${dup} plaqueta(s) repetida(s) ignorada(s).` : ""}`);
       toast.success("Ficha importada e vinculada ao manejo");
       setPreparado(null);
-      if (autexes.length === 1) nav({ to: "/base/$autex", params: { autex: autexes[0]! } });
+      if (autexes.length === 1 && autexes[0]) nav({ to: "/base/$autex", params: { autex: autexes[0] } });
       else nav({ to: "/base" });
     } catch (e) {
       toast.error((e as Error).message);
       setStatus("");
     }
-    setBusy(false);
+    finally { setBusy(false); }
   }
 
   return (

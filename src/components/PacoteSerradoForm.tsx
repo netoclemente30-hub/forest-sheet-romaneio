@@ -26,7 +26,7 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, sugestao, onSalvo,
   function alterar(index:number, valores:Partial<BitolaSerrada>) { setItens(s=>s.map((i,n)=>n===index ? {...i,...valores} : i)); }
   async function salvar(e:React.FormEvent) {
     e.preventDefault(); if(busy)return; if(!confirmada){toast.error('Confirme ou altere a AUTEX sugerida');return;} setBusy(true);
-    try { await salvarPacote(empresa,id,{numero,data,observacoes:obs,autex},itens); toast.success('Pacote salvo'); onSalvo(); }
+    try { await salvarPacote(empresa,id,{numero,data,observacoes:obs,autex},itens); toast.success('Pacote guardado no aparelho — aguarda confirmação na nuvem'); onSalvo(); }
     catch(e) { toast.error(e instanceof Error ? e.message : 'Não foi possível salvar'); }
     finally { setBusy(false); }
   }

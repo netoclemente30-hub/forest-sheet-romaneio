@@ -18,7 +18,7 @@ export type SalvarEncaixeDeps = {
 export async function salvarEncaixe(linha: LinhaSaldo, medidas: MedidasEncaixe, empresa: string, toras: Tora[], deps: SalvarEncaixeDeps): Promise<Tora> {
   const volume = volumeEncaixe(medidas);
   if (!empresa || linha.arvore === null || !linha.autex.trim() || volume === null) throw new Error("Confira AUTEX/AUTESP, árvore e todas as medidas antes de salvar.");
-  const inventario = deps.online() ? await deps.lerInventario() : toras;
+  const inventario = toras;
   const itens = await deps.listarFila();
   const identidade = { empresa_id: empresa, arvore: linha.arvore, secao: linha.secao.trim().toUpperCase() || null, autex: linha.autex.trim() };
   const pendentes: IdentidadeTora[] = itens.flatMap(({ op }) => op.tipo === "tora_insert" ? [{ empresa_id: String(op.dados["empresa_id"] ?? ""), arvore: Number(op.dados["arvore"]), secao: String(op.dados["secao"] ?? ""), autex: String(op.dados["autex"] ?? ""), plaqueta: Number(op.dados["plaqueta"]) }] : []);
@@ -28,8 +28,7 @@ export async function salvarEncaixe(linha: LinhaSaldo, medidas: MedidasEncaixe, 
   const log = await deps.capturar("Encaixe confirmado", `Plaqueta ${plaqueta} · ${linha.especie} · árvore ${linha.arvore} · secção ${identidade.secao ?? "sem seção"} · AUTEX ${identidade.autex} · identidade escolhida pelo usuário · saldo ${linha.volume} m³ · medido ${volume} m³`);
   const valores = Object.fromEntries(CAMPOS_ENCAIXE.map((k) => [k, Number(medidas[k].trim().replace(",", "."))])) as Record<(typeof CAMPOS_ENCAIXE)[number], number>;
   const tora: Tora = { ...identidade, ...valores, origem: "serraria", plaqueta, volume, especie: linha.especie || null, nome_cientifico: linha.nome_cientifico || null, carregada: false, created_at: log.criado_em, romaneio_id: null, serrada_em: null, etiqueta_impressa_em: null };
-  if (deps.online()) { await deps.inserir(tora, log); }
-  else await deps.enfileirar({ tipo: "tora_insert", dados: tora, log });
+  await deps.enfileirar({ tipo: "tora_insert", dados: tora, log });
   return tora;
 }
 

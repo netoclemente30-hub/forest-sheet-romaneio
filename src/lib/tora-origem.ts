@@ -1,6 +1,7 @@
 import type { Arvore, Romaneio, Tora } from "./data";
 import type { ItemFila } from "./offline/fila";
 import { torasEtiquetasOffline } from "./encaixe-salvar";
+import { projetarDados } from './offline/projecao';
 
 export type OrigemTora = "manejo" | "serraria";
 
@@ -20,7 +21,7 @@ export function patioDaTora(tora: Tora, romaneios: Romaneio[]): string | null {
 /** Project local operations without inserting duplicate rows into the inventory. */
 export function estoqueComFila(toras: Tora[], itens: ItemFila[], empresa: string | null): Tora[] {
   if (!empresa) return toras;
-  const lista = toras.filter(t => t.empresa_id === empresa);
+  const lista = projetarDados('toras', toras, itens, empresa);
   for (const t of torasEtiquetasOffline(itens, empresa)) {
     if (!lista.some((x) => x.empresa_id === empresa && x.plaqueta === t.plaqueta)) lista.push(t);
   }

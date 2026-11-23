@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { comCache } from './offline/cache';
+import { fila } from './offline/fila';
+import { capturarLog } from './registro';
 
 export type Explanada = {
   id: string;
@@ -12,13 +15,14 @@ export type Explanada = {
 
 export async function listarExplanadas(empresa: string, autex?: string): Promise<Explanada[]> {
   if (!empresa) return [];
-  // Tabela proposta para o banco administrado pela Lovable.
+  return comCache(`explanadas:${autex ?? ''}`, async () => {
   let q = supabase.from("explanadas" as "patios")
     .select("*").eq("empresa_id", empresa).order("nome");
   if (autex) q = q.filter("autex", "eq", autex);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Explanada[];
+  }, empresa);
 }
 
 export async function cadastrarExplanada({
@@ -38,7 +42,5 @@ export async function cadastrarExplanada({
   if (latitude != null && longitude != null &&
     !(latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180))
     throw new Error("Coordenadas da explanada inválidas");
-  const { error } = await supabase.from("explanadas" as "patios")
-    .insert({ empresa_id: empresa, autex, nome: n, latitude, longitude } as never);
-  if (error) throw new Error(error.message);
+  await fila().enfileirar({ tipo: 'cadastro_upsert', tabela: 'explanadas', empresa_id: empresa, conflito: 'id', dados: { id: crypto.randomUUID(), autex, nome: n, latitude, longitude }, log: await capturarLog('Explanada cadastrada', `${autex} · ${n}`) });
 }

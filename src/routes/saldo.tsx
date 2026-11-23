@@ -24,6 +24,8 @@ import { SerrariaAbas } from "@/components/SerrariaAbas";
 import { TorasAguardando } from "@/components/TorasAguardando";
 import { ExportarSaldoPendente } from "@/components/ExportarSaldoPendente";
 import { saldoNaoMedido } from "@/lib/saldo-pendentes";
+import { comCache } from '@/lib/offline/cache';
+import { fila } from '@/lib/offline/fila';
 
 export const Route = createFileRoute("/saldo")({
   staticData: { sitemap: false },
@@ -75,15 +77,12 @@ function Saldo() {
     networkMode: "always",
     queryFn: async (): Promise<LinhaSaldo[]> => {
       if (!empresa) return [];
-      const chave = `saldo-linhas:${empresa}`;
-      if (!navigator.onLine) {
-        try { return JSON.parse(localStorage.getItem(chave) ?? "[]") as LinhaSaldo[]; } catch { return []; }
-      }
+      return comCache(`saldo-linhas:${empresa}`, async () => {
       const { data, error } = await supabase.from("saldos").select("linhas").eq("empresa_id", empresa).maybeSingle();
       if (error) throw error;
       const l = (data?.linhas ?? []) as unknown as LinhaSaldo[];
-      try { localStorage.setItem(chave, JSON.stringify(l)); } catch { /* cheio */ }
       return l;
+      }, empresa);
     },
   });
   const linhas = saldo.data ?? [];
@@ -91,11 +90,8 @@ function Saldo() {
   const setLinhas = async (l: LinhaSaldo[]) => {
     if (!podeOperar) return;
     if (!empresa) throw new Error("Aguarde carregar a empresa");
-    qc.setQueryData(["saldo-linhas", empresa], l);
-    try { localStorage.setItem(`saldo-linhas:${empresa}`, JSON.stringify(l)); } catch { /* cheio */ }
-    if (!navigator.onLine) return;
-    const { error } = await supabase.from("saldos").upsert({ empresa_id: empresa, linhas: l as unknown as never, atualizado_em: new Date().toISOString() });
-    if (error) toast.error("Saldo não foi compartilhado: " + error.message);
+    await fila().enfileirar({ tipo: 'cadastro_upsert', tabela: 'saldos', empresa_id: empresa, conflito: 'empresa_id', dados: { linhas: l, atualizado_em: new Date().toISOString() }, log: await capturarLog('Saldo importado', `${l.length} linhas`) });
+    qc.setQueryData(['saldo-linhas', empresa], l);
   };
   const res = useMemo(() => conferirSaldo(linhas, torasEmpresa), [linhas, torasEmpresa]);
   const ok = useMemo(() => res.filter((r) => r.tora), [res]);
@@ -141,20 +137,13 @@ function Saldo() {
     if (!podeOperar) return;
     const ini = Number(inicio);
     if (!Number.isSafeInteger(ini) || ini <= 0) { toast.error("Digite a plaqueta inicial"); return; }
-    if (!navigator.onLine) { toast.error("Precisa de internet para cadastrar o saldo"); return; }
+    if (!empresa) { toast.error('Escolha uma empresa'); return; }
     const novas = novasTorasDoSaldo(res.filter((r) => !r.tora).map((r) => r.linha), ini, new Set((toras.data ?? []).map((t) => t.plaqueta)));
     if (!confirm(`Cadastrar ${novas.length} toras no estoque, plaquetas ${novas[0]?.plaqueta} a ${novas.at(-1)?.plaqueta}?`)) return;
     setBusy(true);
     try {
-      const emp = empresaIdGravacao();
-      const autexes = [...new Set(novas.map((t) => t.autex).filter((a): a is string => !!a))];
-      if (autexes.length) { const { error } = await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...emp })), { onConflict: "empresa_id,numero", ignoreDuplicates: true }); if (error) throw error; }
-      for (let i = 0; i < novas.length; i += 500) {
-        const { error } = await supabase.from("toras").insert(novas.slice(i, i + 500).map((t) => ({ ...t, ...emp, origem: "serraria" })));
-        if (error) throw error;
-      }
-      await gravarRegistro(await capturarLog("Saldo cadastrado", `${novas.length} toras · plaquetas ${novas[0]?.plaqueta}–${novas.at(-1)?.plaqueta}`));
-      toast.success(`${novas.length} toras cadastradas`);
+      for (const t of novas) await fila().enfileirar({ tipo: 'tora_insert', dados: { ...t, empresa_id: empresa, origem: 'serraria' }, log: await capturarLog('Saldo cadastrado', `Plaqueta ${t.plaqueta}`) });
+      toast.success(`${novas.length} toras guardadas no aparelho — aguardam confirmação na nuvem`);
       await qc.invalidateQueries({ queryKey: ["toras"] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erro ao cadastrar"); }
     finally { setBusy(false); }
@@ -169,7 +158,7 @@ function Saldo() {
       const l = lerSaldo(XLSX.utils.sheet_to_json<unknown[]>(folha, { header: 1, raw: false }));
       await setLinhas(l);
       const autexes = [...new Set(l.map((x) => x.autex).filter(Boolean))];
-      if (autexes.length && navigator.onLine) await supabase.from("autex").upsert(autexes.map((numero) => ({ numero, ...empresaIdGravacao() })), { onConflict: "empresa_id,numero", ignoreDuplicates: true });
+      if (empresa) for (const numero of autexes) await fila().enfileirar({ tipo: 'cadastro_upsert', tabela: 'autex', empresa_id: empresa, conflito: 'empresa_id,numero', dados: { numero }, log: await capturarLog('AUTEX do saldo', numero) });
       toast.success(`${l.length} linhas lidas`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível ler a planilha"); }
   }

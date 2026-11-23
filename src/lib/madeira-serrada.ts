@@ -6,6 +6,7 @@ import { comCache } from './offline/cache';
 import { capturarLog } from './registro';
 import type { LogCapturado } from './registro';
 import type { ItemFila } from './offline/fila';
+import { guardarRascunho } from './offline/rascunho';
 
 export const COMPRIMENTOS = Array.from({ length: 17 }, (_, i) => (1 + i * 0.5).toFixed(1));
 export type BitolaSerrada = { especie: string; tipo_peca: string; grossura: number; largura: number; distribuicao_pecas: Record<string, number> };
@@ -99,24 +100,27 @@ export async function salvarPacote(empresa: string, id: string, cab: CabPacote, 
   const { fila }=await import('./offline/fila');
   const f=fila(); const pendente=(await f.listar()).find(i=>i.op.tipo==='pacote_serrado_salvar'&&i.op.pacote_id===id&&i.op.empresa_id===empresa);
   const log = await capturarLog('Pacote de madeira serrada salvo', `Pacote ${cab.numero}`);
-  const op={tipo:'pacote_serrado_salvar' as const,empresa_id:empresa,pacote_id:id,cab:{...cab,offline_criacao:true},itens,log};
+  const existentes = await import('./offline/cache').then(m => m.lerCache<PacoteSerrado>(`madeira-serrada:${empresa}`, empresa));
+  const op={tipo:'pacote_serrado_salvar' as const,empresa_id:empresa,pacote_id:id,cab:{...cab,...(existentes?.some(p=>p.id===id)?{}:{offline_criacao:true})},itens,log};
   if(pendente){await f.atualizarPacote(pendente.id,op);return;}
-  if(!redeDisponivel()){await f.enfileirar(op);return;}
-  try{await enviarPacote(empresa,id,cab,itens,log);}catch(e){if(!redeDisponivel()||erroDeRede(e)){await f.enfileirar(op);return;}throw e;}
+  await f.enfileirar(op);
 }
 export async function excluirPacote(empresa: string, id: string) {
+  await guardarRascunho(`excluir-pacote:${id}`, { id, confirmado: false }, empresa);
   exigirConexao();
   const log = await capturarLog('Pacote de madeira serrada excluído', id);
   const { error } = await supabase.rpc('excluir_pacote_serrado', { _empresa: empresa, _id: id, _log: log as unknown as Json });
   if (error) throw new Error(error.message);
 }
 export async function excluirCarga(empresa: string, id: string) {
+  await guardarRascunho(`excluir-carga:${id}`, { id, confirmado: false }, empresa);
   exigirConexao();
   const log = await capturarLog('Carga de madeira serrada excluída', id);
   const { error } = await supabase.rpc('excluir_carga_serrada', { _empresa: empresa, _id: id, _log: log as unknown as Json });
   if (error) throw new Error(error.message);
 }
 export async function salvarCargaSerrada(empresa: string, id: string, cab: CabCarga, pacotes: string[]) {
+  await guardarRascunho(`carga-serrada:${id}`, { id, cab, pacotes, confirmada: false }, empresa);
   exigirConexao();
   const log = await capturarLog('Carga de madeira serrada expedida', cab.numero_carga);
   const { error } = await supabase.rpc('salvar_carga_serrada', { _empresa: empresa, _id: id, _cab: cab, _pacotes: pacotes, _log: log as unknown as Json });

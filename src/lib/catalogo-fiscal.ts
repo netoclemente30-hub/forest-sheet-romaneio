@@ -6,6 +6,7 @@ export type ProdutoFiscal = {
   ncm: string;
   cfop: string;
   preco: string;
+  unidade?: string;
 };
 export type CatalogoFiscal = { clientes: ClienteFiscal[]; produtos: ProdutoFiscal[] };
 export const documentoId = (valor: string) => valor.replace(/[./\s-]/g, "").toUpperCase();

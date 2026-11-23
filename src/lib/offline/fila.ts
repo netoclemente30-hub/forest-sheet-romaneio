@@ -10,6 +10,11 @@ import type { PontoRastro } from '@/lib/exploracao';
 import type { DadosArvoreGPS } from '@/lib/exploracao-salvar';
 
 export type Op =
+  | { tipo: 'estoque_operacao'; empresa_id: string; operacao: string; tipo_operacao: string; dados: Record<string, unknown>; alvos: (number | string)[]; log: LogCapturado }
+  | { tipo: 'aguardando_delete'; id: string; empresa_id: string; log: LogCapturado }
+  | { tipo: 'romaneio_importado_salvar'; empresa_id: string; documento_id: string; revisao: number; cab: import('@/lib/romaneio-serrado-importar').CabImportado; itens: import('@/lib/romaneio-serrado-importar').PecaImportada[]; operacao: string; log: LogCapturado }
+  | { tipo: 'campo_update'; empresa_id: string; tabela: 'arvores' | 'autex' | 'toras'; alvo: string | number; chave: 'id' | 'numero' | 'plaqueta'; dados: Record<string, unknown>; log: LogCapturado }
+  | { tipo: 'cadastro_upsert'; empresa_id: string; tabela: 'autex' | 'explanadas' | 'saldos'; dados: Record<string, unknown>; conflito: string; log: LogCapturado }
   | { tipo:'pacote_serrado_salvar'; empresa_id:string; pacote_id:string; cab:CabPacote; itens:BitolaSerrada[]; log:LogCapturado }
   | { tipo: "tora_insert"; dados: Record<string, unknown>; log?: LogCapturado }
   | {
@@ -23,7 +28,7 @@ export type Op =
   | { tipo: "tora_delete"; plaqueta: number; empresa_id: string; log?: LogCapturado }
   | {
       tipo: "romaneio_salvar";
-      cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string };
+      cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string; cliente?: Record<string, string> | null };
       total_volume: number;
       qtd_toras: number;
       plaquetas: number[];
@@ -78,9 +83,10 @@ export interface ItemFila {
   op: Op;
   /** Responsável pelo lançamento offline (separa contas no mesmo aparelho). */
   usuario_id?: string;
+  /** Durable marker: the remote response may have been lost. Do not rewrite this intent. */
+  envio_iniciado?: boolean;
   erro?: string;
   estado?: "pendente" | "enviando" | "enviado" | "erro";
-  envio_iniciado?: boolean;
 }
 
 export interface FilaStore {
@@ -121,6 +127,7 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
     async editarErro(id: string, op: Op) {
       const item = (await store.all()).find((i) => i.id === id);
       if (!item?.erro) throw new Error("Este lançamento não está mais disponível para edição");
+      if (item.envio_iniciado) throw new Error('Este lançamento já teve envio iniciado. Tente novamente antes de editar.');
       if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
       if (item.envio_iniciado) throw new Error("Envio sem confirmação: tente novamente com os mesmos dados antes de editar.");
       if (empresaDaOp(op) !== empresaDaOp(item.op)) throw new Error("Não é possível trocar a empresa do lançamento");
@@ -132,6 +139,7 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
     async substituir(id: string, op: Op) {
       const item = (await store.all()).find((i) => i.id === id);
       if (!item) throw new Error("Este lançamento não está mais na lista de pendentes");
+      if (item.envio_iniciado) throw new Error('Envio sem confirmação: este lançamento já teve envio iniciado. Aguarde a confirmação antes de editar.');
       if (op.tipo !== item.op.tipo) throw new Error("Não é possível trocar o tipo do lançamento");
       if (item.envio_iniciado) throw new Error("Envio sem confirmação: tente novamente com os mesmos dados antes de editar.");
       if (empresaDaOp(op) !== empresaDaOp(item.op)) throw new Error("Não é possível trocar a empresa do lançamento");
@@ -142,6 +150,7 @@ export function criarFila(store: FilaStore, onMudou: () => void = () => {}) {
       const item=(await store.all()).find(i=>i.id===id);
       if(item?.envio_iniciado) throw new Error('Envio sem confirmação: aguarde antes de editar o pacote');
       if(!item||item.op.tipo!=='pacote_serrado_salvar'||item.op.empresa_id!==op.empresa_id||item.op.pacote_id!==op.pacote_id) throw new Error('Pacote pendente não encontrado');
+      if (item.envio_iniciado) throw new Error('O envio deste pacote já começou. Aguarde a confirmação antes de editar.');
       await store.put({...item,op:{...op,log:item.op.log}});
       onMudou();
     },

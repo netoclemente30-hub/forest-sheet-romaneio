@@ -1,4 +1,11 @@
 # Tarefas
+- [x] Preparar envio de e-mails de notify.gestorflorestal.com.br: serviço configurado, dependências e prévia protegida instaladas; envio aguarda verificação DNS. Nenhum envio fiscal ativado nesta etapa.
+- [x] Monitoramento: rejeições confirmadas da primeira transação liberam edição no mesmo ID; respostas perdidas continuam protegidas. 30 testes passaram; edição/salvamento pelo aviso de erro com sessão real e rejeição local conferidos, sem alterar estoque; não publicado.
+- [ ] Monitoramento: envio real de XML ao contador — plano aprovado; opção indisponível até ativação, cadastro preservado. Implementação do envio e validação aguardam configuração do domínio pelo proprietário.
+- [x] Fiscal: Contador/Emitente recolhíveis, emitente salvo por empresa na nuvem e NF-e manual com cadastro de itens/unidade; 23 testes passaram. Cadastro de produto → prévia R$ 250 → reabertura → nova nota vazia verificados com sessão real sem alterar dados fiscais da empresa; gravação do emitente real/emissão não executadas.
+- [ ] Offline-first solicitado em 19/11: persistência antes do envio, transações IndexedDB, contexto usuário/empresa, projeções, reenvio seguro e testes; preservar histórico e não publicar.
+- [x] Primeira entrega offline-first: transações, fila antes do envio e projeções implantadas; validação e limitações em docs/offline-first-validacao.md. Não considerar cobertura completa: concorrência dos caminhos legados, recuperação de rascunhos e confirmação de exclusões especiais continuam abertas.
+- [ ] Integrar esta entrega na main — checkout atual feat/emissor-nfe-spedy; conexão externa/main atual não verificáveis pelas referências locais.
 - [x] Importar romaneio Excel de madeira serrada com seleção de aba e edição de peças, medidas, espécie, nome científico e AUTEX livre; documentos separados das expedições. MIRINDIBA: 491 peças, 5,1960 m³ e 7,30 m preservados; 34 testes focais passaram. Importação/cancelamento em desktop/384 px e salvamento/edição/reabertura autenticados conferidos; documento temporário removido, auditoria de teste preservada. Salvar requer internet; não publicado.
 - [x] Aceitar a ficha enviada em Inserir planilha de coordenadas: detectar UTM e converter com fuso/hemisfério/datum explícitos, preservando ficha/abates. Prévia autenticada reconheceu 128 árvores da MADENORTE, sem erros em desktop/384 px; 15 testes passaram. Nenhuma posição gravada: fuso e datum reais ainda precisam de confirmação do engenheiro.
 - [x] Árvores "sumiram": investigado — etiqueta (tora 201), Base (515 árvores RICARDO RMS), Serraria RJ (1.591 toras) e página pública da tora 585 (AUTEX + árvore 117 B + secção) todos corretos no preview; sintomas são da versão publicada desatualizada — pendente publicar.
@@ -85,3 +92,6 @@
 - [x] Verificar reconexão real, cache multiempresa e política PWA prioritária; ciclo instalado depende do aparelho.
 - [x] 423 testes passaram, tipos sem erros, compilação automática OK; lançamento local/reabertura/rotas conferidos sem escrita remota. Relatório em docs/OFFLINE_FIRST_VALIDACAO.md.
 - [ ] Validar PWA instalada em modo avião por horas e fechar/reabrir após bloqueio — depende de aparelho e versão publicada autorizada pelo Neto.
+
+- [x] Fiscal Spedy homologação (P01–P06): emissão/consulta/XML/DANFE/inutilização no servidor, bloqueio de produção, auditoria.
+- [ ] Validação real Spedy: aguarda chave SPEDY_SANDBOX_KEY_<UUID> por empresa, A1 e cadastro na conta sandbox.

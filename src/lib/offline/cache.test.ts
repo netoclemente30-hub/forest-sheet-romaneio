@@ -31,6 +31,19 @@ it("resposta atrasada da RJ não grava toras no cache da empresa selecionada dep
   expect(put).not.toHaveBeenCalledWith("cache", expect.anything(), "usuario-a:ricardo:toras");
 });
 
+it('resposta perdida de uma conta não é salva no cache da conta seguinte', async () => {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+  const put = vi.spyOn(idb, 'put').mockResolvedValue(undefined);
+  let resolver: ((dados: { plaqueta: number }[]) => void) | undefined;
+  const leitura = comCache('toras', () => new Promise<{ plaqueta: number }[]>(resolve => { resolver = resolve; }));
+  await vi.waitFor(() => expect(resolver).toBeTypeOf('function'));
+  idUsuario = 'usuario-b';
+  resolver?.([{ plaqueta: 9 }]);
+  expect(await leitura).toEqual([]);
+  expect(put).toHaveBeenCalledWith('cache', expect.anything(), 'usuario-a:sem-vinculo:toras');
+  expect(put).not.toHaveBeenCalledWith('cache', expect.anything(), 'usuario-b:sem-vinculo:toras');
+});
+
 describe("consulta sem internet", () => {
   it("lê a base já salva sem aguardar uma tentativa de rede", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
@@ -83,7 +96,7 @@ it('não guarda resposta iniciada por uma conta na conta que entrou depois', asy
   await vi.waitFor(() => expect(resolver).toBeTypeOf('function'));
   idUsuario = 'usuario-b'; resolver?.([{ plaqueta: 39 }]);
   expect(await p).toEqual([]);
-  expect(put).not.toHaveBeenCalled();
+  expect(put).not.toHaveBeenCalledWith('cache', expect.anything(), expect.stringContaining('usuario-b'));
 });
 it('Wi-Fi sem backend e sem cache devolve lista vazia, sem inventar dados', async () => {
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);

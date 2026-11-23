@@ -39,3 +39,16 @@ describe("estoque consolidado", () => {
     expect(patio.rodape?.[3]).toBe(fmtM3(1.434));
   });
 });
+
+import { resumoGeral } from "./relatorios-gerais";
+describe("resumo geral da empresa", () => {
+  it("conta cargas recebidas e vendidas só dentro do período", () => {
+    const roms = [{ id: "r1", recebido_em: "2026-11-05T10:00:00Z", qtd_toras: 10, total_volume: 20 }, { id: "r2", recebido_em: "2026-10-05T10:00:00Z", qtd_toras: 5, total_volume: 9 }] as never;
+    const cargas = [{ data: "2026-11-10", total_volume_m3: 12.5, cliente_nome: "A" }, { data: "2026-12-01", total_volume_m3: 3, cliente_nome: "B" }] as never;
+    const g = resumoGeral([], roms, [], cargas, { inicio: "2026-11-01", fim: "2026-11-30", especie: "" });
+    expect(g.cargasRecebidas).toBe(1);
+    expect(g.volRecebido).toBe(20);
+    expect(g.cargasVendidas).toBe(1);
+    expect(g.volVendido).toBe(12.5);
+  });
+});

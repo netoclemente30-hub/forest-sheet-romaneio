@@ -23,8 +23,8 @@ export function somenteDaEmpresa<T extends { empresa_id: string }>(
 }
 
 export async function listarCadastrosRomaneio(empresa: string) {
-  if (!empresa) return { motoristas: [], veiculos: [] };
-  const [motoristas, veiculos] = await Promise.all([
+  if (!empresa) return { motoristas: [], veiculos: [], clientes: [] as ClienteSalvo[] };
+  const [motoristas, veiculos, clientes] = await Promise.all([
     comCache(`motoristas:${empresa}`, async () => {
       const { data, error } = await supabase.from('motoristas').select('nome,cpf,empresa_id').eq('empresa_id', empresa).order('nome');
       if (error) throw error;
@@ -35,8 +35,13 @@ export async function listarCadastrosRomaneio(empresa: string) {
       if (error) throw error;
       return somenteDaEmpresa(data, empresa);
     }, empresa),
+    comCache(`clientes:${empresa}`, async () => {
+      const { data, error } = await supabase.from("romaneios").select("cliente,empresa_id").eq("empresa_id", empresa).not("cliente", "is", null).order("created_at", { ascending: false }).limit(300);
+      if (error) return [];
+      return (data ?? []).filter((x) => x.empresa_id === empresa).map((x) => x.cliente);
+    }, empresa),
   ]);
-  return { motoristas, veiculos };
+  return { motoristas, veiculos, clientes: clientesUnicos(clientes) };
 }
 
 export async function listarPatiosSerraria(empresa: string): Promise<{ nome: string; empresa_id: string }[]> {
@@ -47,4 +52,17 @@ export async function listarPatiosSerraria(empresa: string): Promise<{ nome: str
     if (error) throw new Error("Erro ao carregar pátios: " + error.message);
     return somenteDaEmpresa(data, empresa);
   });
+}
+
+/** Clientes já usados em romaneios desta empresa, o mais recente primeiro, sem repetir nome. */
+export type ClienteSalvo = { nome: string } & Partial<Record<"documento" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "uf" | "cep", string>>;
+export function clientesUnicos(lista: unknown[]): ClienteSalvo[] {
+  const vistos = new Map<string, ClienteSalvo>();
+  for (const c of lista) {
+    if (!c || typeof c !== "object") continue;
+    const o = c as Record<string, unknown>;
+    const nome = typeof o["nome"] === "string" ? o["nome"].trim() : "";
+    if (nome && !vistos.has(nome.toLowerCase())) vistos.set(nome.toLowerCase(), { ...(o as Record<string, string>), nome });
+  }
+  return [...vistos.values()];
 }

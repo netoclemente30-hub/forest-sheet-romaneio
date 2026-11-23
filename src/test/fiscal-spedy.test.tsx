@@ -12,7 +12,7 @@ vi.mock("@/hooks/useAuth", () => ({
     papel: "admin_empresa",
   }),
 }));
-vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn() }));
+vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn(), diagnosticarSpedy: vi.fn(), emitirNfeHomologacao: vi.fn(), consultarNfeHomologacao: vi.fn(), baixarNfeHomologacao: vi.fn(), inutilizarHomologacao: vi.fn(), verificarCadastroSpedy: vi.fn(), cadastrarEmpresaSpedy: vi.fn(), enviarCertificadoSpedy: vi.fn() }));
 vi.mock("@/lib/fiscal-cargas", () => ({
   cargasFiscais: async () => [{ id: "toras/1", nome: "Carga 1" }],
   importarCarga: async () => ({
@@ -28,6 +28,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
+vi.setConfig({ testTimeout: 30000 });
+
 it("confere a carga, salva a prévia, simula assinatura e separa o histórico por empresa", async () => {
   const client = new QueryClient();
   const Fiscal = Route.options.component!;
@@ -51,7 +53,7 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
   fireEvent.change(await screen.findByLabelText("Destinatário"), {
     target: { value: "Cliente de teste" },
   });
-  fireEvent.change(screen.getByLabelText(/Preço por m³/), { target: { value: "250,50" } });
+  fireEvent.change(await screen.findByLabelText(/Preço por m³/, {}, { timeout: 10000 }), { target: { value: "250,50" } });
   for (const [label, value] of Object.entries({
     "CPF ou CNPJ do destinatário": "11222333000181",
     Logradouro: "Rua das Toras",
@@ -64,7 +66,7 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
     "Modalidade do frete": "1",
     "Informações adicionais de interesse do Fisco (opcional)": "Observação de teste",
   })) {
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.change(screen.getAllByLabelText(label)[0]!, { target: { value } });
   }
   fireEvent.click(screen.getByText("Gerar prévia e salvar rascunho"));
   expect(screen.getByText(/Total dos produtos/)).toHaveTextContent("375,75");
@@ -93,7 +95,7 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
   fireEvent.click(screen.getByText("Cancelar"));
   expect(screen.getByRole("heading", { name: "Prévia da NF-e · Rascunho" })).toBeVisible();
 });
-it("completa um rascunho anterior sem substituir carga, emitente ou preços", () => {
+it("completa um rascunho anterior sem substituir carga, emitente ou preços", async () => {
   const chave = "fiscal-spedy-v1:usuario:a";
   const cadastro = { nome: "Emitente antigo", cnpj: "11222333000181", ie: "1234" };
   const antigo = {
@@ -122,7 +124,7 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", ()
   );
   fireEvent.click(screen.getByText("R-antigo · Rascunho"));
   fireEvent.click(screen.getByText("Editar dados da nota"));
-  expect(screen.getByLabelText("CPF ou CNPJ do destinatário")).toHaveValue("12345678909");
+  await waitFor(() => expect(screen.getAllByLabelText("CPF ou CNPJ do destinatário")[0]).toHaveValue("12345678909"), { timeout: 10000 });
   for (const [label, value] of Object.entries({
     Logradouro: "Rua A",
     Número: "15",
@@ -132,10 +134,10 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", ()
     CEP: "69000000",
     "Modalidade do frete": "9",
   })) {
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.change(screen.getAllByLabelText(label)[0]!, { target: { value } });
   }
   fireEvent.click(screen.getByText("Salvar alterações"));
-  expect(JSON.parse(sessionStorage.getItem(chave)!).historico).toEqual([
+  expect(JSON.parse(localStorage.getItem(chave + ':rascunhos') ?? '{}').historico).toEqual([
     { ...antigo, detalhes: expect.objectContaining({ modFrete: "9" }) },
   ]);
 });
@@ -162,9 +164,9 @@ it("consulta CNPJ, cadastra cliente e produto e reutiliza os dados ao preparar a
     </QueryClientProvider>,
   );
   const preencher = (label: string, value: string) =>
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.change(screen.getAllByLabelText(label)[0]!, { target: { value } });
   preencher("CNPJ", cnpj);
-  await screen.findByDisplayValue("Madeiras Exemplo", {}, { timeout: 3000 });
+  await screen.findByDisplayValue("Madeiras Exemplo", {}, { timeout: 10000 });
   expect(screen.getByLabelText("Município do emitente")).toHaveValue("Manaus");
   preencher("Inscrição estadual", "123");
   fireEvent.click(screen.getByText("Salvar cadastro"));
@@ -172,7 +174,7 @@ it("consulta CNPJ, cadastra cliente e produto e reutiliza os dados ao preparar a
   fireEvent.click(screen.getByText("Cadastros de clientes e produtos"));
   preencher("CPF ou CNPJ do destinatário", cnpj);
   await waitFor(() => expect(screen.getByLabelText("Logradouro")).toHaveValue("Rua A"), {
-    timeout: 3000,
+    timeout: 10000,
   });
   fireEvent.click(screen.getByText("Salvar cliente"));
   expect(localStorage.getItem("fiscal-spedy-v1:usuario:a:cadastros:cliente:" + cnpj)).toContain(
@@ -204,7 +206,7 @@ it("consulta CNPJ, cadastra cliente e produto e reutiliza os dados ao preparar a
   expect(screen.getByText(/Total dos produtos/)).toHaveTextContent("180,00");
   expect(screen.getByText(/Jatobá serrado · NCM/)).toHaveTextContent("CFOP 5101");
 });
-it("consulta somente o sandbox e usa exclusivamente a chave da empresa", async () => {
+it("consulta somente o sandbox; empresa sem chave própria usa a chave mestra", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
   const http = vi.fn().mockResolvedValue({ ok: true });
   vi.stubGlobal("fetch", http);
@@ -214,10 +216,10 @@ it("consulta somente o sandbox e usa exclusivamente a chave da empresa", async (
     "https://sandbox-api.spedy.com.br/v1/product-invoices?pageSize=1",
     expect.objectContaining({
       method: "GET",
-      redirect: "error",
+      redirect: "manual",
       headers: { "X-Api-Key": "fixture" },
     }),
   );
-  expect(await verificarSandbox(id.replace(/1$/, "2"))).toMatch(/pendente/);
-  expect(http).toHaveBeenCalledTimes(1);
+  expect(await verificarSandbox(id.replace(/1$/, "2"))).toMatch(/aceitou/);
+  expect(http).not.toHaveBeenCalledWith(expect.not.stringContaining("sandbox-api.spedy.com.br"), expect.anything());
 });

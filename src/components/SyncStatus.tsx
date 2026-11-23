@@ -12,6 +12,11 @@ import { EditarLancamento } from "@/components/EditarLancamento";
 function descrever(op: Op): string {
   if (op.log?.detalhe) return `${op.log.acao} · ${op.log.detalhe}`;
   switch (op.tipo) {
+    case 'estoque_operacao': return op.log.detalhe;
+    case 'aguardando_delete': return 'Exclusão de tora não identificada';
+    case 'cadastro_upsert': return `Cadastro ${op.tabela}`;
+    case 'romaneio_importado_salvar': return `Romaneio importado ${op.cab.numero_carga}`;
+    case 'campo_update': return `Alteração de ${op.tabela} · ${op.alvo}`;
     case 'pacote_serrado_salvar': return `Pacote de madeira serrada ${op.cab.numero}`;
     case "tora_insert": return `Tora lançada · plaqueta ${String(op.dados["plaqueta"] ?? "?")}`;
     case "tora_update": return `Tora editada · plaqueta ${op.plaqueta}`;
@@ -47,6 +52,7 @@ export function SyncStatus() {
   const [enviando, setEnviando] = useState(0);
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<ItemFila | null>(null);
+  const [semCache, setSemCache] = useState(false);
   const pendentes = itens.filter((i) => !i.erro).length;
   const comErro = itens.filter((i) => i.erro);
   const erros = comErro.length;
@@ -75,7 +81,12 @@ export function SyncStatus() {
   }, [atualizar, qc]);
 
   useEffect(() => {
-    const desassinar = assinarFila(() => void atualizar());
+    const cacheStatus = (event: Event) => {
+      const detalhe = (event as CustomEvent<{ ausente: boolean }>).detail;
+      if (detalhe?.ausente) setSemCache(true);
+    };
+    window.addEventListener('cache-disponibilidade', cacheStatus);
+    const desassinar = assinarFila(() => { void atualizar(); void qc.invalidateQueries(); });
     window.addEventListener("online", tentarSync);
     window.addEventListener("offline", atualizar);
     const retomar = () => { if (document.visibilityState !== "hidden") void tentarSync(); };
@@ -87,6 +98,7 @@ export function SyncStatus() {
       document.removeEventListener("visibilitychange", retomar);
       window.removeEventListener("focus", retomar);
       window.clearInterval(intervalo);
+      window.removeEventListener('cache-disponibilidade', cacheStatus);
       desassinar();
       window.removeEventListener("online", tentarSync);
       window.removeEventListener("offline", atualizar);
@@ -146,7 +158,7 @@ export function SyncStatus() {
                 <div className="text-sm text-destructive break-words">{explicar(i.erro ?? "")}</div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" disabled={sync} onClick={() => tentarDeNovo(i.id)}><RefreshCw /> Tentar de novo</Button>
-                  {!i.envio_iniciado && i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
+                  {!i.envio_iniciado && i.op.tipo !== 'estoque_operacao' && i.op.tipo !== 'aguardando_delete' && i.op.tipo !== "rastro_salvar" && i.op.tipo !== "arrasto_toras" && i.op.tipo !== "arrasto_arvore" && i.op.tipo !== "transferencia_explanada" && <Button size="sm" variant="outline" disabled={sync} onClick={() => setEditando(i)}><Pencil /> Editar</Button>}
                   <Button size="sm" variant="destructive" disabled={sync} onClick={() => descartar(i)}><Trash2 /> Descartar</Button>
                 </div>
               </div>

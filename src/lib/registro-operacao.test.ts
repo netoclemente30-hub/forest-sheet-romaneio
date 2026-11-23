@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { registrarOperacao } from "./registro-operacao";
+import { enviarOperacao } from "./registro-operacao";
 import { salvarEncaixe, type SalvarEncaixeDeps } from "./encaixe-salvar";
 import { executarOp } from "./offline/sync";
 import type { LogCapturado } from "./registro";
@@ -17,7 +17,7 @@ beforeEach(() => {
 });
 
 it("envia encaixe online sem campos gerados pelo banco, preservando medidas e secção vazia", async () => {
-  const deps: SalvarEncaixeDeps = { listarFila: async () => [], online: () => true, lerInventario: async () => [], capturar: async () => log, gravarLog: async () => {}, enfileirar: vi.fn(), inserir: async (t, l) => { await registrarOperacao("tora_insert", "RJ", t, [], l); } };
+  const deps: SalvarEncaixeDeps = { listarFila: async () => [], online: () => true, lerInventario: async () => [], capturar: async () => log, gravarLog: async () => {}, enfileirar: async (op) => { if (op.tipo === 'tora_insert') await enviarOperacao('tora_insert', 'RJ', op.dados, [], log); }, inserir: vi.fn() };
   const tora = await salvarEncaixe(linha, medidas, "RJ", [], deps);
   expect(rpc).toHaveBeenCalledWith("registrar_operacao", expect.objectContaining({ _empresa: "RJ", _operacao: "operacao-estavel", _dados: { plaqueta: 1, arvore: 48, secao: null, autex: linha.autex, especie: linha.especie, nome_cientifico: linha.nome_cientifico, volume: 2.725, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6, origem: "serraria", carregada: false, empresa_id: "RJ" } }));
   expect(tora.created_at).toBe(log.criado_em);
@@ -33,5 +33,5 @@ it("reenvia encaixe antigo da fila sem mudar dados locais, auditoria ou id de re
 });
 
 it("não remove campos desconhecidos para contornar a rejeição do servidor", async () => {
-  await expect(registrarOperacao("tora_insert", "RJ", { campo_invalido: true }, [], log)).rejects.toThrow("Campo não permitido ao lançar tora");
+  await expect(enviarOperacao("tora_insert", "RJ", { campo_invalido: true }, [], log)).rejects.toThrow("Campo não permitido ao lançar tora");
 });

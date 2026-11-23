@@ -29,14 +29,6 @@ function erroDeRede(error: unknown): boolean {
 }
 
 async function executarOuEnfileirar(op: Op): Promise<boolean> {
-  if (estaOnline()) {
-    try {
-      await executarOp(op);
-      return false;
-    } catch (error) {
-      if (!erroDeRede(error)) throw error;
-    }
-  }
   await fila().enfileirar(op);
   return true;
 }
@@ -87,7 +79,7 @@ export async function persistirArvoreLocal(atual: Arvore[], id: string, dados: D
   const cache = await lerCache<Arvore>("arvores");
   const base = cache?.length ? cache : atual;
   const atualizada = base.map((a) => a.id === id ? { ...a, ...dados } : a);
-  await salvarCache("arvores", atualizada);
+  // Local intent lives in the queue, not in the confirmed base.
   return atualizada;
 }
 
@@ -96,16 +88,15 @@ export async function persistirRastroLocal(atual: RastroGPS[], autex: string, po
   const agora = new Date().toISOString();
   const novos: RastroGPS[] = pontos.map((p) => ({ ...p, created_at: agora }));
   const atualizado = mesclarRastros(cache ?? [], atual, novos);
-  await salvarCache(`rastros:${autex}`, atualizado);
+  // Pending points are projected from the queue, preserving the confirmed base.
   return atualizado;
 }
 
 type RastroAtivo = { empresa: string; autex: string; pontos: PontoRastro[] };
-const chaveAtivo = (empresa: string, autex: string) => `rastro-ativo:${empresa}:${autex}`;
 
 export async function carregarRastroAtivo(empresa: string, autex: string): Promise<PontoRastro[]> {
   try {
-    return (await idb.get<RastroAtivo>("cache", chaveAtivo(empresa, autex)))?.pontos ?? [];
+    return (await lerCache<RastroAtivo>(`rastro-ativo:${autex}`, empresa))?.[0]?.pontos ?? [];
   } catch {
     return [];
   }
@@ -113,8 +104,7 @@ export async function carregarRastroAtivo(empresa: string, autex: string): Promi
 
 export async function guardarRastroAtivo(empresa: string, autex: string, pontos: PontoRastro[]): Promise<void> {
   try {
-    if (pontos.length) await idb.put("cache", { empresa, autex, pontos } satisfies RastroAtivo, chaveAtivo(empresa, autex));
-    else await idb.del("cache", chaveAtivo(empresa, autex));
+    await salvarCache(`rastro-ativo:${autex}`, pontos.length ? [{ empresa, autex, pontos } satisfies RastroAtivo] : [], empresa);
   } catch {
     toast.warning("Não foi possível guardar o rastro neste aparelho");
   }

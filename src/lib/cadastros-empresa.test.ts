@@ -26,6 +26,11 @@ const dados = {
     { empresa_id: rj, placa: "PLACA-RJ", tipo: "caminhao" },
     { empresa_id: madenorte, placa: "PLACA-M", tipo: "caminhao" },
   ],
+  romaneios: [
+    { empresa_id: rj, cliente: { nome: "José Clemente", documento: "doc-rj", municipio: "Ariquemes" } },
+    { empresa_id: rj, cliente: { nome: "josé clemente", documento: "antigo" } },
+    { empresa_id: madenorte, cliente: { nome: "Cliente M", documento: "doc-m" } },
+  ],
   patios: [
     { empresa_id: rj, nome: "Pátio RJ" },
     { empresa_id: madenorte, nome: "Pátio M" },
@@ -39,11 +44,10 @@ beforeEach(() => {
     select: () => ({
       eq: (campo: string, empresa: string) => {
         if (campo !== "empresa_id") throw new Error("Consulta sem filtro por empresa");
+        const resultado = { data: dados[tabela].filter((d) => d.empresa_id === empresa), error: null };
         return {
-          order: async () => ({
-            data: dados[tabela].filter((d) => d.empresa_id === empresa),
-            error: null,
-          }),
+          order: async () => resultado,
+          not: () => ({ order: () => ({ limit: async () => resultado }) }),
         };
       },
     }),
@@ -58,7 +62,7 @@ describe("isolamento de cadastros RJ e MADENORTE", () => {
   });
 
   it("sem empresa não consulta cadastros privados nem pátios", async () => {
-    expect(await listarCadastrosRomaneio("")).toEqual({ motoristas: [], veiculos: [] });
+    expect(await listarCadastrosRomaneio("")).toEqual({ motoristas: [], veiculos: [], clientes: [] });
     expect(await listarPatiosSerraria("")).toEqual([]);
     expect(mocks.from).not.toHaveBeenCalled();
   });
@@ -67,12 +71,14 @@ describe("isolamento de cadastros RJ e MADENORTE", () => {
     expect(await listarCadastrosRomaneio(madenorte)).toEqual({
       motoristas: [dados.motoristas[1]],
       veiculos: [dados.veiculos[1]],
+      clientes: [dados.romaneios[2]!.cliente],
     });
     expect(await listarCadastrosRomaneio(rj)).toEqual({
       motoristas: [dados.motoristas[0]],
       veiculos: [dados.veiculos[0]],
+      clientes: [dados.romaneios[0]!.cliente],
     });
-    expect(mocks.from).toHaveBeenCalledTimes(4);
+    expect(mocks.from).toHaveBeenCalledTimes(6);
   });
 
   it("o pátio da RJ nunca aparece como sugestão da MADENORTE", async () => {

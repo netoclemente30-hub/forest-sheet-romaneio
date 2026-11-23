@@ -5,7 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { gravarRegistro, type LogCapturado } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
-import { registrarOperacao } from "@/lib/registro-operacao";
+import { enviarOperacao } from "@/lib/registro-operacao";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { comPrazo, erroDeRede, informarConexao, redeDisponivel, verificarBackend } from "./conexao";
 import { rejeicaoConfirmada, erroDaTransacao } from "./rejeicao";
@@ -16,6 +16,10 @@ export function estaOnline(): boolean {
 
 // Executa uma operação contra o backend. Lança erro em caso de falha.
 export async function executarOp(op: Op, operacao?: string): Promise<void> {
+  if (op.tipo === 'estoque_operacao') {
+    await enviarOperacao(op.tipo_operacao, op.empresa_id, op.dados, op.alvos, op.log, op.operacao);
+    return;
+  }
   if (op.tipo === "transferencia_explanada") {
     // RPC do banco valida cargo, empresa, AUTEX, estoque, concorrência e auditoria.
     // Cast local porque o schema da Lovable atualiza os tipos gerados separadamente.
@@ -78,12 +82,12 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
     if (!empresa) { const { data, error } = await supabase.rpc("minha_empresa"); if (error) throw error; empresa = data ?? ""; }
     const dados = op.tipo === "tora_insert" || op.tipo === "tora_update" ? op.dados : op.tipo === "toras_serradas" ? { desfazer: op.desfazer } : op.tipo === "romaneio_recebido" ? { patio: op.patio } : {};
     const alvos = op.tipo === "tora_update" || op.tipo === "tora_delete" ? [op.plaqueta] : op.tipo === "toras_serradas" ? op.plaquetas : op.tipo === "romaneio_recebido" ? [op.id] : [];
-    await registrarOperacao(op.tipo, empresa, dados, alvos, log, operacao);
+    await enviarOperacao(op.tipo, empresa, dados, alvos, log, operacao);
     return;
   }
   await executarOpSemLog(op, operacao);
   // A função SQL de romaneio já registra a operação na mesma transação.
-  if (op.log && op.tipo !== "romaneio_salvar") {
+  if (op.log && op.tipo !== "romaneio_salvar" && op.tipo !== 'romaneio_importado_salvar') {
     await gravarRegistro(op.log, "empresa_id" in op ? op.empresa_id ?? null : null);
   }
 }
@@ -91,6 +95,27 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
 async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
   switch (op.tipo) {
     case 'pacote_serrado_salvar': return;
+    case 'estoque_operacao': return;
+    case 'romaneio_importado_salvar': {
+      const { error } = await supabase.rpc('salvar_romaneio_serrado_importado', { _empresa: op.empresa_id, _id: op.documento_id, _revisao: op.revisao, _cab: op.cab as never, _itens: op.itens as never, _operacao: op.operacao, _log: op.log as never });
+      if (error) throw erroDaTransacao(error);
+      return;
+    }
+    case 'campo_update': {
+      const { error } = await supabase.from(op.tabela as 'arvores').update(op.dados as never).filter(op.chave, 'eq', op.alvo).eq('empresa_id', op.empresa_id).select('*');
+      if (error) throw new Error(error.message);
+      return;
+    }
+    case 'cadastro_upsert': {
+      const { error } = await supabase.from(op.tabela).upsert({ ...op.dados, empresa_id: op.empresa_id } as never, { onConflict: op.conflito });
+      if (error) throw new Error(error.message);
+      return;
+    }
+    case 'aguardando_delete': {
+      const { error } = await supabase.from('toras_aguardando').delete().eq('id', op.id).eq('empresa_id', op.empresa_id);
+      if (error) throw new Error(error.message);
+      return;
+    }
     case "tora_insert": {
       const { error } = await supabase.from("toras").insert(op.dados as never);
       if (error) throw erroDaTransacao(error);
@@ -194,6 +219,12 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
       if (error) throw erroDaTransacao(error);
       return;
     }
+    default: {
+      // A queued type this version cannot send (e.g. saved by another app
+      // version) must stay in the queue as an error, never be dropped as sent.
+      const tipo = (op as { tipo?: unknown }).tipo;
+      throw new Error(`Tipo de lançamento não suportado por esta versão (${String(tipo)}). Os dados continuam guardados neste aparelho.`);
+    }
   }
 }
 
@@ -221,7 +252,7 @@ export async function sincronizar(f: Fila, executar: (op: Op, operacao?: string)
         await comPrazo(executar(atual.op, atual.id), 20000);
       } catch (e) {
         if (erroDeRede(e) || (typeof navigator !== 'undefined' && !navigator.onLine)) { informarConexao(false); break; }
-        await f.marcarErro(item.id, e instanceof Error ? e.message : String(e), rejeicaoConfirmada(e));
+        await f.marcarErro(item.id, e instanceof Error ? e.message : String(e), rejeicaoConfirmada(e) && !atual.envio_iniciado);
         erros++;
         continue;
       }

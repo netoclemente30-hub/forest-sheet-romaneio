@@ -11,7 +11,7 @@ import {
   type ProdutoFiscal,
 } from "@/lib/catalogo-fiscal";
 const vazio = () => detalhesIniciais({ numero: "", data: "", itens: [] });
-const produtoVazio = () => ({ codigo: "", descricao: "", ncm: "", cfop: "", preco: "" });
+const produtoVazio = (): ProdutoFiscal => ({ codigo: "", descricao: "", ncm: "", cfop: "", preco: "", unidade: "M3" });
 export function CadastrosFiscais({
   catalogo,
   gravar,
@@ -146,7 +146,8 @@ export function CadastrosFiscais({
               ["descricao", "Descrição do produto"],
               ["ncm", "NCM"],
               ["cfop", "CFOP padrão"],
-              ["preco", "Preço padrão por m³ (R$)"],
+              ["unidade", "Unidade (M3, UN, KG…)"],
+              ["preco", "Preço padrão por unidade (R$)"],
             ] as const
           ).map(([k, label]) => (
             <label key={k}>
@@ -163,7 +164,7 @@ export function CadastrosFiscais({
                         ? "[0-9]{1,8}([.,][0-9]{1,2})?"
                         : ".*\\S.*"
                 }
-                value={produto[k]}
+                value={produto[k] ?? "M3"}
                 onChange={(e) => setProduto({ ...produto, [k]: e.target.value })}
               />
             </label>

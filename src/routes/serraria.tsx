@@ -141,7 +141,7 @@ function Serraria() {
     catch (error) { setBusy(false); toast.error(error instanceof Error ? error.message : "Não foi possível serrar"); return; }
     setBusy(false);
     setToraLida(null);
-    toast.success(desfazer ? `${selecionadas.length} toras voltaram ao pátio` : `${selecionadas.length} toras serradas`);
+    toast.success(`${selecionadas.length} alterações guardadas neste aparelho — aguardam confirmação na nuvem`);
     if(!desfazer)irParaAba('serradas');else setSel([]);
     await qc.invalidateQueries({ queryKey: ["toras"] });
   }

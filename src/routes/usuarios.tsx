@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa, definirFuncao, statusFuncoes } from "@/lib/usuarios.functions";
+import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa, definirCnpjEmpresa, definirFuncao, statusFuncoes } from "@/lib/usuarios.functions";
 import { FUNCOES, funcaoValida, nomePapel, type FuncaoFuncionario } from "@/lib/funcoes";
 import { formatarCnpj, LIMITE_DEMONSTRACAO, type StatusEmpresa } from "@/lib/cnpj";
 import { Button } from "@/components/ui/button";
@@ -200,6 +200,15 @@ function UsuariosPage() {
                 <option value="ativa">Ativa</option>
                 <option value="inativa">Inativa</option>
               </select>
+              {souSuperAdmin && (
+                <Button type="button" size="sm" variant="outline" onClick={async () => {
+                  const cnpj = window.prompt(`CNPJ de ${e.nome}`, e.cnpj ? formatarCnpj(e.cnpj) : "");
+                  if (cnpj === null) return;
+                  const ie = window.prompt(`Inscrição estadual de ${e.nome}`, "") ?? "";
+                  try { await definirCnpjEmpresa({ data: { empresaId: e.id, cnpj, ie } }); toast.success("CNPJ salvo."); await qc.invalidateQueries(); }
+                  catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao salvar CNPJ"); }
+                }}>CNPJ</Button>
+              )}
             </div>
           ))}
         </div>

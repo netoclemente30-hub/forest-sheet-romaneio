@@ -1,5 +1,5 @@
 import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
-import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
+import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, LifeBuoy, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { registrarLogin } from "@/lib/registro";
@@ -28,7 +28,9 @@ const nav = [
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
 ] as const;
 
-const navPorPapel = (papel: Papel) => {
+const navPorPapel = (papel: Papel) => [...navBase(papel), { to: "/ajuda" as const, label: "Ajuda", icon: LifeBuoy }];
+
+const navBase = (papel: Papel) => {
   const inicio = { to: "/" as const, label: "Início", icon: Home };
   const mapa = { to: "/cortador" as const, label: "Mapa", icon: MapPinned };
   const toras = { to: "/toras" as const, label: "Toras", icon: Scissors };
@@ -43,7 +45,7 @@ const navPorPapel = (papel: Papel) => {
   if (papel === "romaneador") return [toras, patios, mapa];
   if (papel === "motorista") return [carga, { to: "/historico" as const, label: "Cargas", icon: Truck }];
   if (papel === "gerente_patio") return [serraria, relatorios];
-  if (papel === "gerente_escritorio") return [...nav, registros];
+  if (papel === "gerente_escritorio") return [...nav, { to: "/fiscal" as const, label: "Fiscal", icon: ClipboardList }, registros];
   return [inicio];
 };
 
@@ -205,7 +207,7 @@ export function AppShell() {
         {!isSuperAdmin && situacao.data?.status === "demonstracao" && <AvisoDemonstracao s={situacao.data} />}
         <div className="mb-3 text-xs text-muted-foreground">Função: <strong>{papel === "sem_funcao" && estadoPermissoes !== "validado" ? "Aguardando validação" : nomePapel(papel)}</strong></div>
         {somenteLeitura && <p role="status" className="mb-3 rounded-md border p-2 text-sm">
-          Modo consulta: você pode visualizar informações, registros e gerar relatórios, mas não alterar lançamentos nem reverter operações.
+          Modo consulta: você pode visualizar informações, registros e gerar relatórios, mas não alterar lançamentos nem reverter operações. O módulo Fiscal está liberado.
         </p>}
         {papel === "sem_funcao" ? (
           <div role="alert" className="rounded-xl border p-4 text-sm">

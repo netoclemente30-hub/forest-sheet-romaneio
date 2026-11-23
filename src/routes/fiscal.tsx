@@ -1,7 +1,14 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { cargaManual, itemDoCadastro } from "@/lib/fiscal-manual";
+import { hojeLocal } from "@/lib/nfe-txt";
 import { CadastrosFiscais } from "@/components/CatalogoFiscal";
 import { GerenciamentoFiscal } from "@/components/GerenciamentoFiscal";
 import { ConsultaCnpjFiscal } from "@/components/ConsultaCnpjFiscal";
+import { OnboardingSpedy } from "@/components/OnboardingSpedy";
 import {
   documentoId,
   lerCatalogo,
@@ -18,6 +25,7 @@ import { DadosFiscaisNota } from "@/components/DadosFiscaisNota";
 import { useAuth } from "@/hooks/useAuth";
 import { EVENTO_EMPRESA, getEmpresaAtiva } from "@/lib/empresa";
 import { cnpjValido } from "@/lib/cnpj";
+import { ContadorFiscal } from "@/components/ContadorFiscal";
 import { cargasFiscais, importarCarga } from "@/lib/fiscal-cargas";
 import {
   chaveFiscal,
@@ -30,18 +38,21 @@ import {
   contaNova,
   montarRascunho,
   type ContaFiscal,
+  type Cadastro,
   type Rascunho,
 } from "@/lib/fiscal";
-import { redeDisponivel, comPrazo } from "@/lib/offline/conexao";
 import { verificarSpedy } from "@/lib/spedy.functions";
+import { DiagnosticoSpedy, EmissaoHomologacao, InutilizacaoHomologacao } from "@/components/HomologacaoSpedy";
 import type { DadosNfe } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/fiscal")({
   staticData: { sitemap: false },
   head: () => ({ meta: [
-    { title: "Fiscal — Gestor Florestal" }, { name: "description", content: "Cadastros fiscais, rascunhos e emissão de notas da empresa." },
-    { property: "og:title", content: "Fiscal — Gestor Florestal" }, { property: "og:description", content: "Cadastros fiscais, rascunhos e emissão de notas da empresa." },
-    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+    { title: 'Fiscal — Gestor Florestal' },
+    { name: 'description', content: 'Cadastros e rascunhos fiscais por empresa no Gestor Florestal.' },
+    { property: 'og:title', content: 'Fiscal — Gestor Florestal' },
+    { property: 'og:description', content: 'Cadastros e rascunhos fiscais por empresa no Gestor Florestal.' },
+    { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' },
   ] }),
   component: Fiscal,
 });
@@ -60,7 +71,7 @@ function Fiscal() {
   const ativa = useSyncExternalStore(ouvir, getEmpresaAtiva, () => null);
   const empresa = isSuperAdmin ? ativa || empresaId : empresaId;
   if (permissoesCarregando) return <p>Carregando empresa…</p>;
-  if (!session || !["superadmin", "admin_empresa"].includes(papel))
+  if (!session || !["superadmin", "admin_empresa", "gerente_escritorio"].includes(papel))
     return <p>Acesso fiscal restrito à administração.</p>;
   if (!empresa) return <p>Selecione a empresa para abrir o Fiscal.</p>;
   const chave = chaveFiscal(session.user.id, empresa);
@@ -68,13 +79,33 @@ function Fiscal() {
 }
 function Painel({ empresa, chave }: { empresa: string; chave: string }) {
   const [conta, setConta] = useState<ContaFiscal>(() => {
-    const sessao: ContaFiscal = JSON.parse(sessionStorage.getItem(chave) || "null") ?? contaNova();
+    const sessao: ContaFiscal = JSON.parse(localStorage.getItem(chave + ':rascunhos') || sessionStorage.getItem(chave) || "null") ?? contaNova();
     return {
       ...sessao,
       cadastro: JSON.parse(localStorage.getItem(chave + ":emitente") || "null") ?? sessao.cadastro,
     };
   });
   const [cadastro, setCadastro] = useState(conta.cadastro);
+  const [emitenteAberto, setEmitenteAberto] = useState(!conta.cadastro.nome);
+  const [carregandoEmitente, setCarregandoEmitente] = useState(true);
+  const [salvandoEmitente, setSalvandoEmitente] = useState(false);
+  useEffect(() => {
+    let ativo = true;
+    void supabase.from("empresa_emitente").select("cadastro").eq("empresa_id", empresa).maybeSingle().then(({ data, error }) => {
+      if (!ativo) return;
+      if (error) toast.error("Não foi possível carregar o emitente salvo. Confira a conexão.");
+      else if (data?.cadastro && typeof data.cadastro === "object" && !Array.isArray(data.cadastro)) {
+        const salvo = data.cadastro as unknown as Cadastro;
+        if (salvo.nome && salvo.cnpj && salvo.ie) {
+          setCadastro(salvo);
+          setConta((atual) => ({ ...atual, cadastro: salvo }));
+          setEmitenteAberto(false);
+        }
+      }
+      setCarregandoEmitente(false);
+    });
+    return () => { ativo = false; };
+  }, [empresa]);
   const prefixo = chave + ":cadastros:";
   const [catalogo, setCatalogo] = useState(() => lerCatalogo(prefixo));
   const [mostrarCadastros, setMostrarCadastros] = useState(false);
@@ -102,6 +133,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
     }
   }
   const [origem, setOrigem] = useState("");
+  const [manualId, setManualId] = useState(() => "manual:" + crypto.randomUUID());
   const [aberto, setAberto] = useState("");
   const [conexao, setConexao] = useState("");
   const cargas = useQuery({
@@ -116,19 +148,18 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
   const previa = conta.historico.find((r) => idRascunho(r) === aberto);
   function salvar(proxima: ContaFiscal) {
     try {
-      sessionStorage.setItem(chave, JSON.stringify(proxima));
+      localStorage.setItem(chave + ':rascunhos', JSON.stringify(proxima));
       setConta(proxima);
       return true;
     } catch {
-      toast.error("Falha ao salvar nesta aba.");
+      toast.error("Falha ao guardar o rascunho neste aparelho.");
       return false;
     }
   }
   async function testar() {
-    if (!redeDisponivel()) { setConexao("Indisponível sem conexão. Nenhuma consulta ou emissão foi realizada."); return; }
     setConexao("Consultando…");
     try {
-      setConexao(await comPrazo(verificarSpedy({ data: { empresa } })));
+      setConexao(await verificarSpedy({ data: { empresa } }));
     } catch {
       setConexao("Não foi possível verificar a conexão da empresa.");
     }
@@ -146,7 +177,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
       {mostrarCadastros && <CadastrosFiscais catalogo={catalogo} gravar={gravar} />}
       <p>
         Homologação Spedy · Rascunhos sem valor fiscal. Clientes e produtos ficam neste navegador. O
-        histórico fica nesta aba durante a sessão.
+        histórico de rascunhos fica neste aparelho. Emissão e consulta fiscal exigem internet.
       </p>
       <GerenciamentoFiscal
         notas={conta.historico}
@@ -160,6 +191,8 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
         }}
         nova={() => {
           setAberto("");
+          setOrigem("");
+          setManualId("manual:" + crypto.randomUUID());
           document
             .getElementById("preparar-nfe")
             ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -169,24 +202,40 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           salvar({ ...conta, inutilizacoes: [r, ...(conta.inutilizacoes ?? [])] })
         }
       />
+      <ContadorFiscal empresa={empresa} />
+      <InutilizacaoHomologacao empresa={empresa} cadastro={conta.cadastro} itens={conta.inutilizacoes ?? []} />
       <section className={painel}>
-        <h2 className="text-xl font-bold">Emitente</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl font-bold">Emitente</h2>
+          <Button variant="ghost" size="icon" aria-label={emitenteAberto ? "Minimizar emitente" : "Expandir emitente"} aria-expanded={emitenteAberto} onClick={() => setEmitenteAberto(!emitenteAberto)}>{emitenteAberto ? <ChevronUp /> : <ChevronDown />}</Button>
+        </div>
+        {!emitenteAberto && <p className="break-words text-sm text-muted-foreground">{carregandoEmitente ? "Carregando emitente…" : `${conta.cadastro.nome} · ${conta.cadastro.cnpj}`}</p>}
+        <div hidden={!emitenteAberto} className="space-y-3">
+        <DiagnosticoSpedy empresa={empresa} cnpj={conta.cadastro.cnpj} />
         <small>Empresa do Gestor · {empresa}</small>
+        <OnboardingSpedy empresa={empresa} cadastro={conta.cadastro} />
         <form
           className="grid gap-3"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
+            if (carregandoEmitente || salvandoEmitente) return;
             if (!cnpjValido(cadastro.cnpj) || !cadastro.nome.trim() || !cadastro.ie.trim()) {
               toast.error("Confira a razão social, o CNPJ e a inscrição estadual.");
               return;
             }
+            setSalvandoEmitente(true);
             try {
-              localStorage.setItem(chave + ":emitente", JSON.stringify(cadastro));
+              const log = await capturarLog("Cadastro fiscal do emitente", "Atualização do emitente da empresa");
+              const { error } = await supabase.from("empresa_emitente").upsert({ empresa_id: empresa, cadastro: cadastro as unknown as Json, atualizado_em: new Date().toISOString() });
+              if (error) throw error;
+              setConta((atual) => ({ ...atual, cadastro }));
+              setEmitenteAberto(false);
+              try { localStorage.setItem(chave + ":emitente", JSON.stringify(cadastro)); } catch { /* A nuvem preserva o cadastro. */ }
+              try { await gravarRegistro(log, empresa); } catch { toast.warning("Emitente salvo, mas não foi possível registrar a atividade."); }
+              toast.success("Emitente salvo para as próximas notas.");
             } catch {
-              toast.error("Falha ao salvar o emitente neste navegador.");
-              return;
-            }
-            if (salvar({ ...conta, cadastro })) toast.success("Cadastro fiscal salvo.");
+              toast.error("Não foi possível salvar o emitente. Confira a conexão e tente novamente.");
+            } finally { setSalvandoEmitente(false); }
           }}
         >
           {(
@@ -238,7 +287,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               ))}
             </div>
           </details>
-          <Button>Salvar cadastro</Button>
+          <Button disabled={carregandoEmitente || salvandoEmitente}>{salvandoEmitente ? "Salvando…" : "Salvar cadastro"}</Button>
         </form>
         <p>Assinatura do módulo · {conta.assinatura ? "Ativa em simulação" : "Inativa"}</p>
         <Button
@@ -251,6 +300,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           Verificar conexão Spedy
         </Button>
         <p role="status">{conexao}</p>
+        </div>
       </section>
       <section className={painel} id="preparar-nfe">
         <h2 className="text-xl font-bold">Preparar NF-e</h2>
@@ -264,7 +314,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               setAberto("");
             }}
           >
-            <option value="">Selecione a carga</option>
+            <option value="">Sem romaneio · adicionar itens</option>
             {cargas.data?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nome}
@@ -278,18 +328,19 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
           <p role="alert">Falha ao carregar o romaneio. Confira a conexão e os itens da carga.</p>
         )}
         {origem && carga.isLoading && <p>Carregando itens…</p>}
-        {carga.data && (
+        {(!origem || carga.data) && (
           <Editor
-            key={origem}
-            carga={carga.data}
+            key={origem || manualId}
+            manual={!origem}
+            carga={origem && carga.data ? carga.data : cargaManual(hojeLocal())}
             catalogo={catalogo}
-            habilitado={conta.assinatura && !!conta.cadastro.nome}
-            gerar={(cliente, precos, fiscais) => {
+            habilitado={!carregandoEmitente && conta.assinatura && !!conta.cadastro.nome}
+            gerar={(cliente, precos, fiscais, dadosCarga) => {
               try {
                 const r = montarRascunho(
                   conta.cadastro,
-                  carga.data,
-                  origem,
+                  dadosCarga,
+                  origem || manualId,
                   cliente,
                   precos,
                   fiscais,
@@ -300,14 +351,14 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
                     historico: [r, ...conta.historico],
                   })
                 )
-                  setAberto(origem);
+                  setAberto(origem || manualId);
               } catch (e) {
                 toast.error((e as Error).message);
               }
             }}
-            existente={conta.historico.some((d) => d.origem === origem)}
+            existente={conta.historico.some((d) => d.origem === (origem || manualId))}
             abrir={() => {
-              const r = conta.historico.find((r) => r.origem === origem);
+              const r = conta.historico.find((r) => r.origem === (origem || manualId));
               if (r) setAberto(idRascunho(r));
             }}
           />
@@ -321,13 +372,13 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
             r={previa}
             catalogo={catalogo}
             habilitado={conta.assinatura}
-            salvarDados={(detalhes, precos, fiscais) => {
+            salvarDados={(detalhes, precos, fiscais, dadosCarga) => {
               const atualizado = {
                 ...previa,
                 ...(previa.itens.length
                   ? montarRascunho(
                       previa.cadastro,
-                      previa.carga,
+                      dadosCarga,
                       previa.origem,
                       detalhes,
                       precos,
@@ -338,7 +389,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
                 detalhes,
                 assinado: false,
                 carga: {
-                  ...previa.carga,
+                  ...dadosCarga,
                   cliente: { nome: detalhes.nome.trim(), documento: detalhes.documento.trim() },
                 },
               };
@@ -363,6 +414,19 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
               Simular assinatura digital
             </Button>
           )}
+          {previa.detalhes && <EmissaoHomologacao empresa={empresa} r={previa} />}
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (!window.confirm("Excluir este rascunho deste aparelho? Notas já enviadas em homologação continuam registradas no servidor.")) return;
+              if (salvar({ ...conta, historico: conta.historico.filter((r) => r !== previa) })) {
+                setAberto("");
+                toast.success("Rascunho excluído.");
+              }
+            }}
+          >
+            Excluir rascunho
+          </Button>
         </section>
       )}
     </main>
@@ -377,15 +441,17 @@ function Editor({
   abrir,
   anterior,
   cancelar,
+  manual = false,
 }: {
   carga: DadosNfe;
   habilitado: boolean;
-  gerar: (cliente: DetalhesNota, precos: string[], fiscais: ProdutoFiscal[]) => void;
+  gerar: (cliente: DetalhesNota, precos: string[], fiscais: ProdutoFiscal[], carga: DadosNfe) => void;
   catalogo: CatalogoFiscal;
   existente: boolean;
   abrir: () => void;
   anterior?: Rascunho;
   cancelar?: () => void;
+  manual?: boolean;
 }) {
   const [cliente, setCliente] = useState(() =>
     anterior
@@ -397,6 +463,8 @@ function Editor({
           ),
         },
   );
+  const [itens, setItens] = useState(carga.itens);
+  const dadosCarga = { ...carga, itens };
   const [aba, setAba] = useState("Cabeçalho");
   const [buscarCliente, setBuscarCliente] = useState("");
   const [produtos, setProdutos] = useState(() =>
@@ -440,6 +508,7 @@ function Editor({
           cliente,
           produtos.map((p) => p.preco),
           produtos,
+          dadosCarga,
         );
       }}
     >
@@ -457,7 +526,7 @@ function Editor({
         ))}
       </div>
       <div hidden={aba !== "Cabeçalho"} data-aba="Cabeçalho" className="grid gap-3 sm:grid-cols-2">
-        <p>Modelo 55 · Homologação · Romaneio {carga.numero}</p>
+        <p>Modelo 55 · Homologação{manual ? " · Sem romaneio" : ` · Romaneio ${carga.numero}`}</p>
         <label>
           Tipo da nota
           <select
@@ -538,8 +607,8 @@ function Editor({
       </div>
       <div hidden={aba !== "Totais"} data-aba="Totais" className="space-y-3">
         <p>
-          Volume do romaneio ·{" "}
-          {carga.itens
+          Quantidade dos itens ·{" "}
+          {itens
             .reduce((s, i) => s + i.quantidade, 0)
             .toLocaleString("pt-BR", { maximumFractionDigits: 4 })}{" "}
           m³
@@ -547,7 +616,7 @@ function Editor({
         <p>
           Soma dos produtos preenchidos ·{" "}
           {moeda(
-            carga.itens.reduce(
+            itens.reduce(
               (s, i, n) =>
                 s +
                 Math.round(
@@ -626,9 +695,10 @@ function Editor({
         <DadosFiscaisNota secao="fisco" dados={cliente} alterar={setCliente} />
       </div>
       <div hidden={aba !== "Produtos"} data-aba="Produtos">
-        {carga.itens.map((i, n) => (
-          <fieldset className="mb-3 space-y-2 rounded border p-3" key={i.descricao}>
-            <legend>{i.descricao}</legend>
+        {manual && <Button type="button" variant="outline" onClick={() => { setItens((atual) => [...atual, itemDoCadastro()]); setProdutos((atual) => [...atual, { codigo: "", descricao: "", ncm: "", cfop: "", preco: "" }]); }}><Plus /> Adicionar item</Button>}
+        {itens.map((i, n) => (
+          <fieldset className="mb-3 space-y-2 rounded border p-3" key={n}>
+            <legend>{i.descricao || `Item ${n + 1}`}</legend>
             <label>
               Produto cadastrado
               <select
@@ -639,9 +709,10 @@ function Editor({
                 onChange={(e) => {
                   const p = catalogo.produtos.find((p) => p.codigo === e.target.value);
                   atualizar(n, p ?? { ...i, cfop: "", preco: "" });
+                  if (manual && p) setItens((atual) => atual.map((item, index) => index === n ? { ...itemDoCadastro(p), quantidade: item.quantidade } : item));
                 }}
               >
-                <option value="">Usar item do romaneio</option>
+                <option value="">{manual ? "Preencher item manualmente" : "Usar item do romaneio"}</option>
                 {catalogo.produtos.map((p) => (
                   <option key={p.codigo} value={p.codigo}>
                     {p.codigo} · {p.descricao}
@@ -649,32 +720,42 @@ function Editor({
                 ))}
               </select>
             </label>
+            {manual && <div className="grid gap-2 sm:grid-cols-2">
+              {(["codigo", "descricao", "unidade"] as const).map((campo) => <label key={campo}>{campo === "codigo" ? "Código do item" : campo === "descricao" ? "Descrição do item" : "Unidade"}<Input required value={campo === "unidade" ? i.unidade : produtos[n]?.[campo] ?? ""} onChange={(e) => {
+                const valor = campo === "unidade" ? e.target.value.toUpperCase() : e.target.value;
+                setItens((atual) => atual.map((item, index) => index === n ? { ...item, [campo]: valor } : item));
+                const produto = produtos[n];
+                if (produto) atualizar(n, { ...produto, [campo]: valor });
+              }} /></label>)}
+              <label>Quantidade<Input required type="number" min="0.0001" step="0.0001" value={i.quantidade || ""} onChange={(e) => setItens((atual) => atual.map((item, index) => index === n ? { ...item, quantidade: Number(e.target.value) } : item))} /></label>
+            </div>}
             {(["ncm", "cfop"] as const).map((k) => (
               <label key={k}>
                 {k.toUpperCase()} da operação
                 <Input
                   pattern={k === "ncm" ? "[0-9]{8}" : "[0-9]{4}"}
                   value={produtos[n]?.[k] ?? ""}
-                  onChange={(e) => atualizar(n, { ...produtos[n]!, [k]: e.target.value })}
+                  onChange={(e) => { const produto = produtos[n]; if (produto) atualizar(n, { ...produto, [k]: e.target.value }); }}
                 />
               </label>
             ))}
-            <label className="block" key={i.descricao}>
+            <label className="block" key={n}>
               {i.descricao} · {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}{" "}
-              m³ · Preço por m³ (R$)
+              {i.unidade} · Preço por unidade (R$)
               <Input
                 required
                 inputMode="decimal"
                 value={produtos[n]?.preco ?? ""}
-                onChange={(e) => atualizar(n, { ...produtos[n]!, preco: e.target.value })}
+                onChange={(e) => { const produto = produtos[n]; if (produto) atualizar(n, { ...produto, preco: e.target.value }); }}
               />
             </label>
+            {manual && <Button type="button" size="icon" variant="ghost" aria-label={`Remover item ${n + 1}`} onClick={() => { setItens((atual) => atual.filter((_, index) => index !== n)); setProdutos((atual) => atual.filter((_, index) => index !== n)); }}><Trash2 /></Button>}
           </fieldset>
         ))}
       </div>
       {!habilitado && <p>Salve o cadastro e ative a assinatura simulada para criar o rascunho.</p>}
       {anterior?.assinado && <p>Ao salvar as alterações, a nota volta ao estado de rascunho.</p>}
-      <Button disabled={!habilitado || (!anterior && !carga.itens.length)}>
+      <Button disabled={!habilitado || !itens.length}>
         {anterior ? "Salvar alterações" : "Gerar prévia e salvar rascunho"}
       </Button>
       {cancelar && (
@@ -693,7 +774,7 @@ function EditarDadosNota({
 }: {
   r: Rascunho;
   habilitado: boolean;
-  salvarDados: (d: DetalhesNota, precos: string[], fiscais: ProdutoFiscal[]) => boolean;
+  salvarDados: (d: DetalhesNota, precos: string[], fiscais: ProdutoFiscal[], carga: DadosNfe) => boolean;
   catalogo: CatalogoFiscal;
 }) {
   const [edicao, setEdicao] = useState<DetalhesNota | null>(null);
@@ -710,15 +791,16 @@ function EditarDadosNota({
   return (
     <Editor
       carga={r.carga}
+      manual={r.origem.startsWith("manual:")}
       catalogo={catalogo}
       anterior={r}
       habilitado={habilitado}
       existente={false}
       abrir={() => {}}
       cancelar={() => setEdicao(null)}
-      gerar={(d, precos, fiscais) => {
+      gerar={(d, precos, fiscais, carga) => {
         try {
-          if (habilitado && salvarDados(d, precos, fiscais)) setEdicao(null);
+          if (habilitado && salvarDados(d, precos, fiscais, carga)) setEdicao(null);
         } catch (e) {
           toast.error((e as Error).message);
         }
@@ -780,7 +862,7 @@ function Previa({ r }: { r: Rascunho }) {
         {r.itens.map((i) => (
           <li key={i.codigo + "-" + r.itens.indexOf(i)}>
             {i.descricao} · NCM {i.ncm} · CFOP {i.cfop || "Pendente"} ·{" "}
-            {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} m³ ×{" "}
+            {i.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} {i.unidade} ×{" "}
             {moeda(i.preco)} = {moeda(i.centavos / 100)}
           </li>
         ))}

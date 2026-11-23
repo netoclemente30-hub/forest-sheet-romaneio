@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { salvarCache } from "@/lib/offline/cache";
 import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { fila } from '@/lib/offline/fila';
 
 export function ImportarCoordenadas({ autex, arvores }: { autex: string; arvores: Arvore[] }) {
   const { empresaId } = useAuth();
@@ -50,7 +51,6 @@ export function ImportarCoordenadas({ autex, arvores }: { autex: string; arvores
   async function salvar() {
     if (!preview || !configurado || preview.erros.length || busy) return;
     if (preview.empresa !== empresa || preview.autex !== autex) { setArquivo(null); toast.error("O manejo mudou. Selecione a planilha novamente."); return; }
-    if (!navigator.onLine) { toast.error("Conecte à internet para importar as coordenadas."); return; }
     setBusy(true);
     let salvas = 0;
     try {
@@ -58,17 +58,14 @@ export function ImportarCoordenadas({ autex, arvores }: { autex: string; arvores
         const agora = new Date().toISOString();
         const dados = dadosCoordenadas(item.latitude, item.longitude, agora);
         const log = await capturarLog("Coordenadas de árvore importadas", `Árvore ${item.arvore.numero} · AUTEX ${autex} · ${item.latitude}, ${item.longitude}`);
-        const { data, error } = await supabase.from("arvores").update(dados).eq("id", item.arvore.id).eq("empresa_id", preview.empresa).eq("autex", preview.autex).select("id");
-        if (error) throw new Error(error.message);
-        if (!data?.length) throw new Error(`Árvore ${item.arvore.numero} não está mais disponível.`);
-        await gravarRegistro(log);
+        await fila().enfileirar({ tipo: 'arvore_gps', id: item.arvore.id, empresa_id: preview.empresa, autex: preview.autex, dados: { ...dados, abatida_em: item.arvore.abatida_em }, log });
         const todas = qc.getQueryData<Arvore[]>(arvoresQuery.queryKey) ?? arvores;
         const atualizadas = todas.map((a) => a.id === item.arvore.id ? { ...a, ...dados } : a);
         qc.setQueryData(arvoresQuery.queryKey, atualizadas);
-        await salvarCache("arvores", atualizadas);
+        // The queue projects these coordinates; do not overwrite the authoritative cache.
         salvas++;
       }
-      toast.success(`${salvas} coordenadas importadas.`);
+      toast.success(`${salvas} coordenadas guardadas no aparelho — aguardam confirmação na nuvem.`);
       setArquivo(null);
     } catch (e) { toast.error(`${salvas} salvas. ${e instanceof Error ? e.message : "Falha ao importar."} Você pode tentar novamente.`); }
     finally { setBusy(false); await qc.invalidateQueries({ queryKey: arvoresQuery.queryKey }); }

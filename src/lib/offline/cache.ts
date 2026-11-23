@@ -48,10 +48,12 @@ export async function comCache<T>(nome: string, buscar: () => Promise<T[]>, empr
   if (!redeDisponivel()) return local();
   try {
     const dados = await comPrazo(buscar(), 10000);
-    if (!escopo || await chave(nome, empresa) !== escopo) return [];
     informarConexao(true);
+    // Stored under the identity captured BEFORE the request (its real owner).
     try { await idb.put('cache', { dados, salvoEm: Date.now() }, escopo); }
     catch { console.warn('Consulta disponível online, mas não foi possível guardar uma cópia neste aparelho.'); }
+    // A reply that arrives after the account/company changed is never shown.
+    if (await chave(nome, empresa) !== escopo) return [];
     return dados;
   } catch (e) {
     if (!erroDeRede(e)) throw e; // An authorization failure is NOT permission to show stale private data.

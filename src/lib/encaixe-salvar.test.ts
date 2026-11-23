@@ -30,13 +30,14 @@ describe("escolha de encaixe", () => {
     expect(torasEtiquetasOffline(fila, "RJ")).toEqual([tora]);
     expect(torasEtiquetasOffline(fila, "OUTRA")).toEqual([]);
   });
-  it("recalcula a plaqueta usando inventário atualizado quando online", async () => {
+  it("online usa inventário local e guarda antes de qualquer envio", async () => {
     const d = deps(); d.online = () => true;
     d.lerInventario = vi.fn().mockResolvedValue([{ empresa_id: "RJ", plaqueta: 1, arvore: 99, secao: "A", autex: "OUTRA" }]);
-    const tora = await salvarEncaixe(linha, medidas, "RJ", [], d);
+    const tora = await salvarEncaixe(linha, medidas, "RJ", [{ empresa_id: 'RJ', plaqueta: 1, arvore: 99, secao: 'A', autex: 'OUTRA' } as Tora], d);
     expect(tora.plaqueta).toBe(2);
-    expect(d.inserir).toHaveBeenCalledWith(tora, expect.objectContaining({ acao: "Encaixe confirmado" }));
-    expect(d.enfileirar).not.toHaveBeenCalled();
+    expect(d.inserir).not.toHaveBeenCalled();
+    expect(d.lerInventario).not.toHaveBeenCalled();
+    expect(d.enfileirar).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'tora_insert', dados: tora }));
   });
   it("não reutiliza identidade escolhida que já está na fila", async () => {
     const d = deps();

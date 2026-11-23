@@ -56,6 +56,7 @@ export async function importarCarga(empresa: string, origem: string): Promise<Da
       data: r.data,
       placa: r.placa,
       reboque: r.julieta,
+      cliente: clienteDoRomaneio(r.cliente),
       motorista: { nome: r.motorista || "", cpf: r.cpf || "" },
       itens: itensDeToras(itens),
     };
@@ -93,5 +94,17 @@ export async function importarCarga(empresa: string, origem: string): Promise<Da
     placa: r.placa_veiculo,
     reboque: r.placa_reboque,
     itens: itensDeSerrada(itens),
+  };
+}
+
+export function clienteDoRomaneio(c: unknown): NonNullable<DadosNfe["cliente"]> | null {
+  if (!c || typeof c !== "object") return null;
+  const o = c as Record<string, unknown>;
+  const t = (k: string) => (typeof o[k] === "string" ? (o[k] as string).trim() : "");
+  if (!t("nome") && !t("documento")) return null;
+  return {
+    nome: t("nome"), documento: t("documento"),
+    endereco: { logradouro: t("logradouro"), numero: t("numero"), complemento: t("complemento"),
+      bairro: t("bairro"), municipio: t("municipio"), uf: t("uf").toUpperCase(), cep: t("cep") },
   };
 }

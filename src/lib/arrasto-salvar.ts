@@ -50,14 +50,6 @@ export async function registrarArrasto({
     capturado_em: gps.capturado_em,
     log,
   };
-  if (estaOnline()) {
-    try {
-      await executarOp(op);
-      return { offline: false, op };
-    } catch (e) {
-      if (!erroRede(e)) throw e;
-    }
-  }
   await fila().enfileirar(op);
   return { offline: true, op };
 }
