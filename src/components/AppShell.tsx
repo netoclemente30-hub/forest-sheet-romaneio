@@ -49,6 +49,10 @@ const navBase = (papel: Papel) => {
   return [inicio];
 };
 
+function nomeEmpresaSalva(usuario: string): string | null {
+  try { return localStorage.getItem(`empresa-selecionada-nome:${usuario}`); } catch { return null; }
+}
+
 export function AppShell() {
   const installation = useInstallApp();
   const { session, loading, isSuperAdmin, papel, permissoesCarregando, estadoPermissoes } = useAuth();
@@ -161,13 +165,20 @@ export function AppShell() {
                 const proxima = e.target.value;
                 await qc.cancelQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
                 qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
-                try { localStorage.setItem(`empresa-selecionada:${session.user.id}`, proxima); } catch { /* selection remains in this tab */ }
+                try {
+                  localStorage.setItem(`empresa-selecionada:${session.user.id}`, proxima);
+                  const nome = (empresas.data ?? []).find((x) => x.id === proxima)?.nome;
+                  if (nome) localStorage.setItem(`empresa-selecionada-nome:${session.user.id}`, nome);
+                } catch { /* selection remains in this tab */ }
                 setEmpresaAtiva(proxima || null);
                 setEmpresaSel(proxima);
                 void qc.invalidateQueries();
               }}
             >
               <option value="">Todas as empresas</option>
+              {empresaSel && !(empresas.data ?? []).some((e) => e.id === empresaSel) && (
+                <option value={empresaSel}>{nomeEmpresaSalva(session.user.id) ?? "Empresa selecionada"}</option>
+              )}
               {(empresas.data ?? []).map((e) => (
                 <option key={e.id} value={e.id}>{e.nome}</option>
               ))}
