@@ -1,8 +1,9 @@
 import { useAuth } from "@/hooks/useAuth";
+import {ClienteRomaneio,clienteRomaneioVazio} from "@/components/ClienteRomaneio";
 import { pode } from "@/lib/funcoes";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
@@ -40,15 +41,16 @@ export const Route = createFileRoute("/romaneio")({
 });
 
 function RomaneioPage() {
-  const { papel, empresaId, isSuperAdmin } = useAuth();
+  const { papel, empresaId, isSuperAdmin,session } = useAuth();
   const empresa = empresaDaOperacao(isSuperAdmin, empresaId, getEmpresaAtiva());
   const podeCarregar = pode(papel, "carga_criar");
   const toras = useQuery(torasQuery);
   const qc = useQueryClient();
   const nav = useNavigate();
   const [cab, setCab] = useState({ placa: "", julieta: "", motorista: "", cpf: "", data: new Date().toISOString().slice(0, 10) });
-  const clienteVazio = { nome: "", documento: "", logradouro: "", numero: "", complemento: "", bairro: "", municipio: "", uf: "", cep: "" };
+  const clienteVazio = clienteRomaneioVazio;
   const [cliente, setCliente] = useState<typeof clienteVazio>(clienteVazio);
+  useEffect(()=>{setCliente(clienteRomaneioVazio);},[empresa]);
   const [itens, setItens] = useState<Tora[]>([]);
   const [plq, setPlq] = useState("");
   const [scan, setScan] = useState(false);
@@ -115,6 +117,7 @@ function RomaneioPage() {
         empresa_id: empresa,
         log,
       });
+      void sincronizar(fila()).catch(()=>{ /* A carga permanece na fila para nova tentativa. */ });
       setItens([]);
       toast.success("Romaneio guardado neste aparelho — aguarda confirmação na nuvem");
       nav({ to: "/historico" });
@@ -142,7 +145,7 @@ function RomaneioPage() {
         Selecione uma empresa no topo para consultar cadastros e lançar romaneios.
       </p>}
       {cad.isError && <p role="alert" className="rounded-md border px-3 py-2 text-sm text-destructive">
-        Não foi possível carregar motoristas e veículos desta empresa. Confira a conexão.
+        Não foi possível carregar clientes, motoristas e veículos desta empresa. Confira a conexão.
       </p>}
       <datalist id="lista-caminhao">{cad.data?.veiculos.filter((v) => v.tipo === "caminhao").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
       <datalist id="lista-reboque">{cad.data?.veiculos.filter((v) => v.tipo === "reboque").map((v) => <option key={v.placa} value={v.placa} />)}</datalist>
@@ -154,26 +157,7 @@ function RomaneioPage() {
         {f("cpf", "CPF")}
         <div className="col-span-2">{f("data", "Data", "date")}</div>
       </div>
-      <datalist id="lista-cliente">{cad.data?.clientes.map((c) => <option key={c.nome} value={c.nome} />)}</datalist>
-      <div className="bg-card border rounded-xl p-3 space-y-2">
-        <p className="font-semibold text-sm">Cliente / destinatário (vai para a nota fiscal)</p>
-        {!!cad.data?.clientes.length && <div className="flex flex-wrap gap-1">
-          {cad.data.clientes.slice(0, 8).map((c) => <Button key={c.nome} size="sm" variant="outline" onClick={() => setCliente({ ...clienteVazio, ...c })}>{c.nome}</Button>)}
-        </div>}
-        <div className="grid grid-cols-2 gap-2">
-          {([["nome", "Nome / razão social", 2], ["documento", "CPF / CNPJ", 2], ["logradouro", "Endereço (rua)", 2], ["numero", "Número", 1], ["complemento", "Complemento", 1], ["bairro", "Bairro", 1], ["municipio", "Município", 1], ["uf", "UF", 1], ["cep", "CEP", 1]] as const).map(([k, label, span]) => (
-            <div key={k} className={span === 2 ? "col-span-2 space-y-1" : "space-y-1"}>
-              <Label className="text-xs">{label}</Label>
-              <Input aria-label={label} list={k === "nome" ? "lista-cliente" : undefined} value={cliente[k]} maxLength={k === "uf" ? 2 : undefined} className="h-11"
-                onChange={(e) => {
-                  const v = e.target.value;
-                  const salvo = k === "nome" ? cad.data?.clientes.find((c) => c.nome.toLowerCase() === v.trim().toLowerCase()) : undefined;
-                  setCliente(salvo ? { ...clienteVazio, ...salvo } : { ...cliente, [k]: k === "uf" ? v.toUpperCase() : v });
-                }} />
-            </div>
-          ))}
-        </div>
-      </div>
+      {empresa && session?.user.id && <ClienteRomaneio key={empresa} empresa={empresa} usuario={session.user.id} salvos={cad.data?.clientes??[]} cliente={cliente} alterar={setCliente}/>}
       <details className="bg-card border rounded-xl p-3">
         <summary className="font-semibold cursor-pointer">Cadastros salvos (toque para preencher)</summary>
         <div className="mt-2 space-y-2 text-sm">

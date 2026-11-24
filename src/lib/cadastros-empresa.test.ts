@@ -76,7 +76,7 @@ describe("isolamento de cadastros RJ e MADENORTE", () => {
     expect(await listarCadastrosRomaneio(rj)).toEqual({
       motoristas: [dados.motoristas[0]],
       veiculos: [dados.veiculos[0]],
-      clientes: [dados.romaneios[0]!.cliente],
+      clientes: [dados.romaneios[0]!.cliente,dados.romaneios[1]!.cliente],
     });
     expect(mocks.from).toHaveBeenCalledTimes(6);
   });

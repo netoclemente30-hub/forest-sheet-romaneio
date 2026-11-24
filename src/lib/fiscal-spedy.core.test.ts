@@ -65,6 +65,12 @@ function spedy(opts: { env?: string; cert?: string; cnpj?: string; post?: (body:
 const ctx = (http: Http | null, store: Store, empresa = "emp-a") => ({ http, store, empresa, usuario: "u1" });
 
 describe("payload", () => {
+  it("envia a escolha Entrada à Spedy",()=>{
+    const {payload}=montarPayload({...nota,tipo:"0",itens:nota.itens.map(i=>({...i,cfop:"1102"}))});
+    expect(payload.operationType).toBe("incoming");
+    expect(montarPayload(nota).payload.operationType).toBe("outgoing");
+    expect(()=>montarPayload({...nota,tipo:"0"})).toThrow(/CFOP/);
+  });
   it("valida e calcula totais", () => {
     const { payload } = montarPayload(nota);
     const item = payload.items[0]!;

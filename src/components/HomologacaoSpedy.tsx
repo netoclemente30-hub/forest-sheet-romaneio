@@ -46,6 +46,7 @@ function entrada(r: Rascunho, t: Record<string, string>): NotaFiscalEntrada {
   const icms = t["regime"] === "simples" ? { csosn: Number(t["icms"]) } : { cst: Number(t["icms"]) };
   return {
     emitenteCnpj: r.cadastro.cnpj,
+    tipo: d.cabecalho?.tipo ?? "1",
     natureza: d.cabecalho?.natureza || r.carga.natureza || "",
     serie: d.cabecalho?.serie || undefined,
     consumidorFinal: t["final"] === "1",

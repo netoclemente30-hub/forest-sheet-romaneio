@@ -37,7 +37,7 @@ export async function listarCadastrosRomaneio(empresa: string) {
     }, empresa),
     comCache(`clientes:${empresa}`, async () => {
       const { data, error } = await supabase.from("romaneios").select("cliente,empresa_id").eq("empresa_id", empresa).not("cliente", "is", null).order("created_at", { ascending: false }).limit(300);
-      if (error) return [];
+      if (error) throw error;
       return (data ?? []).filter((x) => x.empresa_id === empresa).map((x) => x.cliente);
     }, empresa),
   ]);
@@ -54,7 +54,7 @@ export async function listarPatiosSerraria(empresa: string): Promise<{ nome: str
   });
 }
 
-/** Clientes já usados em romaneios desta empresa, o mais recente primeiro, sem repetir nome. */
+/** Clientes já usados nesta empresa, com documento como identidade e nome como fallback legado. */
 export type ClienteSalvo = { nome: string } & Partial<Record<"documento" | "logradouro" | "numero" | "complemento" | "bairro" | "municipio" | "uf" | "cep", string>>;
 export function clientesUnicos(lista: unknown[]): ClienteSalvo[] {
   const vistos = new Map<string, ClienteSalvo>();
@@ -62,7 +62,9 @@ export function clientesUnicos(lista: unknown[]): ClienteSalvo[] {
     if (!c || typeof c !== "object") continue;
     const o = c as Record<string, unknown>;
     const nome = typeof o["nome"] === "string" ? o["nome"].trim() : "";
-    if (nome && !vistos.has(nome.toLowerCase())) vistos.set(nome.toLowerCase(), { ...(o as Record<string, string>), nome });
+    const documento=typeof o["documento"]==="string"?o["documento"].replace(/[./\s-]/g,"").toUpperCase():"";
+    const chave=documento || nome.toLowerCase();
+    if (nome && !vistos.has(chave)) vistos.set(chave, { ...(o as Record<string, string>), nome });
   }
   return [...vistos.values()];
 }

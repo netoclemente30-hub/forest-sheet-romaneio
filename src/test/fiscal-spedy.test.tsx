@@ -5,6 +5,13 @@ import { Route } from "@/routes/fiscal";
 import { verificarSandbox } from "@/lib/spedy.server";
 
 const auth = vi.hoisted(() => ({ empresa: "a" }));
+const buscaFiscal = vi.hoisted(() => ({
+  romaneio: undefined as string | undefined,
+  empresa: undefined as string | undefined,
+}));
+vi.spyOn(Route, "useSearch").mockImplementation(
+  () => buscaFiscal as ReturnType<typeof Route.useSearch>,
+);
 vi.mock("@/components/EventosNfe", () => ({ EventosNfe: () => null }));
 vi.mock("@/components/OnboardingSpedy", () => ({ OnboardingSpedy: () => null }));
 vi.mock("@/components/ContadorFiscal", () => ({ ContadorFiscal: () => null }));
@@ -45,18 +52,56 @@ vi.mock("@/lib/spedy.functions", () => ({
 }));
 vi.mock("@/lib/fiscal-cargas", () => ({
   cargasFiscais: async () => [{ id: "toras/1", nome: "Carga 1" }],
-  importarCarga: async () => ({
+  importarCarga: async (_empresa: string, origem: string) => ({
+    ...(origem.endsWith("11111111-2222-4333-8444-555555555555")
+      ? {
+          tipo: "0",
+          natureza: "ENTRADA DE MADEIRA EM TORA",
+          cliente: {
+            nome: "João",
+            documento: "11144477735",
+            endereco: {
+              logradouro: "Estrada do Manejo",
+              numero: "10",
+              complemento: "Lote A",
+              bairro: "Zona Rural",
+              municipio: "Manaus",
+              uf: "AM",
+              cep: "69000000",
+            },
+          },
+        }
+      : {}),
     numero: "C-1",
     data: "2026-11-10",
     itens: [{ descricao: "Jatobá", quantidade: 1.5, unidade: "M3", ncm: "44034900" }],
   }),
 }));
 afterEach(() => {
+  buscaFiscal.romaneio = undefined;
+  buscaFiscal.empresa = undefined;
   cleanup();
   sessionStorage.clear();
   localStorage.clear();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+it("abre o romaneio enviado pelo atalho com João, endereço e nota de entrada", async () => {
+  buscaFiscal.romaneio = "toras/11111111-2222-4333-8444-555555555555";
+  buscaFiscal.empresa = "a";
+  const Fiscal = Route.options.component!;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Fiscal />
+    </QueryClientProvider>,
+  );
+  await screen.findByDisplayValue("João");
+  expect(screen.getByLabelText("CPF ou CNPJ do destinatário")).toHaveValue("11144477735");
+  expect(screen.getByLabelText("Município")).toHaveValue("Manaus");
+  expect(screen.getByLabelText("Logradouro")).toHaveValue("Estrada do Manejo");
+  expect(screen.getByLabelText("Tipo da nota")).toHaveValue("0");
+  expect(screen.getByLabelText("Natureza da operação")).toHaveValue("ENTRADA DE MADEIRA EM TORA");
+  expect(screen.getByLabelText(/Preço por unidade/)).toBeInTheDocument();
 });
 vi.setConfig({ testTimeout: 30000 });
 

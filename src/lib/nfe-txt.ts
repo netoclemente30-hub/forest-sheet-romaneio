@@ -3,6 +3,7 @@
 
 export type ItemNfe = { codigo: string; descricao: string; ncm: string; unidade: string; quantidade: number; pecas?: number };
 export type DadosNfe = {
+  tipo?: "0" | "1";
   numero: string;
   data: string; // AAAA-MM-DD
   natureza?: string;
