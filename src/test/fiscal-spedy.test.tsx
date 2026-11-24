@@ -5,6 +5,26 @@ import { Route } from "@/routes/fiscal";
 import { verificarSandbox } from "@/lib/spedy.server";
 
 const auth = vi.hoisted(() => ({ empresa: "a" }));
+vi.mock("@/components/EventosNfe", () => ({ EventosNfe: () => null }));
+vi.mock("@/components/OnboardingSpedy", () => ({ OnboardingSpedy: () => null }));
+vi.mock("@/components/ContadorFiscal", () => ({ ContadorFiscal: () => null }));
+vi.mock("@/components/HomologacaoSpedy", () => ({
+  DiagnosticoSpedy: () => null,
+  EmissaoHomologacao: () => null,
+  InutilizacaoHomologacao: () => null,
+}));
+vi.mock("@/lib/registro", () => ({
+  capturarLog: async () => ({}),
+  gravarRegistro: async () => {},
+}));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
+      upsert: async () => ({ error: null }),
+    }),
+  },
+}));
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
     empresaId: auth.empresa,
@@ -12,7 +32,17 @@ vi.mock("@/hooks/useAuth", () => ({
     papel: "admin_empresa",
   }),
 }));
-vi.mock("@/lib/spedy.functions", () => ({ verificarSpedy: vi.fn(), diagnosticarSpedy: vi.fn(), emitirNfeHomologacao: vi.fn(), consultarNfeHomologacao: vi.fn(), baixarNfeHomologacao: vi.fn(), inutilizarHomologacao: vi.fn(), verificarCadastroSpedy: vi.fn(), cadastrarEmpresaSpedy: vi.fn(), enviarCertificadoSpedy: vi.fn() }));
+vi.mock("@/lib/spedy.functions", () => ({
+  verificarSpedy: vi.fn(),
+  diagnosticarSpedy: vi.fn(),
+  emitirNfeHomologacao: vi.fn(),
+  consultarNfeHomologacao: vi.fn(),
+  baixarNfeHomologacao: vi.fn(),
+  inutilizarHomologacao: vi.fn(),
+  verificarCadastroSpedy: vi.fn(),
+  cadastrarEmpresaSpedy: vi.fn(),
+  enviarCertificadoSpedy: vi.fn(),
+}));
 vi.mock("@/lib/fiscal-cargas", () => ({
   cargasFiscais: async () => [{ id: "toras/1", nome: "Carga 1" }],
   importarCarga: async () => ({
@@ -46,14 +76,19 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
   ] as const) {
     fireEvent.change(screen.getByLabelText(label), { target: { value: valor } });
   }
+  await waitFor(() => expect(screen.getByText("Salvar cadastro")).toBeEnabled());
   fireEvent.click(screen.getByText("Salvar cadastro"));
+  await waitFor(() =>
+    expect(localStorage.getItem("fiscal-spedy-v1:usuario:a:emitente")).toContain("Madeireira A"),
+  );
   fireEvent.click(screen.getByText("Simular contratação"));
   await screen.findByText("Carga 1");
   fireEvent.change(screen.getByLabelText("Romaneio"), { target: { value: "toras/1" } });
-  fireEvent.change(await screen.findByLabelText("Destinatário"), {
+  await screen.findByLabelText(/Preço por unidade/);
+  fireEvent.change(screen.getByLabelText("Destinatário"), {
     target: { value: "Cliente de teste" },
   });
-  fireEvent.change(await screen.findByLabelText(/Preço por m³/, {}, { timeout: 10000 }), { target: { value: "250,50" } });
+  fireEvent.change(screen.getByLabelText(/Preço por unidade/), { target: { value: "250,50" } });
   for (const [label, value] of Object.entries({
     "CPF ou CNPJ do destinatário": "11222333000181",
     Logradouro: "Rua das Toras",
@@ -84,14 +119,17 @@ it("confere a carga, salva a prévia, simula assinatura e separa o histórico po
   expect(screen.getByText(/Endereço · Rua das Toras, 42, Galpão A/)).toBeVisible();
   expect(screen.getByText(/Fisco · Observação de teste/)).toBeVisible();
   fireEvent.click(screen.getByText("Editar dados da nota"));
-  expect(screen.getByLabelText("Tipo da nota")).toHaveValue("1");
-  fireEvent.change(screen.getByLabelText("Tipo da nota"), { target: { value: "0" } });
-  fireEvent.change(screen.getByLabelText("Modalidade do frete"), { target: { value: "0" } });
+  const edicao = within(screen.getByText("Salvar alterações").closest("form")!);
+  expect(edicao.getByLabelText("Tipo da nota")).toHaveValue("1");
+  fireEvent.change(edicao.getByLabelText("Tipo da nota"), { target: { value: "0" } });
+  fireEvent.change(edicao.getByLabelText("Modalidade do frete"), { target: { value: "0" } });
   fireEvent.click(screen.getByText("Salvar alterações"));
   expect(screen.getByText(/Modalidade do frete · CIF/)).toBeVisible();
   expect(screen.getByText(/Modelo 55 · Entrada · Série/)).toBeVisible();
   fireEvent.click(screen.getByText("Editar dados da nota"));
-  expect(screen.getByLabelText("Tipo da nota")).toHaveValue("0");
+  expect(
+    within(screen.getByText("Salvar alterações").closest("form")!).getByLabelText("Tipo da nota"),
+  ).toHaveValue("0");
   fireEvent.click(screen.getByText("Cancelar"));
   expect(screen.getByRole("heading", { name: "Prévia da NF-e · Rascunho" })).toBeVisible();
 });
@@ -105,9 +143,19 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", as
       numero: "R-antigo",
       data: "2026-01-01",
       cliente: { nome: "Cliente antigo", documento: "12345678909" },
-      itens: [],
+      itens: [{ codigo: "A", descricao: "Madeira", ncm: "44034900", unidade: "M3", quantidade: 1 }],
     },
-    itens: [],
+    itens: [
+      {
+        codigo: "A",
+        descricao: "Madeira",
+        ncm: "44034900",
+        unidade: "M3",
+        quantidade: 1,
+        preco: 34,
+        centavos: 3400,
+      },
+    ],
     total: 3400,
     criado: "2026-01-01",
     assinado: false,
@@ -124,7 +172,8 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", as
   );
   fireEvent.click(screen.getByText("R-antigo · Rascunho"));
   fireEvent.click(screen.getByText("Editar dados da nota"));
-  await waitFor(() => expect(screen.getAllByLabelText("CPF ou CNPJ do destinatário")[0]).toHaveValue("12345678909"), { timeout: 10000 });
+  const edicao = within(screen.getByText("Salvar alterações").closest("form")!);
+  expect(edicao.getByLabelText("CPF ou CNPJ do destinatário")).toHaveValue("12345678909");
   for (const [label, value] of Object.entries({
     Logradouro: "Rua A",
     Número: "15",
@@ -134,11 +183,15 @@ it("completa um rascunho anterior sem substituir carga, emitente ou preços", as
     CEP: "69000000",
     "Modalidade do frete": "9",
   })) {
-    fireEvent.change(screen.getAllByLabelText(label)[0]!, { target: { value } });
+    fireEvent.change(edicao.getByLabelText(label), { target: { value } });
   }
   fireEvent.click(screen.getByText("Salvar alterações"));
-  expect(JSON.parse(localStorage.getItem(chave + ':rascunhos') ?? '{}').historico).toEqual([
-    { ...antigo, detalhes: expect.objectContaining({ modFrete: "9" }) },
+  expect(JSON.parse(localStorage.getItem(chave + ":rascunhos") ?? "{}").historico).toEqual([
+    expect.objectContaining({
+      total: antigo.total,
+      criado: antigo.criado,
+      detalhes: expect.objectContaining({ modFrete: "9" }),
+    }),
   ]);
 });
 it("consulta CNPJ, cadastra cliente e produto e reutiliza os dados ao preparar a nota", async () => {
@@ -172,21 +225,26 @@ it("consulta CNPJ, cadastra cliente e produto e reutiliza os dados ao preparar a
   fireEvent.click(screen.getByText("Salvar cadastro"));
   fireEvent.click(screen.getByText("Simular contratação"));
   fireEvent.click(screen.getByText("Cadastros de clientes e produtos"));
-  preencher("CPF ou CNPJ do destinatário", cnpj);
-  await waitFor(() => expect(screen.getByLabelText("Logradouro")).toHaveValue("Rua A"), {
+  const clientes = within(
+    screen.getByRole("heading", { name: "Cadastros fiscais" }).closest("section")!,
+  );
+  fireEvent.change(clientes.getByLabelText("CPF ou CNPJ do destinatário"), {
+    target: { value: cnpj },
+  });
+  await waitFor(() => expect(clientes.getByLabelText("Logradouro")).toHaveValue("Rua A"), {
     timeout: 10000,
   });
   fireEvent.click(screen.getByText("Salvar cliente"));
   expect(localStorage.getItem("fiscal-spedy-v1:usuario:a:cadastros:cliente:" + cnpj)).toContain(
     "Manaus",
   );
-  fireEvent.click(screen.getByRole("button", { name: "Produtos" }));
+  fireEvent.click(clientes.getByRole("button", { name: "Produtos" }));
   for (const [label, v] of Object.entries({
     "Código do item": "JAT",
     "Descrição do produto": "Jatobá serrado",
     NCM: "44072990",
     "CFOP padrão": "5101",
-    "Preço padrão por m³ (R$)": "120",
+    "Preço padrão por unidade (R$)": "120",
   }))
     preencher(label, v);
   fireEvent.click(screen.getByText("Salvar produto"));
@@ -211,6 +269,7 @@ it("consulta somente o sandbox; empresa sem chave própria usa a chave mestra", 
   const http = vi.fn().mockResolvedValue({ ok: true });
   vi.stubGlobal("fetch", http);
   vi.stubEnv("SPEDY_SANDBOX_KEY_00000000_0000_4000_8000_000000000001", "fixture");
+  vi.stubEnv("SPEDY_SANDBOX_KEY", "fixture-mestra");
   expect(await verificarSandbox(id)).toMatch(/aceitou/);
   expect(http).toHaveBeenCalledWith(
     "https://sandbox-api.spedy.com.br/v1/product-invoices?pageSize=1",
@@ -221,5 +280,8 @@ it("consulta somente o sandbox; empresa sem chave própria usa a chave mestra", 
     }),
   );
   expect(await verificarSandbox(id.replace(/1$/, "2"))).toMatch(/aceitou/);
-  expect(http).not.toHaveBeenCalledWith(expect.not.stringContaining("sandbox-api.spedy.com.br"), expect.anything());
+  expect(http).not.toHaveBeenCalledWith(
+    expect.not.stringContaining("sandbox-api.spedy.com.br"),
+    expect.anything(),
+  );
 });
