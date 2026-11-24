@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SinaflorCsvExportacao } from '@/components/SinaflorCsvExportacao';
-import type { Tora } from '@/lib/data';
+import type { Arvore, Tora } from '@/lib/data';
 
 const mocks = vi.hoisted(() => ({salvar:vi.fn(),listar:vi.fn(),erro:vi.fn()}));
 vi.mock('@/hooks/useAuth',()=>({useAuth:()=>({empresaId:'empresa',isSuperAdmin:false,session:{user:{id:'usuario'}}})}));
@@ -12,6 +12,29 @@ vi.mock('sonner',()=>({toast:{error:mocks.erro,success:vi.fn()}}));
 
 const tora = {empresa_id:'empresa',autex:'AUTEX 123',origem:'manejo',arvore:7477,secao:'A',plaqueta:3,d_topo1:72,d_topo2:74,d_pe1:56,d_pe2:57,comprimento:5.1,created_at:new Date().toISOString()} as Tora;
 beforeEach(()=>{vi.clearAllMocks();localStorage.clear();mocks.listar.mockResolvedValue([]);mocks.salvar.mockResolvedValue(undefined);});
+
+it('oferece abate e traçamento juntos com arquivos independentes do cortador e das medições', async()=>{
+  const arvores = [
+    {empresa_id:'empresa',autex:'AUTEX 123',numero:7478,abatida_em:new Date().toISOString()},
+    {empresa_id:'empresa',autex:'AUTEX 123',numero:7477,abatida_em:null},
+  ] as Arvore[];
+  render(<SinaflorCsvExportacao arvores={arvores} toras={[tora]} />);
+  const abate = await screen.findByRole('button',{name:'CSV árvores abatidas (1)'});
+  const tracamento = screen.getByRole('button',{name:'Traçar SINAFLOR (1 toras)'});
+  expect(abate).toBeEnabled();
+  expect(tracamento).toBeEnabled();
+  fireEvent.click(abate);
+  await waitFor(()=>expect(mocks.salvar).toHaveBeenCalledTimes(1));
+  await waitFor(()=>expect(tracamento).toBeEnabled());
+  fireEvent.click(tracamento);
+  await waitFor(()=>expect(mocks.salvar).toHaveBeenCalledTimes(2));
+  const arquivos = await Promise.all(mocks.salvar.mock.calls.map(([a])=>new Promise<string>(resolve=>{
+    const leitor = new FileReader();leitor.onload=()=>resolve(String(leitor.result));leitor.readAsText(a.blob);
+  })));
+  expect(arquivos[0]).toBe('Número da árvore\n7478\n');
+  expect(arquivos[1]).toContain('7477;A;0,73;0,565;5,1');
+  expect(arquivos[1]).not.toContain('7478;');
+});
 
 it('mostra o lançamento na prévia, seleciona a única AUTEX e baixa o layout de cinco colunas',async()=>{
   render(<SinaflorCsvExportacao arvores={[]} toras={[tora]} apenasTracadas />);
