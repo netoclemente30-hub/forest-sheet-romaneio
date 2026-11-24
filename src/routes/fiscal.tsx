@@ -47,6 +47,10 @@ import { DiagnosticoSpedy, EmissaoHomologacao, InutilizacaoHomologacao } from "@
 import type { DadosNfe } from "@/lib/nfe-txt";
 
 export const Route = createFileRoute("/fiscal")({
+  validateSearch: (search:Record<string,unknown>) => ({
+    romaneio:typeof search["romaneio"]==="string" && /^(toras|serrada)\/[0-9a-f-]{36}$/i.test(search["romaneio"]) ? search["romaneio"] : undefined,
+    empresa:typeof search["empresa"]==="string" && /^[0-9a-f-]{36}$/i.test(search["empresa"]) ? search["empresa"] : undefined,
+  }),
   staticData: { sitemap: false },
   head: () => ({ meta: [
     { title: 'Fiscal — Gestor Florestal' },
@@ -68,6 +72,7 @@ const ouvir = (fn: () => void) => {
   };
 };
 function Fiscal() {
+  const busca=Route.useSearch();
   const { session, empresaId, isSuperAdmin, papel, permissoesCarregando } = useAuth();
   const ativa = useSyncExternalStore(ouvir, getEmpresaAtiva, () => null);
   const empresa = isSuperAdmin ? ativa || empresaId : empresaId;
@@ -76,9 +81,10 @@ function Fiscal() {
     return <p>Acesso fiscal restrito à administração.</p>;
   if (!empresa) return <p>Selecione a empresa para abrir o Fiscal.</p>;
   const chave = chaveFiscal(session.user.id, empresa);
-  return <Painel key={chave} empresa={empresa} chave={chave} />;
+  if(busca.empresa && busca.empresa!==empresa)return <p role="alert">Selecione a empresa do romaneio no topo para preparar esta NF-e.</p>;
+  return <Painel key={chave+":"+(busca.romaneio??"")} empresa={empresa} chave={chave} origemInicial={busca.romaneio??""} />;
 }
-function Painel({ empresa, chave }: { empresa: string; chave: string }) {
+function Painel({ empresa, chave,origemInicial }: { empresa: string; chave: string;origemInicial:string }) {
   const [conta, setConta] = useState<ContaFiscal>(() => {
     const sessao: ContaFiscal = JSON.parse(localStorage.getItem(chave + ':rascunhos') || sessionStorage.getItem(chave) || "null") ?? contaNova();
     return {
@@ -133,9 +139,12 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
       return false;
     }
   }
-  const [origem, setOrigem] = useState("");
+  const [origem, setOrigem] = useState(origemInicial);
   const [manualId, setManualId] = useState(() => "manual:" + crypto.randomUUID());
-  const [aberto, setAberto] = useState("");
+  const [aberto, setAberto] = useState(()=>{
+    const salvo=conta.historico.find(r=>r.origem===origemInicial);
+    return salvo?idRascunho(salvo):"";
+  });
   const [conexao, setConexao] = useState("");
   const cargas = useQuery({
     queryKey: ["cargas-fiscais", empresa],
@@ -460,9 +469,9 @@ function Editor({
       ? (anterior.detalhes ?? detalhesIniciais(anterior.carga))
       : {
           ...detalhesIniciais(carga),
-          ...catalogo.clientes.find(
+          ...(!carga.cliente?.endereco ? catalogo.clientes.find(
             (c) => documentoId(c.documento) === documentoId(carga.cliente?.documento ?? ""),
-          ),
+          ) : {}),
         },
   );
   const [itens, setItens] = useState(carga.itens);

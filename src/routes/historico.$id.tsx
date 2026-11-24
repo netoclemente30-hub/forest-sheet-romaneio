@@ -1,5 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate,Link } from "@tanstack/react-router";
+import {rotaPermitida} from "@/lib/funcoes";
+import {clienteDoRomaneio} from "@/lib/fiscal-cargas";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,6 +145,7 @@ function Detalhe() {
   if (q.isLoading) return <p className="text-muted-foreground">Carregando…</p>;
   if (!q.data) return <p>Romaneio não encontrado.</p>;
   const { r, itens: itensBrutos } = q.data;
+  const cliente=clienteDoRomaneio(r.cliente);
   const itens = ordenarRomaneio(itensBrutos);
   const totais = totaisComerciais(itens);
 
@@ -161,7 +164,12 @@ function Detalhe() {
         <Button variant="secondary" className="flex-1 h-12" onClick={() => void compartilharPdf(r, itens).catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao gerar PDF"))}><Share2 /> Enviar PDF</Button>
         {podeExcluir && <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>}
       </div>
-      <NfeWhatsapp titulo="ROMANEIO DE TORAS" nomeArquivo={`nfe-romaneio-${(r.placa || "sem-placa").replace(/\W/g, "")}-${r.data}`} dados={{ numero: `${r.placa || "SEM-PLACA"}-${r.data.replace(/-/g, "")}`, data: r.data, natureza: "REMESSA DE MADEIRA EM TORA", motorista: r.motorista ? { nome: r.motorista, cpf: r.cpf ?? "" } : null, placa: r.placa, reboque: r.julieta, itens: itensDeToras(itens) }} />
+      <div className="rounded-xl border bg-card p-3">
+        <h2 className="font-semibold">Cliente / fornecedor do manejo</h2>
+        <p>{cliente?.nome || "Cliente não informado neste romaneio"}</p>
+        {cliente && <p className="text-sm">{cliente.documento} · {Object.values(cliente.endereco??{}).filter(Boolean).join(", ")}</p>}
+      </div>
+      <NfeWhatsapp acaoFiscal={rotaPermitida(papel,"/fiscal") && r.empresa_id ? <Button asChild className="h-11" size="sm"><Link to="/fiscal" search={{romaneio:"toras/"+r.id,empresa:r.empresa_id}}>Gerar NF-e</Link></Button> : undefined} titulo="ROMANEIO DE TORAS" nomeArquivo={`nfe-romaneio-${(r.placa || "sem-placa").replace(/\W/g, "")}-${r.data}`} dados={{ numero: `${r.placa || "SEM-PLACA"}-${r.data.replace(/-/g, "")}`, data: r.data, natureza: "REMESSA DE MADEIRA EM TORA", cliente:clienteDoRomaneio(r.cliente), motorista: r.motorista ? { nome: r.motorista, cpf: r.cpf ?? "" } : null, placa: r.placa, reboque: r.julieta, itens: itensDeToras(itens) }} />
       <div className="bg-card border rounded-xl p-3 flex items-center gap-4">
         <QrImage value={qrRomaneio(r, itens.map((t) => t.plaqueta))} size={140} />
         <div className="text-sm">

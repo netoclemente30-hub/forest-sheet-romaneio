@@ -52,6 +52,8 @@ export async function importarCarga(empresa: string, origem: string): Promise<Da
     if (itens.length !== r.qtd_toras)
       throw new Error("Quantidade de toras divergente. Confira o romaneio.");
     return {
+      tipo: "0",
+      natureza: "ENTRADA DE MADEIRA EM TORA",
       numero: (r.placa || r.id) + " · " + r.data,
       data: r.data,
       placa: r.placa,

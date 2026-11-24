@@ -40,6 +40,7 @@ export type DetalhesNota = {
 };
 export function detalhesIniciais(carga: DadosNfe): DetalhesNota {
   return {
+    ...(carga.tipo ? {cabecalho:{natureza:carga.natureza??"",serie:"",numero:"",finalidade:"1",tipo:carga.tipo}} : {}),
     nome: carga.cliente?.nome ?? "",
     documento: carga.cliente?.documento ?? "",
     endereco: {

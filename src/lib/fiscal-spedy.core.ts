@@ -34,6 +34,7 @@ const fretes = {
 } as const;
 
 export const notaSchema = z.object({
+  tipo: z.enum(["0","1"]).default("1"),
   emitenteCnpj: z.string().transform(so).refine(cnpjValido, "CNPJ do emitente inválido."),
   natureza: texto(3, 60),
   serie: z.string().regex(/^\d{1,3}$/, "Série inválida.").optional(),
@@ -67,6 +68,13 @@ export const notaSchema = z.object({
   pagamento: z.enum(["money", "pix", "bankDeposit", "creditCard", "debitCard", "noPayment"]),
   frete: z.enum(["0", "1", "2", "3", "4", "9"]),
   informacoes: z.string().trim().max(2000).optional(),
+}).superRefine((nota,ctx)=>{
+  const prefixos=nota.tipo==="0"?["1","2","3"]:["5","6","7"];
+  nota.itens.forEach((item,index)=>{
+    if(!prefixos.includes(item.cfop.charAt(0)))ctx.addIssue({
+      code:"custom",path:["itens",index,"cfop"],message:"Confira o CFOP do item para a operação de "+(nota.tipo==="0"?"entrada.":"saída."),
+    });
+  });
 });
 export type NotaFiscalEntrada = z.input<typeof notaSchema>;
 
@@ -93,6 +101,7 @@ export function montarPayload(entrada: NotaFiscalEntrada) {
     emitenteCnpj: n.emitenteCnpj,
     payload: {
       operationNature: n.natureza,
+      operationType: n.tipo==="0"?"incoming":"outgoing",
       ...(n.serie ? { series: n.serie } : {}),
       isFinalCustomer: n.consumidorFinal,
       receiver: {
