@@ -6,6 +6,7 @@ import { capturarLog, gravarRegistro } from "@/lib/registro";
 import { cargaManual, itemDoCadastro } from "@/lib/fiscal-manual";
 import { hojeLocal } from "@/lib/nfe-txt";
 import { CadastrosFiscais } from "@/components/CatalogoFiscal";
+import { EventosNfe } from "@/components/EventosNfe";
 import { GerenciamentoFiscal } from "@/components/GerenciamentoFiscal";
 import { ConsultaCnpjFiscal } from "@/components/ConsultaCnpjFiscal";
 import { OnboardingSpedy } from "@/components/OnboardingSpedy";
@@ -415,6 +416,7 @@ function Painel({ empresa, chave }: { empresa: string; chave: string }) {
             </Button>
           )}
           {previa.detalhes && <EmissaoHomologacao empresa={empresa} r={previa} />}
+          <EventosNfe key={empresa+":"+idRascunho(previa)} empresa={empresa} rascunhoId={idRascunho(previa)}/>
           <Button
             variant="destructive"
             onClick={() => {

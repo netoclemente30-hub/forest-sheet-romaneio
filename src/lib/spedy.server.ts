@@ -107,7 +107,7 @@ export async function storeAdmin(): Promise<Store> {
       return data as Documento | null;
     },
     async atualizar(id, campos) {
-      await db.from("fiscal_documentos").update({ ...campos, atualizado_em: agoraIso() }).eq("id", id).throwOnError();
+      await db.from("fiscal_documentos").update({ ...campos, atualizado_em: agoraIso() }).eq("id", id).neq("status","evento_pendente").throwOnError();
     },
     async inutilizacao(empresa, serie, inicio, fim, justificativa) {
       const { data: outras } = await db.from("fiscal_inutilizacoes").select("id,inicio,fim,serie")

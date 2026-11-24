@@ -237,6 +237,7 @@ export async function emitirNota(
   exigirPronto(diag);
   const http = ctx.http!;
   let doc = (await store.documento(empresa, rascunhoId)) ?? (await store.criarDocumento(empresa, rascunhoId, origem));
+  if(doc.status==="evento_pendente")throw new ErroFiscal("evento_pendente","Existe um evento pendente. Consulte os eventos fiscais da nota.");
   if (FINAIS.includes(doc.status))
     return { situacao: doc.status, documento: doc, mensagem: "Nota já está em estado final; nada foi reenviado." };
   if (EM_PROCESSO.includes(doc.status)) {
@@ -278,6 +279,7 @@ export async function emitirNota(
 export async function consultarNota(ctx: { http: Http | null; store: Store; empresa: string; usuario: string }, rascunhoId: string): Promise<ResultadoEmissao> {
   const doc = await ctx.store.documento(ctx.empresa, rascunhoId);
   if (!doc) return { situacao: "inexistente", documento: null, mensagem: "Nota ainda não enviada." };
+  if(doc.status==="evento_pendente")return {situacao:doc.status,documento:doc,mensagem:"Consulte os eventos fiscais para acompanhar o cancelamento ou a carta de correção."};
   if (!ctx.http) throw new ErroFiscal("chave_ausente", "Chave de homologação da empresa não configurada no servidor.");
   let r: Resposta;
   try {
