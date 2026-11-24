@@ -1,0 +1,243 @@
+LOG TÉCNICO — ÁREA DO ENGENHEIRO / GESTOR FLORESTAL
+Data de referência: 24/11/2026 — America/Manaus
+Estado: desenvolvimento local; layout inicial e fundação offline; não publicado.
+
+1. IDENTIFICAÇÃO E VÍNCULO CONFIRMADO
+
+Repositório: https://github.com/netoclemente30-hub/forest-sheet-romaneio
+Remote origin: https://github.com/netoclemente30-hub/forest-sheet-romaneio.git
+Lovable: https://lovable.dev/projects/5705700e-da9f-4996-a3d9-61406b8a4191
+Nome atual no Lovable: Gestor Florestal.
+Workspace Lovable: netoclemente 14-11 (dcba242451603e0a004b).
+Site existente indicado no README: https://forest-sheet-romaneio.lovable.app
+Confirmação: README local e README lido pelo conector Lovable apontam para o
+mesmo projeto. O último commit informado pelo Lovable coincidiu com o checkout.
+Commit-base: c18935ae0a12139f6ce1ba53fd76c2290cf8ab70
+Mensagem: fix: restore SINAFLOR felling alongside log tracing
+
+NÃO confundir com o aplicativo de depósito Oi Welcome, projeto Lovable
+3e755e32-5d7d-4891-9cbb-4c6d0a74fa4b, localizado em outro workspace.
+
+Pasta local:
+C:\Users\neto-\Documents\ChatGPT\ENGENHEIRO\forest-sheet-romaneio
+
+2. GIT E LIMITES DE EXECUÇÃO
+
+- A pasta ENGENHEIRO inicialmente estava vazia, sem repositório Git.
+- O repositório correto foi clonado; a cópia estava limpa em main.
+- Foi criada e selecionada a branch LOCAL feat/engenheiro.
+- As alterações desta entrega ainda NÃO foram commitadas.
+- Não houve push da branch, PR, merge, alteração remota de main ou publicação.
+- Nenhuma migração foi criada/executada; nenhum dado de produção foi alterado.
+- O site publicado e o editor Lovable ainda não contêm esta implementação.
+- O status local contém arquivos modificados e novos ainda não rastreados.
+  Não usar somente git diff --stat para contar a entrega: ele omite os novos.
+
+3. AUDITORIA DA ESTRUTURA EXISTENTE
+
+- React + TypeScript + TanStack Start/Router; rotas por arquivos.
+- Tailwind e componentes shadcn/Radix; identidade verde, tons claros e Barlow.
+- Raiz: src/routes/__root.tsx. Estrutura operacional: src/components/AppShell.tsx.
+- Apresentação: src/components/apresentacao/ApresentacaoPagina.tsx.
+- Dados operacionais consultados no cliente após autenticação; React Query.
+- Estrutura existente usa empresa_id, empresa_usuarios, RLS e permissões/RPCs.
+- Offline operacional preexistente: IndexedDB, fila, cache e service worker.
+- Manejo e Serraria compartilham estruturas operacionais com origem explícita.
+- Regras lidas: AGENTS.md, src/components/AGENTS.md, src/lib/AGENTS.md,
+  src/routes/README.md.
+- Não editar manualmente arquivos gerados, migrations ou drizzle.
+- Não reescrever histórico publicado. Main sincroniza com o Lovable.
+- Esta auditoria foi de código/estrutura, não uma auditoria do banco em produção.
+
+4. LAYOUT IMPLEMENTADO
+
+- Botão/link Área do Engenheiro inserido no cabeçalho da apresentação e no hero.
+- Acessar sistema e seu diálogo de login foram preservados.
+- Nova rota /engenheiro, título próprio e meta robots noindex/nofollow.
+- A rota reutiliza a identidade visual existente.
+- Abas navegáveis com componentes Radix e estados vazios:
+  Painel; Clientes; Propriedades; Projetos; Inventário; Mapas; Volumetria;
+  Estatísticas; PMFS/POA; Relatórios; Sincronização.
+- Grade responsiva: 2 colunas no celular, 3 no intermediário, 6 no desktop.
+- Botão de retorno à apresentação.
+- Indicador Em preparação e aviso de que acesso/cadastros serão configurados.
+- Nenhum cliente, propriedade, árvore ou projeto fictício inserido na interface.
+- Sincronização exibe explicitamente que ainda não está disponível.
+
+5. ISOLAMENTO ATUAL E LIMITE DE SEGURANÇA
+
+AppShell foi dividido em um seletor externo e OperationalAppShell.
+Para /engenheiro e /engenheiro/, o seletor renderiza Outlet e não monta os
+hooks operacionais de autenticação, consultas de empresas ou sincronização.
+As demais rotas continuam utilizando a estrutura operacional existente.
+
+A Área do Engenheiro atual é uma PRÉVIA PÚBLICA VAZIA, não uma área privada
+com autorização pronta. Não existe novo papel de engenheiro, sessão própria,
+RLS de engenharia, cadastro de escritório ou endpoint de gravação.
+O isolamento implementado evita carregar os módulos e dados operacionais na
+prévia. Não equivale a um sistema de permissões completo para dados futuros.
+As regras existentes de Manejo/Serraria não foram ampliadas nem substituídas.
+
+6. PRIMEIRO INCREMENTO FUNCIONAL — FUNDAÇÃO OFFLINE
+
+Implementação interna em src/lib/engenheiro, ainda SEM conexão com a interface:
+
+- coleta.ts: schema Zod estrito para número, espécie, DAP em cm, altura comercial
+  opcional em metros e coordenadas opcionais WGS84.
+- Rejeita medidas não finitas/não positivas e coordenadas fora dos intervalos.
+- Exige latitude e longitude juntas; não infere datum nem transforma UTM.
+- dapPorCap: conversão geométrica CAP/pi com entrada positiva e finita.
+- Não estima volume, não define fator de forma e não autoriza exploração.
+- rascunhos.ts: IndexedDB separado, gestor-florestal-engenheiro-v1.
+- Chave de segregação: usuário + escritório + projeto; árvore por número.
+- Gravação aguarda conclusão da transação; atualização não duplica a chave.
+- Reabertura preserva os rascunhos.
+- Sem envio ao servidor e sem replay para estoque de toras.
+
+IMPORTANTE: escopo passado à biblioteca não é prova de autorização. A UI deve
+permanecer desconectada até existir identidade/permissão de engenharia validada.
+IndexedDB não fornece, sozinho, criptografia nem isolamento contra alguém que
+controle o mesmo perfil de navegador. Revisar proteção em aparelhos compartilhados.
+Faltam fila de operações auditáveis, conflitos, sincronização, gestão de sessão,
+exportação/recuperação, tratamento de quota e testes reais de armazenamento.
+Há pontos a endurecer antes da integração: falha de leitura por registro corrompido
+e fechamento de conexão aberta tardiamente após evento blocked.
+
+7. FONTES LEGAIS E PESQUISA XENDRA
+
+Arquivos em docs/engenheiro:
+- FONTES.md: índice com origem, escopo, status e ressalva de vigência.
+- fontes.json: URLs, instante de download, status e SHA-256 dos downloads válidos.
+- baixar-fontes.ps1: reprodução do download do recorte selecionado.
+- fontes/: originais oficiais; não foram transformados em regras de negócio.
+
+13 documentos/fontes baixados com sucesso, além do HTML do catálogo SEDAM:
+1) TR 14 SEDAM/CODEF — apresentação de PMFS e POA.
+2) TR 13 SEDAM/CODEF — monitoramento florestal.
+3) Decreto RO 23.481/2018 — procedimentos técnicos de PMFS.
+4) IN SEDAM 04/2025 — TRMFM eletrônico.
+5) IN SEDAM 11/2025 — AUTEX/CAR.
+6) Portaria SEDAM 137/2024 — gestão florestal.
+7) Portaria SEDAM 499/2022 — calendário florestal.
+8) IN MMA 05/2006 — procedimentos técnicos de PMFS.
+9) Resolução CONAMA 406/2009 — manejo madeireiro no Bioma Amazônia.
+10) Manual SINAFLOR — planilha POA/importação do inventário 100%.
+11) Lei 12.651/2012 — texto atualizado disponibilizado pela Câmara.
+12) Decreto 5.975/2006 — texto atualizado disponibilizado pela Câmara.
+13) Página do Ibama sobre manejo florestal sustentável.
+
+Origem principal: https://www.sedam.ro.gov.br/codef
+O recorte NÃO representa toda a legislação ambiental. A presença de uma norma
+no catálogo oficial não confirma sua vigência integral. Alterações, revogações,
+normas posteriores, condicionantes por imóvel e aplicação por competência ainda
+exigem revisão técnica/jurídica. PDFs foram baixados e a assinatura de formato
+foi conferida; não foi concluída leitura jurídica integral de cada documento.
+Não fixar automaticamente DMC, ciclo, intensidade, espécies ou aprovação de PMFS.
+Atualizar especialmente listas de espécies protegidas/CITES e normas estaduais
+posteriores antes de implementar validações legais.
+
+Xendra: pesquisas localizaram referências públicas de uso e contratação, mas
+nenhum manual oficial do fornecedor foi confirmado/acessado nesta execução.
+Referência oficial localizada em busca: relatório da SEMA Porto Velho em
+https://sema.portovelho.ro.gov.br/uploads/arquivos/2019/03/28822/1551956211avaliacao-ecologica-rapida.pdf
+O leitor web recusou o arquivo por tamanho; não foi baixado nem auditado inteiro.
+A tentativa de baixar o registro PNCP 04092680000171-1-000138/2026 falhou
+por redirecionamento HTTP 301; a falha consta em fontes.json.
+Não houve acesso ao software, licença, código, telas privadas ou documentação
+proprietária Xendra. Não afirmar paridade, compatibilidade de arquivos ou fórmulas.
+
+8. ARQUIVOS DE CÓDIGO MODIFICADOS / CRIADOS
+
+Modificados:
+- src/components/AppShell.tsx — seleção da estrutura isolada.
+- src/components/apresentacao/ApresentacaoPagina.tsx — links de entrada.
+- src/routeTree.gen.ts — atualizado AUTOMATICAMENTE pelo TanStack no build.
+- src/test/app-routing.test.tsx — teste de correspondência de /engenheiro.
+
+Novos:
+- src/routes/engenheiro.tsx
+- src/components/engenheiro/EngenheiroPagina.tsx
+- src/lib/engenheiro/coleta.ts
+- src/lib/engenheiro/rascunhos.ts
+- src/lib/engenheiro/rascunhos.test.ts
+- src/test/engenheiro.test.tsx
+- docs/engenheiro/* — índice, fontes, script e este log.
+
+9. TESTES E VALIDAÇÃO EXECUTADOS
+
+- Testes focados: 5 arquivos / 22 testes PASSARAM.
+- Suíte completa: 94 arquivos / 534 testes PASSARAM.
+- TypeScript: tsc --noEmit concluiu com código 0, sem diagnósticos.
+- Build Vite/Nitro: concluiu com código 0; não executou deploy.
+- Novos testes cobrem: abas, estado vazio, ausência de montagem do useAuth
+  operacional, rota, persistência/reabertura, atualização sem duplicação,
+  segregação de escopos, entrada inválida, coordenadas e conversão CAP/DAP.
+- Testes existentes de navegação, permissões, operações e offline também passaram
+  na suíte, dentro dos mocks/ambientes de teste do repositório.
+- Navegador: rota e identidade visual conferidas no desktop; dimensão 390x844
+  conferida, clique na aba Inventário e retorno à apresentação funcionaram.
+- O cabeçalho da apresentação quebra os dois botões em linhas diferentes no
+  celular. Ajuste pendente: agrupá-los na mesma linha quando houver espaço.
+- Não foram realizados login real, ensaio offline de PWA, testes em celular
+  físico, teste de RLS em ambiente isolado ou validação florestal profissional.
+
+Evidências locais, ignoradas por Git por causa da regra *.log:
+- docs/engenheiro/testes-focados.log
+- docs/engenheiro/testes-completos.log
+- docs/engenheiro/typescript.log
+- docs/engenheiro/build.log
+
+Comandos utilizados, executados a partir da raiz do repositório:
+node node_modules/vitest/vitest.mjs run
+node node_modules/typescript/bin/tsc --noEmit
+node node_modules/vite/bin/vite.js build
+
+10. AMBIENTE E RESSALVAS DE REPRODUTIBILIDADE
+
+- Node disponível: v24.22.3. npm e bun não estavam disponíveis no PATH inicial.
+- Repositório traz bun.lock; instalação local feita com pnpm --lockfile=false.
+- Portanto, as versões instaladas não necessariamente reproduzem bun.lock.
+- pnpm reportou scripts de instalação ignorados e overrides não lidos.
+- Não foram alterados package.json nem bun.lock para resolver o ambiente.
+- O alias preexistente de entities no Vite exigiu uma cópia LOCAL de entities
+  4.5.0 da instalação pnpm para node_modules/entities. Não é arquivo versionado.
+- pnpm-workspace.yaml gerado durante instalação foi removido; não faz parte
+  da implementação.
+- Build emitiu avisos de imports dinâmicos e de padrões PWA sem arquivos em dist.
+  Não considerar o service worker validado por este build local.
+- Repetir build/testes no ambiente oficial com o gerenciador/lockfile original
+  antes de integrar. Não alterar configuração PWA de produção sem diagnóstico.
+- Prévia bem-sucedida em http://127.0.0.1:5174/engenheiro, estritamente local.
+  A porta 5173 não ficou acessível ao navegador; nenhuma URL pública foi criada.
+
+11. PRÓXIMAS ETAPAS PARA O PROGRAMADOR
+
+1) Revisar e commitar o estado local exclusivamente em feat/engenheiro.
+   O envio remoto da branch ainda não ocorreu; verificar automações antes do push.
+2) Ajustar agrupamento dos botões no cabeçalho móvel e repetir QA responsivo.
+3) Definir identidade do escritório/engenheiro e permissões independentes;
+   testar negação de acesso a Manejo/Serraria sem alterar acessos existentes.
+4) Projetar tabelas de clientes, propriedades e projetos com isolamento no
+   servidor, políticas/RPCs e auditoria em ambiente de desenvolvimento separado.
+   Seguir a regra do repositório para alterações de schema via Lovable.
+5) Endurecer rascunhos offline, depois conectar formulários autenticados;
+   acrescentar IDs de operação, auditoria, recuperação e resolução de conflitos.
+6) Implementar importação com prévia e validação de unidades, identidade de
+   árvores, espécies e sistema de coordenadas, sem reutilizar estoque operacional.
+7) Validar fórmulas e métodos de volumetria/estatística com engenheiro responsável
+   e conjuntos de referência antes de gerar relatórios técnicos/PMFS/POA.
+8) Consolidar vigência e aplicabilidade das normas; obter documentação pública
+   verificável do Xendra para comparação funcional limitada ao que for comprovado.
+9) Testar PWA/cold start, perda de conexão, troca de conta/escritório, revogação,
+   quota e conflitos em aparelhos reais e em ambiente sem dados de produção.
+
+Não fazer merge em main, publicação ou migração em produção nesta fase.
+
+12. ATUALIZAÇÃO — PONTO DE RESTAURAÇÃO SOLICITADO
+Em 24/11/2026, o usuário solicitou commitar este estado na branch feat/engenheiro.
+As observações anteriores sobre ausência de commit descrevem o momento do log original.
+Este arquivo integra o commit de restauração; identificar seu hash com git log -1.
+Nenhum push, merge ou publicação autorizado/executado nesta etapa.
+proj4 já existe no package.json; @turf/boolean-point-in-polygon ainda não foi adicionado.
+Importação de polígonos UPA/APP, censo UTM/Lat-Lon, bloqueios APP/DMC e exportação
+POA/Sinaflor+ permanecem NÃO IMPLEMENTADOS nesta nova área.

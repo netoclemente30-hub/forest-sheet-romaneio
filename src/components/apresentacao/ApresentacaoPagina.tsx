@@ -106,15 +106,16 @@ export function ApresentacaoPagina() {
   return (
     <main className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-forest text-primary-foreground">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-4 py-3">
           <TreePine className="size-6 shrink-0 text-accent" />
           <div className="min-w-0">
             <p className="font-display text-xl font-bold uppercase leading-none">Gestor Florestal</p>
             <p className="text-[11px] uppercase tracking-widest opacity-75 hidden sm:block">Do manejo à serraria</p>
           </div>
+          <Button asChild variant="outline" className="ml-auto min-h-11 border-primary-foreground/50 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"><Link to="/engenheiro">Área do Engenheiro</Link></Button>
           <Button
             size="lg"
-            className="ml-auto h-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90"
+            className="h-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90"
             onClick={() => { setCadastro(false); setAberto(true); }}
           >
             Acessar sistema
@@ -133,6 +134,7 @@ export function ApresentacaoPagina() {
             aplicativo que funciona no mato, mesmo sem sinal.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild size="lg" variant="outline" className="h-12 border-primary-foreground/50 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"><Link to="/engenheiro">Área do Engenheiro</Link></Button>
             <Button size="lg" className="h-12 bg-accent px-6 text-base text-accent-foreground hover:bg-accent/90" onClick={() => { setCadastro(false); setAberto(true); }}>
               Acessar sistema
               <ArrowRight className="size-4" />

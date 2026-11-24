@@ -55,6 +55,13 @@ function nomeEmpresaSalva(usuario: string): string | null {
 }
 
 export function AppShell() {
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  // The empty engineering workspace must not mount operational auth, queries or sync.
+  if (pathname === "/engenheiro" || pathname === "/engenheiro/") return <Outlet />;
+  return <OperationalAppShell />;
+}
+
+function OperationalAppShell() {
   const installation = useInstallApp();
   const { session, loading, isSuperAdmin, papel, empresaId, permissoesCarregando, estadoPermissoes } = useAuth();
   const qc = useQueryClient();
