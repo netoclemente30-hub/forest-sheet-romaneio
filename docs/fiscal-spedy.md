@@ -1,5 +1,21 @@
 # Fiscal em homologação
 
+## Cancelamento e carta de correção
+
+Abra a nota no Fiscal e use **Cancelamento e carta de correção → Consultar eventos fiscais**. As ações ficam disponíveis quando a Spedy confirma a autorização da NF-e. Escolha **Cancelar NF-e** ou **Carta de correção**, preencha o texto e marque a confirmação para enviar em homologação. O cancelamento exige justificativa de 15 a 255 caracteres. A CC-e aceita de 15 a 1.000 caracteres.
+
+O servidor autoriza com a permissão fiscal da empresa, localiza a nota pelo vínculo salvo e confere o CNPJ cadastrado em empresas, o CNPJ retornado na nota e o ambiente de homologação na nota e nas configurações. O texto da solicitação, o usuário e os resultados ficam na tabela fiscal_eventos existente.
+
+O recebimento HTTP inicia o acompanhamento. **Consultar eventos fiscais** mostra códigos, mensagens e protocolos da Spedy. O cancelamento se confirma por situação canceled ou pelo evento correspondente aceito. A CC-e se confirma por um novo evento correctionLetter com código 135 e protocolo. A identificação dos eventos anteriores impede confundir uma carta antiga com uma nova.
+
+Uma reserva atômica em fiscal_documentos impede envios simultâneos. Em timeout ou resposta incerta, a nota conserva o estado evento_pendente. As consultas comuns e a emissão preservam essa trava. A confirmação de um evento libera somente a reserva consultada. Solicitações sem resultado comprovado exigem reconciliação administrativa e permanecem bloqueadas para reenvio automático.
+
+A CC-e deve respeitar as restrições fiscais para valores e tributos, mudança do emitente ou destinatário e datas. Novas cartas devem consolidar as correções anteriores. Os prazos e as condições de cancelamento são verificados pela SEFAZ.
+
+Implementação validada com serviços simulados. A validação integrada com credenciais e eventos de homologação exige execução autorizada no ambiente de testes.
+
+[Cancelamento na Spedy](https://docs.spedy.com.br/api-reference/nf-e/cancelar-nf-e) · [CC-e na Spedy](https://docs.spedy.com.br/api-reference/nf-e/carta-de-corre%C3%A7%C3%A3o) · [Eventos da Spedy](https://docs.spedy.com.br/api-reference/nf-e/listar-eventos-da-nf-e)
+
 ## Gerenciamento de notas
 
 A listagem reúne destinatário, romaneio, valor e situação, com busca e filtro. **Nova NF-e do romaneio** leva à seleção de cargas de toras ou madeira serrada. A edição tem Cabeçalho, Cliente, Produtos, Totais, Transporte e Fisco.

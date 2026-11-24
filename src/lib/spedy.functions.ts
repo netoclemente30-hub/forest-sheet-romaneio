@@ -19,6 +19,32 @@ const erro = (e: unknown) => {
 };
 const base = z.object({ empresa: z.string().uuid() });
 
+export const consultarEventosNfe = createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth])
+  .inputValidator(base.extend({rascunhoId:z.string().min(1).max(120)}))
+  .handler(async({data,context})=>{
+    await autorizar(context as unknown as Ctx,data.empresa);
+    try{
+      const {httpSandbox}=await import("./spedy.server");
+      const {storeEventos}=await import("./spedy-eventos.server");
+      const {consultarEventosNota}=await import("./spedy-eventos.core");
+      return {ok:true as const,...await consultarEventosNota({http:httpSandbox(data.empresa),store:await storeEventos(),empresa:data.empresa,usuario:context.userId},data.rascunhoId)};
+    }catch(e){return e instanceof ErroFiscal?{ok:false as const,mensagem:e.message}:{ok:false as const,mensagem:"Falha ao consultar os eventos fiscais."};}
+  });
+
+export const enviarEventoNfe = createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth])
+  .inputValidator(base.extend({rascunhoId:z.string().min(1).max(120),confirmacao:z.literal("HOMOLOGACAO"),tipo:z.enum(["cancelamento","correcao"]),texto:z.string().max(1000)}))
+  .handler(async({data,context})=>{
+    await autorizar(context as unknown as Ctx,data.empresa);
+    try{
+      const {httpSandbox}=await import("./spedy.server");
+      const {storeEventos}=await import("./spedy-eventos.server");
+      const {enviarEventoNota}=await import("./spedy-eventos.core");
+      return {ok:true as const,...await enviarEventoNota({http:httpSandbox(data.empresa),store:await storeEventos(),empresa:data.empresa,usuario:context.userId},data.rascunhoId,{tipo:data.tipo,texto:data.texto})};
+    }catch(e){return e instanceof ErroFiscal?{ok:false as const,mensagem:e.message}:{ok:false as const,mensagem:"Falha na operação. Consulte o histórico antes de tentar novamente."};}
+  });
+
 export const verificarSpedy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(base)
