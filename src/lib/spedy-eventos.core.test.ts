@@ -37,9 +37,6 @@ function fixture(
     config: async () => ({ spedy_company_id: "empresa-spedy", cnpj: "11222333000181" }),
     cnpj: async () => "11222333000181",
     documento: async (empresa) => (empresa === doc.empresa_id ? { ...doc } : null),
-    atualizar: async (_, campos) => {
-      Object.assign(doc, campos);
-    },
     reservarEvento: async () => {
       if (doc.status !== "authorized") return null;
       doc.status = "evento_pendente";

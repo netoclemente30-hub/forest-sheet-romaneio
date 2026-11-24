@@ -31,7 +31,7 @@ export type EventoSpedy = {
   codigo: string;
   mensagem: string;
 };
-export type StoreEventos = Pick<Store, "documento" | "atualizar" | "evento" | "config"> & {
+export type StoreEventos = Pick<Store, "documento" | "evento" | "config"> & {
   cnpj(empresa: string): Promise<string>;
   reservarEvento(doc: Documento, usuario: string): Promise<Documento | null>;
   finalizarEvento(doc: Documento, campos: Partial<Documento>): Promise<boolean>;
@@ -95,13 +95,19 @@ export async function consultarEventosNota(ctx: Ctx, rascunho: string) {
   let situacao = String(nota["status"] ?? doc.status);
   if (doc.status === "evento_pendente") {
     const inicio = await ctx.store.ultimoInicio(ctx.empresa, doc.id);
-    let dados: { tipo?: string; anteriores?: string[] } | null = null;
+    let dados: { tipo?: string; anteriores?: string[]; tentativa?: string } | null = null;
     try {
       dados = JSON.parse(inicio?.resultado ?? "null");
     } catch {
       /* Registro incompleto exige reconciliação administrativa. */
     }
-    if (!inicio || !doc.tentativa_em || Date.parse(inicio.criado_em) < Date.parse(doc.tentativa_em))
+    if (
+      !inicio ||
+      !doc.tentativa_em ||
+      !dados?.tentativa ||
+      !Number.isFinite(Date.parse(dados.tentativa)) ||
+      Date.parse(dados.tentativa) !== Date.parse(doc.tentativa_em)
+    )
       dados = null;
     const tipo =
       dados?.tipo === "cancelamento"
@@ -178,7 +184,11 @@ export async function enviarEventoNota(ctx: Ctx, rascunho: string, entrada: Even
     documento_id: doc.id,
     usuario_id: ctx.usuario,
     acao: "evento_inicio",
-    resultado: JSON.stringify({ ...v.data, anteriores: anteriores.map((e) => e.id) }),
+    resultado: JSON.stringify({
+      ...v.data,
+      tentativa: reserva.tentativa_em,
+      anteriores: anteriores.map((e) => e.id),
+    }),
   });
   let resposta;
   try {

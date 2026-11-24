@@ -7,14 +7,6 @@ export async function storeEventos(): Promise<StoreEventos> {
     documento: base.documento,
     config: base.config,
     evento: base.evento,
-    async atualizar(id, campos) {
-      await db
-        .from("fiscal_documentos")
-        .update({ ...campos, atualizado_em: new Date().toISOString() })
-        .eq("id", id)
-        .eq("status", "evento_pendente")
-        .throwOnError();
-    },
     async cnpj(empresa) {
       const { data } = await db
         .from("empresas")

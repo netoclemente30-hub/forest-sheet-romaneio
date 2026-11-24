@@ -17,13 +17,21 @@ const verificar = verificarSpedy as unknown as (req: {
   context: unknown;
   data: { empresa: string };
 }) => Promise<unknown>;
-it.each([consultarEventosNfe,enviarEventoNfe])("nega eventos antes de acessar segredos quando pode_fiscal é falso",async operacao=>{
-  const rpc=vi.fn(async()=>({data:false,error:null}));
-  const handler=operacao as unknown as (r:unknown)=>Promise<unknown>;
-  await expect(handler({context:{userId:"u",supabase:{rpc}},data:{empresa:"outra",rascunhoId:"r"}})).rejects.toThrow();
-  expect(rpc).toHaveBeenCalledWith("pode_fiscal",{_empresa:"outra"});
-  expect(sandbox).not.toHaveBeenCalled();
-});
+it.each([consultarEventosNfe, enviarEventoNfe])(
+  "nega eventos antes de acessar segredos quando pode_fiscal é falso",
+  async (operacao) => {
+    const rpc = vi.fn(async () => ({ data: false, error: null }));
+    const handler = operacao as unknown as (r: unknown) => Promise<unknown>;
+    await expect(
+      handler({
+        context: { userId: "u", supabase: { rpc } },
+        data: { empresa: "outra", rascunhoId: "r" },
+      }),
+    ).rejects.toThrow();
+    expect(rpc).toHaveBeenCalledWith("pode_fiscal", { _empresa: "outra" });
+    expect(sandbox).not.toHaveBeenCalled();
+  },
+);
 it.each([
   [false, "a", "a"],
   [true, "a", "b"],
