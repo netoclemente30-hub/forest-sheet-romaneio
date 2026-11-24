@@ -12,8 +12,8 @@ import modelo from "@/assets/modelo-base.xlsx.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileSpreadsheet, Download } from "lucide-react";
-import { guardarRascunho, lerRascunho, contextoLocal } from '@/lib/offline/rascunho';
+import { FileSpreadsheet, Download, Trash2 } from "lucide-react";
+import { guardarRascunho, lerRascunho, excluirRascunho, contextoLocal } from '@/lib/offline/rascunho';
 
 export const Route = createFileRoute("/importar")({
   staticData: { sitemap: false },
@@ -39,14 +39,14 @@ function Importar() {
   const podeImportar = isAdmin || isSuperAdmin;
   const nav = useNavigate();
   const [status, setStatus] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
   const [preparado, setPreparado] = useState<{ arvores: ArvoreBase[]; calc: Row[]; invalidas: number; repetidas: number; arquivo: string } | null>(null);
   const [autexPadrao, setAutexPadrao] = useState("");
   useEffect(() => {
     let ativo = true;
     void lerRascunho<{ preparado: NonNullable<typeof preparado>; autexPadrao: string }>('ficha-importacao').then(r => {
       if (ativo && r) { setPreparado(r.preparado); setAutexPadrao(r.autexPadrao); }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => { if (ativo) setBusy(false); });
     return () => { ativo = false; };
   }, []);
 
@@ -134,6 +134,9 @@ function Importar() {
       });
       if (error) throw new Error(error.message);
 
+      try { await excluirRascunho('ficha-importacao', empresa); }
+      catch { toast.warning("Ficha importada, mas a prévia não pôde ser apagada deste aparelho. Descarte-a antes de importar outra vez."); }
+
       await qc.invalidateQueries();
       setStatus(`Pronto! ${av.length} árvores e ${tv.length} toras importadas.${dup ? ` ${dup} plaqueta(s) repetida(s) ignorada(s).` : ""}`);
       toast.success("Ficha importada e vinculada ao manejo");
@@ -147,6 +150,20 @@ function Importar() {
     finally { setBusy(false); }
   }
 
+  async function descartar() {
+    if (busy || !preparado) return;
+    setBusy(true);
+    try {
+      await excluirRascunho('ficha-importacao');
+      setPreparado(null);
+      setAutexPadrao("");
+      setStatus("");
+      toast.success("Ficha descartada — nenhum dado foi importado");
+    } catch {
+      toast.error("Não foi possível descartar a ficha neste aparelho. Tente novamente.");
+    } finally { setBusy(false); }
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold uppercase">Importar planilha</h1>
@@ -157,7 +174,7 @@ function Importar() {
       <label className={`flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary p-8 text-center bg-card ${busy ? "opacity-50" : "cursor-pointer"}`}>
         <FileSpreadsheet className="size-10 text-primary" />
         <span className="font-semibold">Escolher arquivo</span>
-        <input type="file" aria-label="Importar ficha de campo" accept=".pdf,.xlsx,.xlsm,.xls" className="hidden" disabled={busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) void processar(file); }} />
+        <input type="file" aria-label="Importar ficha de campo" accept=".pdf,.xlsx,.xlsm,.xls" className="hidden" disabled={busy} onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void processar(file); }} />
       </label>
       {preparado && <section className="space-y-3 border-t pt-4">
         <div className="text-sm break-all">{preparado.arquivo}</div>
@@ -166,7 +183,10 @@ function Importar() {
         <Label htmlFor="autex-importacao">AUTEX para árvores sem autorização no arquivo</Label>
         <Input id="autex-importacao" value={autexPadrao} onChange={(e) => setAutexPadrao(e.target.value)} />
         <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr>{["Nº", "Espécie", "CAP", "DAP", "Altura", "Volume", "Picada"].map((h) => <th key={h} className="p-2 text-left">{h}</th>)}</tr></thead><tbody>{preparado.arvores.slice(0, 5).map((a) => <tr key={`${a.numero}|${a.autex}`} className="border-t"><td className="p-2">{a.numero}</td><td className="p-2">{a.nome_vulgar}</td><td className="p-2">{a.cap ?? "—"}</td><td className="p-2">{a.dap?.toFixed(2) ?? "—"}</td><td className="p-2">{a.altura ?? "—"}</td><td className="p-2">{a.volume ?? "—"}</td><td className="p-2">{a.picada ?? "—"}</td></tr>)}</tbody></table></div>
-        <Button disabled={busy} onClick={confirmar}>Confirmar importação</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={busy} onClick={confirmar}>Confirmar importação</Button>
+          <Button variant="outline" disabled={busy} onClick={descartar}><Trash2 /> Descartar ficha</Button>
+        </div>
       </section>}
       {status && <div className="rounded-lg bg-secondary p-3 text-sm">{status}</div>}
       {busy && <Button disabled className="w-full">Importando…</Button>}

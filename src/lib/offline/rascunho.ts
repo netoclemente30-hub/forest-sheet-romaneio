@@ -21,3 +21,8 @@ export async function lerRascunho<T>(nome: string, empresa?: string | null): Pro
   const c = await contextoLocal(empresa);
   return (await idb.get<{ dados: T }>('cache', `rascunho:${c.usuario}:${c.empresa}:${nome}`))?.dados ?? null;
 }
+
+export async function excluirRascunho(nome: string, empresa?: string | null) {
+  const c = await contextoLocal(empresa);
+  await idb.del('cache', `rascunho:${c.usuario}:${c.empresa}:${nome}`);
+}
