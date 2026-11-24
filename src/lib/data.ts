@@ -26,7 +26,7 @@ export const autexQuery = {
     }),
 };
 
-async function fetchAll<T>(table: "toras" | "arvores", order: string): Promise<T[]> {
+async function fetchAll<T>(table: "toras" | "arvores" | "romaneios", order: string): Promise<T[]> {
   const out: T[] = [];
   const size = 1000;
   const emp = getEmpresaAtiva();
@@ -35,6 +35,7 @@ async function fetchAll<T>(table: "toras" | "arvores", order: string): Promise<T
       .from(table)
       .select("*")
       .order(order, { ascending: true })
+      .order(table === "toras" ? "empresa_id" : "id")
       .range(from, from + size - 1);
     if (emp) q = q.eq("empresa_id", emp);
     const { data, error } = await q;
@@ -72,15 +73,5 @@ export const romaneiosQuery = {
   networkMode: "always" as const,
   queryKey: ["romaneios"],
   queryFn: () =>
-    comCache("romaneios", async () => {
-      let q = supabase
-        .from("romaneios")
-        .select("*")
-        .order("created_at", { ascending: false });
-      const emp = getEmpresaAtiva();
-      if (emp) q = q.eq("empresa_id", emp);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Romaneio[];
-    }),
+    comCache("romaneios", () => fetchAll<Romaneio>("romaneios", "created_at").then(rows => rows.reverse())),
 };

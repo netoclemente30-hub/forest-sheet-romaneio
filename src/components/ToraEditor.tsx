@@ -4,13 +4,14 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import type { Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { fila } from "@/lib/offline/fila";
 import { estaOnline } from "@/lib/offline/sync";
-import { capturarLog, gravarRegistro } from "@/lib/registro";
+import { sincronizar } from "@/lib/offline/sync";
+import { corrigirToraLocal } from "@/lib/offline/editar-tora";
+import { capturarLog } from "@/lib/registro";
 import { registrarOperacao } from "@/lib/registro-operacao";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +46,7 @@ export async function excluirTora(t: Tora): Promise<boolean> {
   return true;
 }
 
-export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[]; onDone: () => void }) {
+export function ToraEditor({ tora, toras, onDone, podeExcluir = true }: { tora: Tora; toras: Tora[]; onDone: () => void; podeExcluir?: boolean }) {
   const qc = useQueryClient();
   const [e, setE] = useState<EdicaoTora>(() => editarDe(tora));
   const [busy, setBusy] = useState(false);
@@ -66,39 +67,22 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
     setBusy(true);
     try {
     const dados = dadosDaEdicao(e);
+    if (await corrigirToraLocal(fila(), tora, dados)) {
+      toast.success('Correção guardada neste aparelho. A tora já aparece com os novos dados.');
+      onDone();
+      return;
+    }
+    if (!podeExcluir) throw new Error('Este lançamento já saiu da lista local. Atualize a lista antes de editar.');
     const mudouPlaqueta = dados.plaqueta !== e.plaqueta;
     const log = await capturarLog(
       "Tora editada",
       `Plaqueta ${mudouPlaqueta ? `${e.plaqueta} → ${dados.plaqueta}` : e.plaqueta} · ${dados.especie ?? "sem espécie"} · árvore ${dados.arvore}${dados.secao ? `-${dados.secao}` : ""} · ${fmtM3(dados.volume)} m³`,
     );
     setBusy(true);
-    if (!estaOnline()) {
-      await fila().enfileirar({ tipo: "tora_update", plaqueta: e.plaqueta, empresa_id: e.empresa_id, autex: dados.autex, dados, log });
-      setBusy(false);
-      toast.success(`Plaqueta ${dados.plaqueta} salva offline — será enviada quando conectar`);
-      onDone();
-      return;
-    }
-    // A AUTEX digitada precisa existir no cadastro da empresa antes de gravar na tora.
-    if (dados.autex) {
-      const { error: ea } = await supabase
-        .from("autex")
-        .upsert({ numero: dados.autex, empresa_id: e.empresa_id }, { onConflict: "empresa_id,numero", ignoreDuplicates: true });
-      if (ea) {
-        setBusy(false);
-        toast.error(ea.message);
-        return;
-      }
-    }
-    try { await registrarOperacao("tora_update", e.empresa_id, dados, [e.plaqueta], log); }
-    catch (error) {
-      setBusy(false);
-      toast.error(error instanceof Error ? error.message : "Não foi possível editar");
-      return;
-    }
-    setBusy(false);
-    toast.success(mudouPlaqueta ? `Plaqueta ${e.plaqueta} alterada para ${dados.plaqueta}` : `Plaqueta ${e.plaqueta} alterada`);
-    await refresh();
+    await fila().enfileirar({ tipo: "tora_update", plaqueta: e.plaqueta, empresa_id: e.empresa_id, autex: dados.autex, dados, log });
+    toast.success(`Plaqueta ${dados.plaqueta} guardada neste aparelho — será enviada quando conectar`);
+    onDone();
+    void sincronizar(fila()).then(r => { if (r.enviados) void qc.invalidateQueries({queryKey:['toras']}); }).catch(() => {});
     } catch (error) { toast.error(error instanceof Error ? error.message : "Não foi possível salvar neste aparelho"); }
     finally { setBusy(false); }
   }
@@ -153,7 +137,7 @@ export function ToraEditor({ tora, toras, onDone }: { tora: Tora; toras: Tora[];
       {campo("comprimento", "Comprimento (m)", "decimal")}
       <CartaoMedidaComercial tora={{ d_topo1: num(e.d_topo1), d_topo2: num(e.d_topo2), d_pe1: num(e.d_pe1), d_pe2: num(e.d_pe2), comprimento: num(e.comprimento), volume: digitado }} />
       <Button className="w-full h-12" disabled={busy} onClick={salvar}>Salvar alterações</Button>
-      <Button variant="destructive" className="w-full" disabled={busy} onClick={excluir}><Trash2 /> Excluir tora</Button>
+      {podeExcluir && <Button variant="destructive" className="w-full" disabled={busy} onClick={excluir}><Trash2 /> Excluir tora</Button>}
     </div>
   );
 }

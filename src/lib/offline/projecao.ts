@@ -73,7 +73,7 @@ export function projetarDados<T>(nome: string, base: T[], itens: ItemFila[], emp
     if (nome === 'toras' && op.tipo === 'romaneio_salvar') {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        if (row && op.plaquetas.includes(Number(row['plaqueta']))) rows[i] = { ...row, carregada: !item.erro, ...status };
+        if (row && op.plaquetas.includes(Number(row['plaqueta']))) rows[i] = { ...row, carregada: !item.erro, romaneio_id: item.erro ? row['romaneio_id'] : row['romaneio_id'] ?? op.log?.operacao_id ?? item.id, ...status };
       }
     }
     if (nome === 'romaneios' && op.tipo === 'romaneio_salvar') {

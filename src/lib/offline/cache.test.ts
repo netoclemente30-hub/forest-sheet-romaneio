@@ -1,7 +1,7 @@
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { getSession: vi.fn() } } }));
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { informarConexao } from "./conexao";
-import { comCache } from "./cache";
+import { comCache, guardarCopiaOffline } from "./cache";
 import { idb } from "./db";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,6 +15,18 @@ beforeEach(() => {
   vi.spyOn(supabase.auth, "getSession").mockImplementation(async () => ({
     data: { session: idUsuario ? { user: { id: idUsuario } } : null }, error: null,
   } as never));
+});
+
+it('preparação não confirma gravação se o aparelho estiver sem espaço', async () => {
+  vi.spyOn(idb, 'put').mockRejectedValue(new Error('QuotaExceededError'));
+  await expect(guardarCopiaOffline('toras', [], 'rj', 'usuario-a')).rejects.toThrow('QuotaExceededError');
+});
+
+it('preparação não grava dados recebidos pela conta anterior na conta atual', async () => {
+  const put = vi.spyOn(idb, 'put').mockResolvedValue(undefined);
+  idUsuario = 'usuario-b';
+  await expect(guardarCopiaOffline('toras', [{plaqueta:3}], 'rj', 'usuario-a')).rejects.toThrow('conta mudou');
+  expect(put).not.toHaveBeenCalled();
 });
 
 it("resposta atrasada da RJ não grava toras no cache da empresa selecionada depois", async () => {

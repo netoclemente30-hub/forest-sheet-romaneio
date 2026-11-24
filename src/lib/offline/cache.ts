@@ -13,6 +13,13 @@ async function chave(nome: string, empresa: string | null): Promise<string | nul
   return usuario + ":" + contexto + ":" + nome;
 }
 
+/** Preparação explícita: só confirma sucesso depois da gravação durável. */
+export async function guardarCopiaOffline(nome: string, dados: unknown, empresa: string, usuario: string): Promise<void> {
+  const escopo = await chave(nome, empresa);
+  if (escopo !== `${usuario}:${empresa}:${nome}`) throw new Error("A conta mudou. Reinicie a preparação offline.");
+  await idb.put("cache", { dados, salvoEm: Date.now() }, escopo);
+}
+
 export async function salvarCache(nome: string, dados: unknown, empresa = getEmpresaAtiva()): Promise<void> {
   try {
     const escopo = await chave(nome, empresa);

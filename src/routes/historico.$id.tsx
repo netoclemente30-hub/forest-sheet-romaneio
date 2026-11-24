@@ -8,6 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { capturarLog } from "@/lib/registro";
 import type { Romaneio, Tora } from "@/lib/data";
+import { romaneiosQuery, torasQuery } from "@/lib/data";
+import { useFilaOffline } from "@/hooks/useFilaOffline";
+import { getEmpresaAtiva } from "@/lib/empresa";
+import { projetarDados } from "@/lib/offline/projecao";
+import { estoqueComFila } from "@/lib/tora-origem";
 import { fmtM3, fmtM3Sinal } from "@/lib/volume";
 import { TextoMedidaComercial } from "@/components/MedidaComercial";
 import { fmtComprimentoComercial, medidaComercial, totaisComerciais } from "@/lib/medida-comercial";
@@ -119,17 +124,14 @@ function Detalhe() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const nav = useNavigate();
-  const q = useQuery({
-    queryKey: ["romaneio", id],
-    queryFn: async () => {
-      const [{ data: r, error }, { data: itens }] = await Promise.all([
-        supabase.from("romaneios").select("*").eq("id", id).single(),
-        supabase.from("toras").select("*").eq("romaneio_id", id).order("plaqueta"),
-      ]);
-      if (error) throw error;
-      return { r: r as Romaneio, itens: (itens ?? []) as Tora[] };
-    },
-  });
+  const { empresaId } = useAuth();
+  const empresa = getEmpresaAtiva() ?? empresaId;
+  const roms = useQuery(romaneiosQuery);
+  const toras = useQuery(torasQuery);
+  const pendentes = useFilaOffline();
+  const registros = projetarDados('romaneios', roms.data ?? [], pendentes.itens, empresa);
+  const registro = registros.find(r => r.id === id);
+  const q = { isLoading: roms.isLoading || toras.isLoading || pendentes.carregando, data: registro ? {r:registro, itens:estoqueComFila(toras.data ?? [], pendentes.itens, empresa).filter(t => t.romaneio_id === id)} : null };
 
   async function excluir() {
     if (!podeExcluir) return;
@@ -143,7 +145,8 @@ function Detalhe() {
   }
 
   if (q.isLoading) return <p className="text-muted-foreground">Carregando…</p>;
-  if (!q.data) return <p>Romaneio não encontrado.</p>;
+  if (roms.isError || toras.isError || pendentes.erro) return <p>Não foi possível ler todos os dados da carga neste aparelho. Conecte e atualize a cópia offline antes de exportar.</p>;
+  if (!q.data) return <p>Romaneio não encontrado na cópia deste aparelho. Conecte e atualize a cópia offline.</p>;
   const { r, itens: itensBrutos } = q.data;
   const cliente=clienteDoRomaneio(r.cliente);
   const itens = ordenarRomaneio(itensBrutos);
