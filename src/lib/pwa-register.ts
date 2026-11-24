@@ -63,6 +63,10 @@ export async function registrarServiceWorker() {
      }
      // A new worker taking over (update) re-prepares pages for ITS precache.
      navigator.serviceWorker.addEventListener("controllerchange", () => { void prepararPaginas(); });
+     if (!ouvindoReconexao) {
+       window.addEventListener("online", () => { void prepararPaginas(); });
+       ouvindoReconexao = true;
+     }
      await prepararPaginas();
   } catch {
     // falha de registro não pode quebrar o app
@@ -70,6 +74,7 @@ export async function registrarServiceWorker() {
 }
 
 let preparando: Promise<void> | null = null;
+let ouvindoReconexao = false;
 function prepararPaginas(): Promise<void> {
   preparando ??= (async () => {
      if (navigator.serviceWorker.controller && navigator.onLine) {

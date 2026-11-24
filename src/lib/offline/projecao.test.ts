@@ -4,6 +4,10 @@ import type { ItemFila } from './fila';
 
 const insert: ItemFila = { id: 'a', criadoEm: 1, op: { tipo: 'tora_insert', dados: { empresa_id: 'RJ', plaqueta: 9, volume: 2 } } };
 describe('projeção cache e fila', () => {
+  it('resposta perdida de carga conserva o ID remoto já confirmado das toras', () => {
+    const item:ItemFila = {id:'op',criadoEm:1,envio_iniciado:true,op:{tipo:'romaneio_salvar',empresa_id:'RJ',cab:{placa:'ABC',motorista:'M',julieta:'',cpf:'',data:'2026-11-24'},plaquetas:[9],total_volume:2,qtd_toras:1}};
+    expect(projetarDados('toras',[{empresa_id:'RJ',plaqueta:9,romaneio_id:'remoto',carregada:true}],[item],'RJ')[0]?.romaneio_id).toBe('remoto');
+  });
   it('plaqueta igual em outra empresa não recebe alteração ou volume', () => {
     const base = [{ empresa_id: 'Outra', plaqueta: 9, volume: 99 }];
     expect(projetarDados('toras', base, [insert], 'Outra')).toEqual(base);

@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { listarEmpresas } from "@/lib/usuarios.functions";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
+import { PrepararOffline } from "./PrepararOffline";
 import { useInstallApp } from "@/hooks/useInstallApp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MANEJO, secaoDaRota, ehRotaPublica } from "@/lib/nav";
@@ -55,7 +56,7 @@ function nomeEmpresaSalva(usuario: string): string | null {
 
 export function AppShell() {
   const installation = useInstallApp();
-  const { session, loading, isSuperAdmin, papel, permissoesCarregando, estadoPermissoes } = useAuth();
+  const { session, loading, isSuperAdmin, papel, empresaId, permissoesCarregando, estadoPermissoes } = useAuth();
   const qc = useQueryClient();
   const contaAnterior = useRef<string | null>(null);
   const [contextoPronto, setContextoPronto] = useState<string | null>(null);
@@ -202,6 +203,7 @@ export function AppShell() {
         </DialogContent>
       </Dialog>
       <SyncStatus key={session.user.id + ":" + empresaSel} />
+      {(isSuperAdmin ? empresaSel : empresaId) && <PrepararOffline key={session.user.id + ':' + (isSuperAdmin ? empresaSel : empresaId)} usuario={session.user.id} empresa={(isSuperAdmin ? empresaSel : empresaId)!} />}
       <main className="mx-auto max-w-3xl p-4">
         {manejo && (
           <nav aria-label="Manejo" className="no-print mb-4 flex flex-wrap gap-1 rounded-lg bg-muted p-1">

@@ -25,6 +25,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash2, QrCode, Printer, Pencil } from "lucide-react";
 import { ToraEditor, excluirTora } from "@/components/ToraEditor";
+import { toraLocalEditavel } from "@/lib/offline/editar-tora";
 import { registrarOperacao } from "@/lib/registro-operacao";
 
 export const Route = createFileRoute("/toras")({
@@ -65,7 +66,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [ordem, setOrdem] = useState<Ordem>("plaqueta_desc");
   const [modo, setModo] = useState<ModoMedida>("fisica");
   const [edit, setEdit] = useState<Tora | null>(null);
-  const { papel, empresaId } = useAuth();
+  const { papel, empresaId, session } = useAuth();
   const pendentes = useFilaOffline();
   const empresa = getEmpresaAtiva() ?? empresaId;
   const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
@@ -147,7 +148,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="QR code" onClick={() => setQr(t.plaqueta)}><QrCode className="h-4 w-4" /></Button>
-              {administrador && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
+              {(administrador || (podeLancar && toraLocalEditavel(t, pendentes.itens, session?.user.id))) && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Editar tora ${t.plaqueta}`} onClick={() => setEdit(t)}><Pencil className="h-4 w-4" /></Button>}
               {administrador && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={`Excluir tora ${t.plaqueta}`} onClick={async () => { if (await excluirTora(t)) await qc.invalidateQueries({ queryKey: ["toras"] }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
             </div>
           </div>
@@ -170,7 +171,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       <Sheet open={edit !== null} onOpenChange={(o) => !o && setEdit(null)}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
-          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={estoque} onDone={() => setEdit(null)} /></div>}
+          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={estoque} podeExcluir={administrador} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
 

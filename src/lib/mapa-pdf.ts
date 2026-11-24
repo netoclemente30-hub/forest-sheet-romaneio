@@ -90,19 +90,21 @@ const chavePdf = async (mapa: MapaPdf) => {
   const c = await contextoLocal(mapa.empresa_id);
   return `geopdf:${c.usuario}:${c.empresa}:${mapa.autex}`;
 };
-async function guardarPdfLocal(mapa: MapaPdf, blob: Blob) {
-  try { await idb.put("cache", { versao: mapa.atualizado_em, path: mapa.arquivo_path, blob }, await chavePdf(mapa)); }
-  catch { /* File still accessible online; local storage may be full. */ }
+async function guardarPdfLocal(mapa: MapaPdf, blob: Blob, exigirCopia = false, chaveCapturada?: string) {
+  try { await idb.put("cache", { versao: mapa.atualizado_em, path: mapa.arquivo_path, blob }, chaveCapturada ?? await chavePdf(mapa)); }
+  catch (e) { if (exigirCopia) throw e; /* File still accessible online; local storage may be full. */ }
 }
 
-export async function baixarMapaPdf(mapa: MapaPdf): Promise<ArquivoGerado> {
+export async function baixarMapaPdf(mapa: MapaPdf, exigirCopia = false, usuarioEsperado?: string): Promise<ArquivoGerado> {
+  const chaveCapturada = await chavePdf(mapa);
+  if (usuarioEsperado && chaveCapturada !== `geopdf:${usuarioEsperado}:${mapa.empresa_id}:${mapa.autex}`) throw new Error('A conta mudou. Reinicie a preparação dos mapas.');
   let local: { versao: string; path: string; blob: Blob } | undefined;
-  try { local = await idb.get("cache", await chavePdf(mapa)); } catch { /* cache unavailable */ }
+  try { local = await idb.get("cache", chaveCapturada); } catch { /* cache unavailable */ }
   if (local?.versao === mapa.atualizado_em && local.path === mapa.arquivo_path) return { blob: local.blob, nome: mapa.nome_arquivo };
   if (!navigator.onLine) throw new Error("Abra este mapa uma vez com internet neste aparelho para usá-lo offline");
   const { data, error } = await supabase.storage.from(MAPA_PDF_BUCKET).download(mapa.arquivo_path);
   if (error || !data) throw new Error(`Não foi possível carregar o PDF: ${error?.message ?? "arquivo indisponível"}`);
   const blob = data.type === "application/pdf" ? data : new Blob([data], { type: "application/pdf" });
-  await guardarPdfLocal(mapa, blob);
+  await guardarPdfLocal(mapa, blob, exigirCopia, chaveCapturada);
   return { blob, nome: mapa.nome_arquivo };
 }
