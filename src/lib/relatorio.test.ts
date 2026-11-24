@@ -61,13 +61,13 @@ it("prepara PDF válido antes do clique para salvar", async () => {
   expect(arquivo.nome).toMatch(/\.pdf$/);
   expect(new TextDecoder().decode(await bytes(arquivo.blob.slice(0, 5)))).toBe("%PDF-");
 });
-it("prepara arquivo SINAFLOR com as quatro colunas de medidas", async () => {
-  const arquivo = await exportarSinaflor([{ ...lista[0], arvore: 11, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 } as Tora]);
+it("prepara arquivo SINAFLOR com árvore, secção e três medidas", async () => {
+  const arquivo = await exportarSinaflor([{ ...lista[0], arvore: 11, secao: 'a', d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 } as Tora]);
   const XLSX = await import("xlsx");
   const wb = XLSX.read(await bytes(arquivo.blob), { type: "array" });
   const sheet = wb.Sheets["Repique SINAFLOR"];
   if (!sheet) throw new Error("Planilha SINAFLOR ausente");
-  expect(XLSX.utils.sheet_to_json(sheet, { header: 1 })[1]).toEqual([11, 0.705, 0.645, 7.6]);
+  expect(XLSX.utils.sheet_to_json(sheet, { header: 1 })[1]).toEqual([11, 'A', 0.705, 0.645, 7.6]);
 });
 describe("ordenarToras", () => {
   it("ordem numérica decrescente", () => expect(ordenarToras(lista, "plaqueta_desc").map((x) => x.plaqueta)).toEqual([12, 8, 5]));
@@ -83,7 +83,7 @@ it("separa toras de mesma árvore e seção por AUTEX", () => {
 import { linhaSinaflor as ls } from "./relatorio";
 import { it as it2, expect as ex2 } from "vitest";
 it2("SINAFLOR: médias de topo e pé em metros", () => {
-  ex2(ls({ arvore: 11, d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 })).toEqual([11, 0.705, 0.645, 7.6]);
+  ex2(ls({ arvore: 11, secao: 'B', d_topo1: 73, d_topo2: 68, d_pe1: 67, d_pe2: 62, comprimento: 7.6 })).toEqual([11, 'B', 0.705, 0.645, 7.6]);
 });
 it2("resumo por espécie: agrupa qtd e volume com nome científico", () => {
   const a = { especie: "Cupiúba", nome_cientifico: "Goupia glabra", volume: 2 } as unknown as Tora;

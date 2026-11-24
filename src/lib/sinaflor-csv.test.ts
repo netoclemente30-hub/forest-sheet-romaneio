@@ -38,6 +38,20 @@ async function texto(blob: Blob): Promise<string> {
 }
 
 describe("CSV SINAFLOR — modelos fornecidos", () => {
+  it('reproduz a primeira linha do arquivo de 30 a 31/10 com médias distintas por ponta', () => {
+    const t = tora(7477, 'a', {d_topo1:72,d_topo2:74,d_pe1:56,d_pe2:57,comprimento:5.1});
+    expect(linhaTracamento(t)).toBe('7477;A;0,73;0,565;5,1');
+  });
+
+  it('traçamento nasce do lançamento da tora, independente da data do corte', async () => {
+    const cortadaAntes = arvore(7477, {abatida_em:'2026-10-28T12:00:00-04:00'});
+    const medidas = [tora(7477,'A'),tora(7477,'B',{plaqueta:7478})];
+    expect(selecionarAbatidas([cortadaAntes],f)).toEqual([]);
+    expect(selecionarTracadas(medidas,f).validas.map(t=>t.secao)).toEqual(['A','B']);
+    const csv = await texto(exportarTracadasCsv(medidas,f).blob);
+    expect(csv).toContain('7477;A;0,585;0,5;6,6');
+    expect(csv).toContain('7477;B;0,585;0,5;6,6');
+  });
   it("gera apenas Número da árvore, sem colunas extras, e remove repetição na AUTEX", async () => {
     const ls = [
       arvore(7452), arvore(7451), arvore(7451),

@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { salvarArquivo } from "@/lib/arquivo";
 import {
   exportarAbatidasCsv, exportarTracadasCsv, selecionarAbatidas,
-  selecionarTracadas, type FiltroSinaflor,
+  selecionarTracadas, linhaTracamento, type FiltroSinaflor,
 } from "@/lib/sinaflor-csv";
 import {
   chaveSinaflor, gravarEnvios, idAbatida, idTracada, lerEnvios,
@@ -26,12 +26,13 @@ function hojeRondonia(): string {
 
 /** O mapa registra abatida_em; o controle de envio ao IBAMA é local e manual. */
 export function SinaflorCsvExportacao({
-  arvores, toras, autexFixa, apenasAbatidas = false,
+  arvores, toras, autexFixa, apenasAbatidas = false, apenasTracadas = false,
 }: {
   arvores: Arvore[];
   toras: Tora[];
   autexFixa?: string;
   apenasAbatidas?: boolean;
+  apenasTracadas?: boolean;
 }) {
   const { empresaId, isSuperAdmin, session } = useAuth();
   const empresaAtiva = getEmpresaAtiva();
@@ -56,6 +57,11 @@ export function SinaflorCsvExportacao({
     ])].filter(Boolean).sort((a, b) => a.localeCompare(b, "pt-BR")),
     [arvores, toras, empresa],
   );
+
+  useEffect(() => {
+    if (autexFixa) return;
+    setAutexEscolhida(atual => autexDisponiveis.includes(atual) ? atual : autexDisponiveis.length === 1 ? autexDisponiveis[0]! : '');
+  }, [autexDisponiveis, autexFixa]);
 
   useEffect(() => {
     setControle(lerEnvios(chave));
@@ -90,7 +96,7 @@ export function SinaflorCsvExportacao({
       const { fila } = await import("@/lib/offline/fila");
       const pendentes = (await fila().listar()).filter((item) => {
         const op = item.op;
-        if (op.tipo === "arvore_gps") return op.empresa_id === empresa && op.autex === autex;
+        if (op.tipo === "arvore_gps") return tipo === 'abatidas' && op.empresa_id === empresa && op.autex === autex;
         if (tipo === "tracadas") {
           if (op.tipo === "tora_insert")
             return String(op.dados["autex"] ?? "") === autex
@@ -144,7 +150,7 @@ export function SinaflorCsvExportacao({
       <div className="flex items-start gap-2">
         <FileSpreadsheet className="size-5 shrink-0 text-primary" />
         <div>
-          <h2 className="font-semibold">{apenasAbatidas ? "CSV de árvores abatidas — SINAFLOR" : "SINAFLOR — abate e traçamento"}</h2>
+          <h2 className="font-semibold">{apenasAbatidas ? "CSV de árvores abatidas — SINAFLOR" : apenasTracadas ? "Traçar SINAFLOR — toras lançadas" : "SINAFLOR — abate e traçamento"}</h2>
           <p className="text-xs text-muted-foreground">Arquivos CSV no mesmo layout dos modelos enviados. Uma empresa e AUTEX por arquivo.</p>
         </div>
       </div>
@@ -166,26 +172,35 @@ export function SinaflorCsvExportacao({
           <Input type="date" aria-label="Data final SINAFLOR" value={fim} min={inicio || undefined} onChange={(e) => setFim(e.target.value)} />
         </label>
       </div>
-      <p className="text-xs text-muted-foreground">Árvore: data do abate no mapa. Tora: data da medição lançada no estoque. Período inclusivo, no horário de Rondônia.</p>
+      <p className="text-xs text-muted-foreground">{apenasTracadas ? 'O traçamento vem de Salvar tora em Lançar tora: uma linha por árvore e secção, pela data do lançamento. O corte é registrado separadamente pelo cortador.' : 'Árvore: data do abate no mapa. Tora: data da medição lançada no estoque.'} Período inclusivo, no horário de Rondônia.</p>
       <div className="rounded-md bg-secondary p-2 text-xs space-y-1">
-        <p>Árvores abatidas: <strong>{abatidas.length}</strong> · novas: <strong>{pendentesAbate.length}</strong> · marcadas: {marcadasAbate}</p>
+        {!apenasTracadas && <p>Árvores abatidas: <strong>{abatidas.length}</strong> · novas: <strong>{pendentesAbate.length}</strong> · marcadas: {marcadasAbate}</p>}
         {!apenasAbatidas && <p>Toras traçadas: <strong>{tracadas.validas.length}</strong> · novas: <strong>{pendentesTracamento.length}</strong> · marcadas: {marcadasTracamento}</p>}
       </div>
-      {(marcadasAbate > 0 || (!apenasAbatidas && marcadasTracamento > 0)) &&
+      {((!apenasTracadas && marcadasAbate > 0) || (!apenasAbatidas && marcadasTracamento > 0)) &&
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" checked={incluirEnviados} onChange={(e) => setIncluirEnviados(e.target.checked)} />
           Incluir registros já marcados como enviados (reexportar)
         </label>}
       <div className="grid gap-2">
-        <Button type="button" disabled={!pronto || !selecionadasAbate.length || ocupado} onClick={() => void gerar("abatidas")}>
+        {!apenasTracadas && <Button type="button" disabled={!pronto || !selecionadasAbate.length || ocupado} onClick={() => void gerar("abatidas")}>
           <Download className="size-4" /> CSV árvores abatidas ({selecionadasAbate.length})
-        </Button>
+        </Button>}
         {!apenasAbatidas && <Button type="button" variant="outline"
           disabled={!pronto || !selecionadasTracamento.length || !!incompletas || !!duplicadas || ocupado}
           onClick={() => void gerar("tracadas")}>
           <FileSpreadsheet className="size-4" /> Traçar SINAFLOR ({selecionadasTracamento.length} toras)
         </Button>}
       </div>
+      {!apenasAbatidas && <details className="rounded-md border p-2" open={apenasTracadas}>
+        <summary className="cursor-pointer text-sm font-medium">Prévia do traçamento ({selecionadasTracamento.length} toras)</summary>
+        <p className="my-2 text-xs text-muted-foreground">Árvore · secção · média do topo × média do pé × comprimento. Cada média usa os dois diâmetros medidos naquela ponta. Diâmetros convertidos de centímetros para metros, como no CSV.</p>
+        <div className="max-h-64 overflow-auto"><table className="w-full text-xs"><thead><tr><th>Árvore</th><th>Secção</th><th>Média topo (m)</th><th>Média pé (m)</th><th>Comprimento (m)</th></tr></thead><tbody>
+          {selecionadasTracamento.slice(0, 50).map(t => <tr key={t.plaqueta}>{linhaTracamento(t).split(';').map((v,i) => <td key={i} className="p-1 text-center">{v}</td>)}</tr>)}
+        </tbody></table></div>
+        {selecionadasTracamento.length > 50 && <p className="text-xs">Exibindo as primeiras 50 toras. O CSV inclui todas as {selecionadasTracamento.length} toras selecionadas.</p>}
+        <p className="mt-2 text-xs text-muted-foreground">Para baixar, os lançamentos precisam estar sincronizados. Diâmetro 1 no CSV = média do topo; Diâmetro 2 = média do pé.</p>
+      </details>}
       {!!ultimo && ultimo.chave === chave && ultimo.periodo === periodo && (
         <div className="rounded-md border p-3 space-y-2">
           <p className="text-sm">Arquivo gerado: {ultimo.ids.length} registros. <strong>O download não confirma lançamento no IBAMA.</strong></p>

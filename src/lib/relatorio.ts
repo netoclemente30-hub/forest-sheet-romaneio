@@ -140,14 +140,14 @@ export function resumoPorEspecie(toras: Tora[]) {
   return [...m.values()].sort((a, b) => a.especie.localeCompare(b.especie, "pt-BR"));
 }
 
-export function linhaSinaflor(t: Pick<Tora, "arvore" | "d_topo1" | "d_topo2" | "d_pe1" | "d_pe2" | "comprimento">) {
+export function linhaSinaflor(t: Pick<Tora, "arvore" | "secao" | "d_topo1" | "d_topo2" | "d_pe1" | "d_pe2" | "comprimento">) {
   const media = (a: number | null, b: number | null) => (a == null || b == null ? null : Math.round(((Number(a) + Number(b)) / 2 / 100) * 10000) / 10000);
-  return [t.arvore, media(t.d_topo1, t.d_topo2), media(t.d_pe1, t.d_pe2), t.comprimento == null ? null : Number(t.comprimento)];
+  return [t.arvore, t.secao?.trim().toUpperCase() ?? "", media(t.d_topo1, t.d_topo2), media(t.d_pe1, t.d_pe2), t.comprimento == null ? null : Number(t.comprimento)];
 }
 
 export async function exportarSinaflor(toras: Tora[]): Promise<ArquivoGerado> {
   const XLSX = await import("xlsx");
-  const head = ["Nº Árvore", "D. Médio Topo (m)", "D. Médio Pé (m)", "Comprimento (m)"];
+  const head = ["Nº Árvore", "Secção", "D. Médio Topo (m)", "D. Médio Pé (m)", "Comprimento (m)"];
   const ws = XLSX.utils.aoa_to_sheet([head, ...toras.map(linhaSinaflor)]);
   ws["!cols"] = head.map((h) => ({ wch: h.length + 3 }));
   const wb = XLSX.utils.book_new();
