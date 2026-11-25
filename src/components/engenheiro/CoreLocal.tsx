@@ -885,6 +885,57 @@ function Coletor({
           <option value="utm">UTM SIRGAS 2000 — zona do projeto</option>
         </select>
       </label>
+      <div className="flex flex-col justify-end gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            if (typeof navigator === "undefined" || !navigator.geolocation) {
+              setErro("GPS não suportado neste aparelho.");
+              return;
+            }
+            setErro("");
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = Number(pos.coords.latitude.toFixed(6));
+                const lon = Number(pos.coords.longitude.toFixed(6));
+                const acc = Math.round(pos.coords.accuracy || 0);
+                try {
+                  const zona = Number((projeto as any)?.zonaUtm ?? (projeto as any)?.zona ?? 20);
+                  const hem = ((projeto as any)?.hemisferio ?? "S") as "S" | "N";
+                  const utm = paraUTM({ latitude: lat, longitude: lon }, zona, hem);
+                  setV((prev: Record<string, string>) => ({
+                    ...prev,
+                    latitude: String(lat),
+                    longitude: String(lon),
+                    x: String(Number(utm.x.toFixed(2))),
+                    y: String(Number(utm.y.toFixed(2))),
+                  }));
+                  setErro(`GPS capturado (± ${acc} m).`);
+                } catch {
+                  setModo("latlon");
+                  setV((prev: Record<string, string>) => ({
+                    ...prev,
+                    latitude: String(lat),
+                    longitude: String(lon),
+                  }));
+                  setErro(`GPS capturado em Lat/Lon (± ${acc} m).`);
+                }
+              },
+              (err) => {
+                setErro(
+                  err.code === 1
+                    ? "Permissão de localização negada no navegador."
+                    : "Não foi possível obter sinal de GPS agora."
+                );
+              },
+              { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+          }}
+        >
+          Capturar GPS
+        </Button>
+      </div>
       {modo === "utm" ? (
         <>
           {campo("x", "Este X (m)", "number")}

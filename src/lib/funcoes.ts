@@ -10,6 +10,7 @@ export const FUNCOES = [
   { valor: "motorista", nome: "Motorista", descricao: "Carregamento, romaneio de carga e TXT NF-e" },
   { valor: "gerente_patio", nome: "Gerente de pátio", descricao: "Operação completa da serraria" },
   { valor: "gerente_escritorio", nome: "Gerente de escritório", descricao: "Módulo fiscal completo; consultas, relatórios e registros sem alterar a operação" },
+  { valor: "engenheiro", nome: "Engenheiro Florestal", descricao: "PMFS, POA, inventário 100%, mapas offline e exportação IF100" },
 ] as const;
 
 export type FuncaoFuncionario = (typeof FUNCOES)[number]["valor"];
@@ -20,20 +21,20 @@ export type Permissao =
   | "carga_criar" | "nfe_txt"
   | "serraria_ver" | "serraria_operar"
   | "relatorios" | "registros_ver" | "registros_reverter"
-  | "usuarios_gerenciar" | "base_importar" | "informacoes_ver";
+  | "usuarios_gerenciar" | "base_importar" | "informacoes_ver" | "engenheiro_acessar";
 
 const ACESSOS: Record<Papel, readonly Permissao[]> = {
   superadmin: [
     "mapa_ver","mapa_abater","mapa_arrastar","mapa_rastrear","toras_ver",
     "toras_lancar","patios_criar","carga_criar","nfe_txt",
     "serraria_ver","serraria_operar","relatorios","registros_ver",
-    "registros_reverter","usuarios_gerenciar","base_importar","informacoes_ver",
+    "registros_reverter","usuarios_gerenciar","base_importar","informacoes_ver","engenheiro_acessar",
   ],
   admin_empresa: [
     "mapa_ver","mapa_abater","mapa_arrastar","mapa_rastrear","toras_ver",
     "toras_lancar","patios_criar","carga_criar","nfe_txt",
     "serraria_ver","serraria_operar","relatorios","registros_ver",
-    "registros_reverter","usuarios_gerenciar","base_importar","informacoes_ver",
+    "registros_reverter","usuarios_gerenciar","base_importar","informacoes_ver","engenheiro_acessar",
   ],
   cortador: ["mapa_ver","mapa_abater","mapa_rastrear"],
   tratorista: ["mapa_ver","mapa_arrastar","mapa_rastrear"],
@@ -43,6 +44,7 @@ const ACESSOS: Record<Papel, readonly Permissao[]> = {
   gerente_escritorio: [
     "mapa_ver","toras_ver","serraria_ver","relatorios","registros_ver","informacoes_ver",
   ],
+  engenheiro: ["engenheiro_acessar"],
   sem_funcao: [],
 };
 
@@ -80,15 +82,17 @@ export function rotaPermitida(papel: Papel, pathname: string): boolean {
   if (pathname === "/registros") return pode(papel, "registros_ver");
   if (pathname === "/base" || pathname.startsWith("/base/")) return papel === "gerente_escritorio";
   if (pathname === "/fiscal") return papel === "gerente_escritorio";
+  if (pathname === "/engenheiro") return pode(papel, "engenheiro_acessar");
   if (pathname === "/importar" || pathname === "/usuarios") return false;
   return false;
 }
 
-export function rotaInicial(papel: Papel): "/" | "/cortador" | "/toras" | "/romaneio" | "/serraria" {
+export function rotaInicial(papel: Papel): "/" | "/cortador" | "/toras" | "/romaneio" | "/serraria" | "/engenheiro" {
   if (papel === "cortador" || papel === "tratorista") return "/cortador";
   if (papel === "romaneador") return "/toras";
   if (papel === "motorista") return "/romaneio";
   if (papel === "gerente_patio") return "/serraria";
+  if (papel === "engenheiro") return "/engenheiro";
   return "/";
 }
 

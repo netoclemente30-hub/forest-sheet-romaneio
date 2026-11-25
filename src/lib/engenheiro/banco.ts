@@ -27,12 +27,12 @@ export function abrirBanco(factory: IDBFactory = indexedDB): Promise<IDBDatabase
     };
   });
 }
-export async function lerEstado(factory?: IDBFactory): Promise<Estado> {
+export async function lerEstado(factory?: IDBFactory, escopo = "local"): Promise<Estado> {
   const db = await abrirBanco(factory);
   try {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction("core", "readonly");
-      const r = tx.objectStore("core").get("local");
+      const r = tx.objectStore("core").get(escopo);
       tx.oncomplete = () => {
         try {
           const s = r.result as Estado | undefined;

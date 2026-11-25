@@ -1,6 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { CoreLocal } from "./CoreLocal";
+import { useAuth } from "@/hooks/useAuth";
+import { pode } from "@/lib/funcoes";
+import { supabase } from "@/integrations/supabase/client";
+import { FormularioLogin, WHATS_ACESSO } from "@/components/FormularioLogin";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   BarChart3,
@@ -9,9 +14,11 @@ import {
   FileText,
   FolderOpen,
   LayoutDashboard,
+  LogOut,
   Map,
   MapPin,
   Ruler,
+  ShieldAlert,
   TreePine,
   Users,
 } from "lucide-react";
@@ -31,9 +38,76 @@ const abas = [
   { id: "sincronizacao", nome: "Sincronização", icone: CloudOff },
 ] as const;
 
-/** Local-only engineering workspace. Never mounts operational providers. */
 export function EngenheiroPagina() {
   const [aba, setAba] = useState("painel");
+  const { session, loading, permissoesCarregando, estadoPermissoes, papel } = useAuth();
+
+  if (loading || (session && permissoesCarregando && estadoPermissoes === "validando")) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+        Carregando acesso...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+        <div className="w-full max-w-md space-y-6 rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
+          <div className="flex items-center gap-3">
+            <TreePine className="size-8 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <h1 className="font-display text-2xl font-bold uppercase text-primary">
+                Área do Engenheiro
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Gestor Florestal · Planejamento e Inventário 100%
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Entre com sua conta Gestor Florestal. Após o primeiro acesso online, o módulo funciona
+            100% offline em campo.
+          </p>
+          <FormularioLogin />
+          <div className="pt-2 text-center">
+            <Link to="/apresentacao" className="text-xs text-muted-foreground underline">
+              Voltar à apresentação
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pode(papel, "engenheiro_acessar")) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+        <div className="w-full max-w-md space-y-4 rounded-2xl border bg-card p-6 text-center shadow-sm sm:p-8">
+          <ShieldAlert className="mx-auto size-10 text-destructive" aria-hidden="true" />
+          <h1 className="font-display text-2xl font-bold uppercase">Módulo não liberado</h1>
+          <p className="text-sm text-muted-foreground">
+            A conta <strong>{session.user.email}</strong> ainda não possui licença ativa para a Área
+            do Engenheiro Florestal.
+          </p>
+          <Button asChild size="lg" className="h-12 w-full">
+            <a href={WHATS_ACESSO} target="_blank" rel="noreferrer">
+              Solicitar liberação pelo WhatsApp
+            </a>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => void supabase.auth.signOut()}
+          >
+            Sair desta conta
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-forest text-primary-foreground">
@@ -43,17 +117,28 @@ export function EngenheiroPagina() {
             <div>
               <p className="font-display text-xl font-bold uppercase">Gestor Florestal</p>
               <p className="text-xs tracking-wide opacity-80">
-                Planejamento e inventário florestal
+                Planejamento e inventário florestal · {session.user.email}
               </p>
             </div>
           </div>
-          <Link
-            to="/apresentacao"
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-current/30 px-4 text-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Voltar à apresentação
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/apresentacao"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-current/30 px-4 text-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              Apresentação
+            </Link>
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-h-11 gap-2 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground"
+              onClick={() => void supabase.auth.signOut()}
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -70,7 +155,7 @@ export function EngenheiroPagina() {
             </p>
           </div>
           <span className="rounded-full border bg-muted px-3 py-1.5 text-xs font-medium">
-            Somente neste aparelho
+            {estadoPermissoes === "offline" ? "Modo offline ativo (campo)" : "Conta verificada · Dados locais"}
           </span>
         </div>
         <Tabs value={aba} onValueChange={setAba} className="space-y-5">

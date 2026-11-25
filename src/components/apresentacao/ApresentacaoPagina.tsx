@@ -29,7 +29,7 @@ import {
   IlusSerraria,
 } from "./Ilustracoes";
 
-const WHATS_FALA = "https://wa.me/5569999004121?text=Quero%20conhecer%20o%20Gestor%20Florestal";
+const WHATS_FALA = "https://wa.me/5569996109506?text=Quero%20conhecer%20o%20Gestor%20Florestal";
 
 const modulos = [
   {

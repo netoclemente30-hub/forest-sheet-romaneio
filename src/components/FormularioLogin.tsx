@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const WHATS_ACESSO =
-  "https://wa.me/5569999004121?text=Ol%C3%A1%20Neto%2C%20quero%20um%20acesso%20ao%20aplicativo%20Manejo%20Florestal.";
+  "https://wa.me/5569996109506?text=Ol%C3%A1%20Neto%2C%20quero%20um%20acesso%20ao%20aplicativo%20Manejo%20Florestal.";
 
 /**
  * Formulário de acesso reutilizável: usado pela tela de login antiga e pelo
@@ -39,7 +39,7 @@ export function FormularioLogin() {
 
   async function google() {
     sessionStorage.setItem("login-pendente", "1");
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + window.location.pathname });
     if (r.error) setSemAcesso(true);
   }
 
