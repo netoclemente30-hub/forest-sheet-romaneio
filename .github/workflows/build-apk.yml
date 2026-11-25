@@ -2,7 +2,7 @@ name: APK do Gestor Florestal
 
 on:
   push:
-    branches: [main]
+    branches: [main, validacao/android-apk]
   workflow_dispatch:
 
 permissions:
