@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:android": "node build-android.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -57,12 +58,15 @@
     "@tanstack/router-plugin": "1.168.42",
     "@tmcw/togeojson": "^7.1.4",
     "@turf/boolean-point-in-polygon": "^7.4.0",
+    "@turf/turf": "^7.4.0",
     "@types/qrcode": "^1.5.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "docx": "^9.16.0",
     "embla-carousel-react": "^8.6.0",
+    "entities": "4.5.0",
     "fflate": "^0.8.3",
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.2",
@@ -87,7 +91,9 @@
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/android": "^6.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -117,7 +123,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@capacitor/cli": "^6.2.1"
   },
   "pnpm": {
     "overrides": {

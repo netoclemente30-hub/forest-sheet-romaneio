@@ -12,16 +12,20 @@ import { fileURLToPath } from "node:url";
 import { navegacaoOffline, paginaOfflinePlugin } from "./src/lib/pwa-policy";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const android = process.argv.includes("android");
 // Variáveis de servidor (sem prefixo VITE_) só em process.env; nunca no bundle do cliente.
 Object.assign(process.env, loadEnv(process.env['NODE_ENV'] ?? "development", process.cwd(), ""));
 
 export default defineConfig({
+  ...(android ? { nitro: false } : {}),
   tanstackStart: {
+    ...(android ? { spa: { enabled: true, prerender: { outputPath: "/index.html" } } } : {}),
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
   },
   vite: {
+    ...(android ? { build: { outDir: ".output/android" } } : {}),
     resolve: {
       alias: [
         { find: "entities/lib/decode.js", replacement: path.resolve(__dirname, "node_modules/entities/lib/decode.js") },
@@ -29,7 +33,7 @@ export default defineConfig({
         { find: /^entities$/, replacement: path.resolve(__dirname, "node_modules/entities") },
       ],
     },
-    plugins: [
+    plugins: android ? [] : [
       VitePWA({
         strategies: "generateSW",
         registerType: "autoUpdate",

@@ -27,12 +27,18 @@ export function abrirBanco(factory: IDBFactory = indexedDB): Promise<IDBDatabase
     };
   });
 }
-export async function lerEstado(factory?: IDBFactory, escopo = "local"): Promise<Estado> {
+function chaveEscopo(escopo: string) {
+  if (!escopo.trim())
+    throw new Error("Sessão sem empresa ou usuário: dados locais não foram abertos.");
+  return `engenheiro:${encodeURIComponent(escopo.trim())}`;
+}
+export async function lerEstado(factory?: IDBFactory, escopo?: string): Promise<Estado> {
+  const chave = chaveEscopo(escopo ?? "");
   const db = await abrirBanco(factory);
   try {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction("core", "readonly");
-      const r = tx.objectStore("core").get(escopo);
+      const r = tx.objectStore("core").get(chave);
       tx.oncomplete = () => {
         try {
           const s = r.result as Estado | undefined;
@@ -49,7 +55,12 @@ export async function lerEstado(factory?: IDBFactory, escopo = "local"): Promise
     db.close();
   }
 }
-export async function salvarEstado(s: Estado, factory?: IDBFactory): Promise<Estado> {
+export async function salvarEstado(
+  s: Estado,
+  factory?: IDBFactory,
+  escopo?: string,
+): Promise<Estado> {
+  const chave = chaveEscopo(escopo ?? "");
   validarEstado(s);
   s = {
     ...s,
@@ -65,7 +76,7 @@ export async function salvarEstado(s: Estado, factory?: IDBFactory): Promise<Est
     return await new Promise((resolve, reject) => {
       const tx = db.transaction("core", "readwrite");
       const store = tx.objectStore("core");
-      const r = store.get("local");
+      const r = store.get(chave);
       let conflito = false;
       const novo = { ...s, revisao: s.revisao + 1 };
       r.onsuccess = () => {
@@ -74,7 +85,7 @@ export async function salvarEstado(s: Estado, factory?: IDBFactory): Promise<Est
           tx.abort();
           return;
         }
-        store.put(novo, "local");
+        store.put(novo, chave);
       };
       tx.oncomplete = () => resolve(novo);
       tx.onabort = () =>

@@ -26,6 +26,8 @@ import {
   exportarGeo,
 } from "@/lib/engenheiro/intercambio";
 import { salvarArquivo } from "@/lib/arquivo";
+import { useAuth } from "@/hooks/useAuth";
+import { gerarRelatorioPMFSPOA } from "@/lib/engenheiro/relatorioDocx";
 
 const Mapa = lazy(() => import("./MapaLocal").then((m) => ({ default: m.MapaLocal })));
 type Campo = { id: string; nome: string; tipo?: string; opcoes?: { id: string; nome: string }[] };
@@ -108,6 +110,8 @@ const categoria = {
 };
 
 export function CoreLocal({ aba }: { aba: string }) {
+  const auth = useAuth() as { session?: { user?: { id?: string } }; empresaId?: string | null };
+  const escopoLocal = auth.empresaId ?? auth.session?.user?.id ?? "";
   const [s, setS] = useState<Estado>(vazio),
     [pronto, setPronto] = useState(false),
     [erro, setErro] = useState(""),
@@ -116,16 +120,17 @@ export function CoreLocal({ aba }: { aba: string }) {
   const [previa, setPrevia] = useState<{ s: Estado; texto: string; erros: string[] } | null>(null);
   const [sugestao, setSugestao] = useState<ReturnType<typeof sugerirSementes> | null>(null);
   useEffect(() => {
-    void lerEstado()
+    setPronto(false);
+    void lerEstado(undefined, escopoLocal)
       .then((s) => {
         setS(s);
         setPronto(true);
       })
       .catch((e) => setErro(e.message));
-  }, []);
+  }, [escopoLocal]);
   const p = s.projetos.find((p) => p.id === pid);
   async function salvar(novo: Estado) {
-    const resultado = await salvarEstado(novo);
+    const resultado = await salvarEstado(novo, undefined, escopoLocal);
     setS(resultado);
     setPrevia(null);
     setSugestao(null);
@@ -294,6 +299,8 @@ export function CoreLocal({ aba }: { aba: string }) {
           <Formulario
             campos={[
               input("nome", "Nome da propriedade"),
+              input("car", "CAR (opcional)"),
+              input("areaTotalHa", "Área total (ha)", "number"),
               opcoes("clienteId", "Cliente", s.clientes),
             ]}
             onSalvar={async (v) =>
@@ -301,7 +308,13 @@ export function CoreLocal({ aba }: { aba: string }) {
                 ...s,
                 propriedades: [
                   ...s.propriedades,
-                  { id: crypto.randomUUID(), nome: v["nome"]!, clienteId: v["clienteId"]! },
+                  {
+                    id: crypto.randomUUID(),
+                    nome: v["nome"]!,
+                    clienteId: v["clienteId"]!,
+                    ...(v["car"] ? { car: v["car"] } : {}),
+                    ...(Number(v["areaTotalHa"]) ? { areaTotalHa: Number(v["areaTotalHa"]) } : {}),
+                  },
                 ],
               })
             }
@@ -632,6 +645,16 @@ export function CoreLocal({ aba }: { aba: string }) {
             intensidade e sementes antes de importar. Não constitui aprovação nem envio ao
             Sinaflor+.
           </p>
+          <Button
+            onClick={() => {
+              if (!p) return;
+              void gerarRelatorioPMFSPOA(s, p)
+                .then((blob) => exportar(`relatorio-${p.tipo.toLowerCase()}-${p.nome}.docx`, blob))
+                .catch((e) => setErro(e.message));
+            }}
+          >
+            Baixar relatório técnico .docx
+          </Button>
           <Formulario
             botao="Exportar arquivo"
             campos={[
@@ -674,7 +697,10 @@ export function CoreLocal({ aba }: { aba: string }) {
       )}
       {aba === "sincronizacao" && (
         <>
-          <p>Armazenamento exclusivamente local. Não há sincronização com servidor.</p>
+          <p>
+            Armazenamento local separado por empresa/usuário nesta instalação. A sessão precisa
+            estar válida para abrir seu escopo.
+          </p>
           <Button
             onClick={() =>
               tentar(() =>
@@ -901,8 +927,8 @@ function Coletor({
                 const lon = Number(pos.coords.longitude.toFixed(6));
                 const acc = Math.round(pos.coords.accuracy || 0);
                 try {
-                  const zona = Number((projeto as any)?.zonaUtm ?? (projeto as any)?.zona ?? 20);
-                  const hem = ((projeto as any)?.hemisferio ?? "S") as "S" | "N";
+                  const zona = p.zona;
+                  const hem = p.hemisferio;
                   const utm = paraUTM({ latitude: lat, longitude: lon }, zona, hem);
                   setV((prev: Record<string, string>) => ({
                     ...prev,
@@ -926,10 +952,10 @@ function Coletor({
                 setErro(
                   err.code === 1
                     ? "Permissão de localização negada no navegador."
-                    : "Não foi possível obter sinal de GPS agora."
+                    : "Não foi possível obter sinal de GPS agora.",
                 );
               },
-              { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+              { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
             );
           }}
         >

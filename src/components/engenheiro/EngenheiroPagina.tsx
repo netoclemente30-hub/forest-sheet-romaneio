@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { CoreLocal } from "./CoreLocal";
@@ -39,6 +40,7 @@ const abas = [
 ] as const;
 
 export function EngenheiroPagina() {
+  const nativo = Capacitor.isNativePlatform();
   const [aba, setAba] = useState("painel");
   const { session, loading, permissoesCarregando, estadoPermissoes, papel } = useAuth();
 
@@ -70,11 +72,11 @@ export function EngenheiroPagina() {
             100% offline em campo.
           </p>
           <FormularioLogin />
-          <div className="pt-2 text-center">
+          {!nativo && <div className="pt-2 text-center">
             <Link to="/apresentacao" className="text-xs text-muted-foreground underline">
               Voltar à apresentação
             </Link>
-          </div>
+          </div>}
         </div>
       </div>
     );
@@ -122,13 +124,13 @@ export function EngenheiroPagina() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Link
+            {!nativo && <Link
               to="/apresentacao"
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-current/30 px-4 text-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
               Apresentação
-            </Link>
+            </Link>}
             <Button
               type="button"
               variant="ghost"

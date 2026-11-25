@@ -16,6 +16,8 @@ import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import { AparenciaProvider } from "@/components/Aparencia";
 
+const buildAndroid = import.meta.env.MODE === "android";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -105,12 +107,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
     ],
     links: [
+      ...(!buildAndroid ? [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap",
       },
+      ] : []),
       {
         rel: "stylesheet",
         href: appCss,
@@ -144,6 +148,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    if (buildAndroid) return;
     // Service worker de offline: só registra no app publicado (nunca no preview).
     void import("@/lib/pwa-register").then((m) => m.registrarServiceWorker());
   }, []);
