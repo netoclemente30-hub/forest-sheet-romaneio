@@ -16,6 +16,11 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Configurar Node 20
         uses: actions/setup-node@v4
         with:
@@ -33,11 +38,11 @@ jobs:
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Instalar dependências
-        run: npm install --legacy-peer-deps
+      - name: Instalar dependências com Bun
+        run: bun install
 
-      - name: Build Web
-        run: npm run build
+      - name: Build Web Android
+        run: bun run build:android
 
       - name: Sincronizar Capacitor Android
         run: npx cap sync android
