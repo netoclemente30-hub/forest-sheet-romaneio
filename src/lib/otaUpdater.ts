@@ -1,10 +1,37 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { CapacitorUpdater } from "@capgo/capacitor-updater";
+import { toast } from "sonner";
 
 const REPO = "https://github.com/netoclemente30-hub/forest-sheet-romaneio";
 const VERSION_URL = REPO + "/releases/latest/download/version.json";
 const versionPattern = /^\d{1,9}\.\d{1,9}\.\d{1,9}$/;
 let verificacao: Promise<void> | undefined;
+let versaoAtiva: Promise<string> | undefined;
+
+export function lerVersaoAndroid() {
+  versaoAtiva ??= CapacitorUpdater.current().then(({ native, bundle }) =>
+    bundle.id === "builtin" ? `v${native}` : `v${native} • OTA #${bundle.version}`,
+  ).catch((erro: unknown) => {
+    versaoAtiva = undefined;
+    throw erro;
+  });
+  return versaoAtiva;
+}
+
+function avisarAtualizacao(id: string) {
+  toast.success("Nova versão do Gestor Florestal baixada. Reinicie o app para aplicar.", {
+    id: "atualizacao-ota",
+    duration: 12_000,
+    action: {
+      label: "Atualizar agora",
+      onClick: () => {
+        void CapacitorUpdater.set({ id }).catch(() => {
+          toast.error("Não foi possível aplicar a atualização agora. Reinicie o app para tentar novamente.");
+        });
+      },
+    },
+  });
+}
 
 function maisNova(candidata: string, atual: string): boolean {
   const partes = atual.split(".").map(Number);
@@ -43,6 +70,7 @@ async function verificar() {
 
   const bundle = await CapacitorUpdater.download({ url, version, checksum });
   await CapacitorUpdater.next({ id: bundle.id });
+  avisarAtualizacao(bundle.id);
 }
 
 export function verificarAtualizacaoOTA() {

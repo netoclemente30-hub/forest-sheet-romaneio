@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { VersaoAplicativo } from "@/components/VersaoAplicativo";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -241,6 +242,7 @@ export function ApresentacaoPagina() {
         </p>
       </section>
 
+      <footer className="px-4 pb-4 text-center"><VersaoAplicativo /></footer>
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent className="max-h-[92vh] w-[calc(100%-2rem)] max-w-sm overflow-y-auto rounded-lg">
           <DialogHeader>

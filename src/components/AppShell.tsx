@@ -12,6 +12,7 @@ import { useSituacaoEmpresa, EmpresaInativa, AvisoDemonstracao } from "@/compone
 import { ApresentacaoPagina } from "@/components/apresentacao/ApresentacaoPagina";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
+import { VersaoAplicativo } from "@/components/VersaoAplicativo";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
 import { PrepararOffline } from "./PrepararOffline";
@@ -144,7 +145,7 @@ function OperationalAppShell() {
   const somenteLeitura = papel === "gerente_escritorio";
   const abasManejo = MANEJO.filter((m) => rotaPermitida(papel, m.to));
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-24">
       <header className="no-print bg-forest text-forest-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
         <span className="font-display text-xl font-bold uppercase min-w-0">GESTOR FLORESTAL{"\n"}</span>
         <div className="ml-auto flex items-center gap-1 shrink-0">
@@ -277,6 +278,7 @@ function OperationalAppShell() {
             </Link>
           ))}
         </div>
+        <div className="pb-1 text-center leading-none"><VersaoAplicativo /></div>
       </nav>
     </div>
   );

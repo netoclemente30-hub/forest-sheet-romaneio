@@ -7,12 +7,24 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 import { loadEnv } from "vite";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { navegacaoOffline, paginaOfflinePlugin } from "./src/lib/pwa-policy";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const android = process.argv.includes("android");
+const buildApp = (() => {
+  const sha = process.env["GITHUB_SHA"];
+  if (sha && /^[a-f0-9]{40}$/i.test(sha)) return sha.slice(0, 7);
+  try {
+    return execFileSync("git", ["rev-parse", "--short=7", "HEAD"], {
+      cwd: __dirname, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "";
+  }
+})();
 // Variáveis de servidor (sem prefixo VITE_) só em process.env; nunca no bundle do cliente.
 Object.assign(process.env, loadEnv(process.env['NODE_ENV'] ?? "development", process.cwd(), ""));
 
@@ -26,6 +38,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    define: { __BUILD_APP__: JSON.stringify(buildApp) },
     ...(android ? { build: { outDir: ".output/android" } } : {}),
     resolve: {
       alias: [
