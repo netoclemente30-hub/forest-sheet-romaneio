@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { baixarArquivo, compartilharArquivoExato } from "@/lib/arquivo";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,17 +73,15 @@ function Etiquetas() {
           .then(() => qc.invalidateQueries({ queryKey: ["toras"] }));
       }
       const blob = doc.output("blob");
-      const file = new File([blob], nome, { type: "application/pdf" });
-      if (!salvar && navigator.canShare?.({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: nome }); setBusy(false); return; }
-        catch (e) { if ((e as Error).name === "AbortError") { setBusy(false); return; } }
+      const arquivo = { blob, nome };
+      if (!Capacitor.isNativePlatform()) {
+        setPdfUrl((anterior) => {
+          if (anterior) URL.revokeObjectURL(anterior);
+          return URL.createObjectURL(blob);
+        });
       }
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
-      const a = document.createElement("a");
-      a.href = url; a.download = nome; a.rel = "noopener";
-      document.body.appendChild(a); a.click(); a.remove();
-      toast.success("PDF gerado — se não baixar, toque em \"Abrir PDF\"");
+      if (salvar) await baixarArquivo(arquivo);
+      else await compartilharArquivoExato(arquivo);
     } catch (e) { console.error(e); toast.error("Não foi possível gerar o arquivo"); }
     setBusy(false);
   }

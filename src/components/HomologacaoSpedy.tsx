@@ -1,3 +1,4 @@
+import { salvarArquivo } from "@/lib/arquivo";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -66,10 +67,7 @@ function baixar(base64: string, nome: string, tipo: string) {
   const bin = atob(base64);
   const b = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
-  const url = URL.createObjectURL(new Blob([b], { type: tipo }));
-  const a = document.createElement("a");
-  a.href = url; a.download = nome; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return salvarArquivo({ blob: new Blob([b], { type: tipo }), nome });
 }
 
 export function EmissaoHomologacao({ empresa, r }: { empresa: string; r: Rascunho }) {
@@ -118,7 +116,7 @@ export function EmissaoHomologacao({ empresa, r }: { empresa: string; r: Rascunh
         {(["xml", "pdf"] as const).map((tipo) => (
           <Button key={tipo} variant="outline" disabled={ocupado || estado?.situacao !== "authorized"} onClick={async () => {
             const res = await arquivo({ data: { empresa, rascunhoId: id, tipo } });
-            if (res.ok) baixar(res.base64, `nfe-homologacao-${r.carga.numero}.${tipo}`, tipo === "xml" ? "application/xml" : "application/pdf");
+            if (res.ok) await baixar(res.base64, `nfe-homologacao-${r.carga.numero}.${tipo}`, tipo === "xml" ? "application/xml" : "application/pdf");
             else toast.error(res.mensagem);
           }}>{tipo === "xml" ? "Baixar XML" : "Baixar DANFE"}</Button>
         ))}

@@ -51,40 +51,51 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    if (!buildAndroid) reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
   const carregamento = erroDeCarregamento(error);
-  const detalhe = error instanceof Error ? error.message : String(error);
+  const propriedades = typeof error === "object" && error ? error : {};
+  const detalhe = "message" in propriedades && typeof propriedades.message === "string"
+    ? propriedades.message : String(error ?? "Erro desconhecido");
+  const stack = "stack" in propriedades && typeof propriedades.stack === "string"
+    ? propriedades.stack.split("\n").slice(0, 6).join("\n") : undefined;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
+      <div className="w-full max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {carregamento ? "Esta tela não abriu sem conexão" : "Esta tela não abriu"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {carregamento
-            ? "Parte do aplicativo não estava salva neste aparelho. Seus lançamentos continuam guardados. Abra a página offline ou tente novamente quando houver sinal."
+            ? (buildAndroid
+              ? "A tela não carregou. Volte ao início ou tente novamente."
+              : "Parte do aplicativo não estava salva neste aparelho. Seus lançamentos continuam guardados. Abra a página offline ou tente novamente quando houver sinal.")
             : "Ocorreu um erro inesperado. Seus lançamentos guardados neste aparelho não foram apagados."}
         </p>
-        <p className="mt-2 break-words text-xs text-muted-foreground">Detalhe: {detalhe}</p>
+        <div role="alert" className="mt-3 max-w-full rounded-md border bg-muted p-3 text-left text-xs">
+          <p className="break-words font-semibold">{detalhe}</p>
+          {stack && <pre className="mt-2 whitespace-pre-wrap break-all">{stack}</pre>}
+        </div>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
-              if (carregamento) { window.location.reload(); return; }
-              router.invalidate();
               reset();
+              void router.invalidate().catch(console.error);
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Tentar novamente
           </button>
-          <a
-            href={carregamento ? "/offline.html" : "/"}
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = buildAndroid ? "/index.html" : carregamento ? "/offline.html" : "/";
+            }}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            {carregamento ? "Abrir página offline" : "Ir para o início"}
-          </a>
+            {carregamento && !buildAndroid ? "Abrir página offline" : "Ir para o início"}
+          </button>
         </div>
       </div>
     </div>
@@ -109,7 +120,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       ...(!buildAndroid ? [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" as const },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap",
@@ -148,7 +159,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (buildAndroid) return;
+    if (buildAndroid) {
+      void import("@/lib/otaUpdater").then((m) => m.verificarAtualizacaoOTA());
+      return;
+    }
     // Service worker de offline: só registra no app publicado (nunca no preview).
     void import("@/lib/pwa-register").then((m) => m.registrarServiceWorker());
   }, []);

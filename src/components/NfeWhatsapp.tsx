@@ -24,7 +24,7 @@ export function NfeWhatsapp({ dados, nomeArquivo,acaoFiscal }: { dados: DadosNfe
 
   return (
     <div className={acaoFiscal?"grid grid-cols-2 gap-2 sm:grid-cols-3":"grid grid-cols-2 gap-2"}>
-      <Button variant="outline" size="sm" className="h-11" onClick={() => baixarArquivo(arquivo())}>
+      <Button variant="outline" size="sm" className="h-11" onClick={() => void baixarArquivo(arquivo()).catch(() => toast.error("Não foi possível salvar o arquivo."))}>
         <FileCode2 /> Baixar TXT
       </Button>
       {acaoFiscal}

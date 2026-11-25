@@ -8,7 +8,7 @@ const p = (id:string,especie:string,comprimento:number,quantidade:number) => ({i
 describe('Excel do romaneio importado', () => {
   it('reimporta peças, 7,30 m e madeiras separadas por aba', async () => {
     const a = await planilhaImportado({cab,itens:[p('1','MIRINDIBA',7.3,12),p('2','MIRINDIBA',4,3),p('3','IPE',2.5,5)]});
-    const abas = lerRomaneioExcel(a);
+    const abas = await lerRomaneioExcel(a);
     expect(abas.map(x=>x.nome)).toEqual(['MIRINDIBA','IPE']);
     expect(abas[0]!.cliente).toBe('Cliente X');
     expect(abas[0]!.itens.map(i=>[i.especie,i.comprimento,i.quantidade])).toEqual([['MIRINDIBA',4,3],['MIRINDIBA',7.3,12]]);

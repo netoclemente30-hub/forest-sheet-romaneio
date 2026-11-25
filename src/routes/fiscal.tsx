@@ -1,3 +1,4 @@
+import { TelaServidorWeb } from "@/components/TelaServidorWeb";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,7 +60,7 @@ export const Route = createFileRoute("/fiscal")({
     { property: 'og:description', content: 'Cadastros e rascunhos fiscais por empresa no Gestor Florestal.' },
     { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' },
   ] }),
-  component: Fiscal,
+  component: () => <TelaServidorWeb titulo="Operações fiscais"><Fiscal /></TelaServidorWeb>,
 });
 const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const painel = "space-y-3 rounded-xl border bg-card p-4";

@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 
 export type PecaImportada = { id:string; especie:string; nome_cientifico:string; autex:string; tipo_peca:string; grossura:number; largura:number; comprimento:number; quantidade:number };
 export type CabImportado = { numero_carga:string; data:string; cliente_nome:string; cliente_documento:string; motorista_nome:string; motorista_cpf:string; placa_veiculo:string; placa_reboque:string; observacoes:string; toras_serradas?:ToraSerradaRef[] };
@@ -41,7 +40,8 @@ export function lerAbaRomaneio(nome:string, linhas:unknown[][]):AbaRomaneio {
   if(itens.length&&!especie)avisos.push('Nome da madeira não informado na aba. Preencha antes de salvar.');
   return {nome,cliente,itens,avisos:[...new Set(avisos)]};
 }
-export function lerRomaneioExcel(buffer:ArrayBuffer):AbaRomaneio[] {
+export async function lerRomaneioExcel(buffer:ArrayBuffer):Promise<AbaRomaneio[]> {
+  const XLSX = await import("xlsx");
   const book=XLSX.read(buffer,{type:'array'});
   return book.SheetNames.map(nome=>{const sheet=book.Sheets[nome];return lerAbaRomaneio(nome,sheet?XLSX.utils.sheet_to_json<unknown[]>(sheet,{header:1,defval:'',blankrows:true}):[]);});
 }

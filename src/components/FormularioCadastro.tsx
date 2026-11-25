@@ -1,7 +1,7 @@
+import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { cadastrarEmpresaPublica } from "@/lib/usuarios.functions";
 import { cnpjValido, formatarCnpj, LIMITE_DEMONSTRACAO } from "@/lib/cnpj";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ export function FormularioCadastro({ onEntrar }: { onEntrar: () => void }) {
     if (!cnpjValido(cnpj)) { toast.error("CNPJ inválido"); return; }
     setBusy(true);
     try {
+      const { cadastrarEmpresaPublica } = await import("@/lib/usuarios.functions");
       await cadastrarEmpresaPublica({ data: { nome, cnpj, email, password: senha } });
       sessionStorage.setItem("login-pendente", "1");
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: senha });
@@ -29,6 +30,15 @@ export function FormularioCadastro({ onEntrar }: { onEntrar: () => void }) {
       toast.error((err as Error).message);
     }
     setBusy(false);
+  }
+
+  if (Capacitor.isNativePlatform() || import.meta.env.MODE === "android") {
+    return (
+      <div className="space-y-3">
+        <p>Cadastre sua empresa na versão web do Gestor Florestal.</p>
+        <Button onClick={onEntrar}>Voltar ao login</Button>
+      </div>
+    );
   }
 
   return (
