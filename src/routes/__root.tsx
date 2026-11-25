@@ -64,7 +64,9 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {carregamento
-            ? "Parte do aplicativo não estava salva neste aparelho. Seus lançamentos continuam guardados. Abra a página offline ou tente novamente quando houver sinal."
+            ? (buildAndroid
+              ? "A tela não carregou. Volte ao início ou tente novamente."
+              : "Parte do aplicativo não estava salva neste aparelho. Seus lançamentos continuam guardados. Abra a página offline ou tente novamente quando houver sinal.")
             : "Ocorreu um erro inesperado. Seus lançamentos guardados neste aparelho não foram apagados."}
         </p>
         <p className="mt-2 break-words text-xs text-muted-foreground">Detalhe: {detalhe}</p>
@@ -80,10 +82,10 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             Tentar novamente
           </button>
           <a
-            href={carregamento ? "/offline.html" : "/"}
+            href={carregamento && !buildAndroid ? "/offline.html" : "/"}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            {carregamento ? "Abrir página offline" : "Ir para o início"}
+            {carregamento && !buildAndroid ? "Abrir página offline" : "Ir para o início"}
           </a>
         </div>
       </div>
@@ -109,7 +111,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       ...(!buildAndroid ? [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" as const },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap",
@@ -148,7 +150,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if (buildAndroid) return;
+    if (buildAndroid) {
+      void import("@/lib/otaUpdater").then((m) => m.verificarAtualizacaoOTA());
+      return;
+    }
     // Service worker de offline: só registra no app publicado (nunca no preview).
     void import("@/lib/pwa-register").then((m) => m.registrarServiceWorker());
   }, []);

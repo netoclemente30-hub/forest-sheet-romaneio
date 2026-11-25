@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Tora } from "@/lib/data";
@@ -59,7 +60,7 @@ export function RelatorioToras({ lista, selecionadas, ordem, setOrdem, titulo, m
           <Button className="w-full" onClick={() => { salvarArquivo(arquivo).catch(() => toast.error("Não foi possível salvar o arquivo. Tente novamente.")); }}><Download /> Salvar arquivo</Button>
           <Button variant="secondary" className="w-full" onClick={() => void compartilhar()}><MessageCircle /> WhatsApp</Button>
           <Button variant="outline" className="w-full" onClick={() => void copiarResumo()}><Copy /> Copiar resumo</Button>
-          {arquivo.blob.type === "application/pdf" && <Button asChild variant="outline" className="w-full"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir PDF</a></Button>}
+          {!Capacitor.isNativePlatform() && arquivo.blob.type === "application/pdf" && <Button asChild variant="outline" className="w-full"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir PDF</a></Button>}
         </div>}
       </DialogContent>
     </Dialog>

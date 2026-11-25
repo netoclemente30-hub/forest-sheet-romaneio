@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { pode } from "@/lib/funcoes";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -106,7 +107,7 @@ export function MapaPdf({ autex, encerrado }: { autex: string; encerrado: boolea
             <iframe title={`Mapa em PDF da AUTEX ${autex}`} src={arquivo.url} className="hidden min-h-0 flex-1 rounded-md border sm:block" />
             <div className="grid gap-2 sm:grid-cols-2">
               <Button onClick={() => { salvarArquivo(arquivo).catch(() => toast.error("Não foi possível salvar o PDF. Tente novamente.")); }}><Download /> Salvar arquivo</Button>
-              <Button asChild variant="outline"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir em nova guia</a></Button>
+              {!Capacitor.isNativePlatform() && <Button asChild variant="outline"><a href={arquivo.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> Abrir em nova guia</a></Button>}
             </div>
             <p className="text-center text-xs text-muted-foreground sm:hidden">Use “Abrir em nova guia” para visualizar a planta completa.</p>
           </>}

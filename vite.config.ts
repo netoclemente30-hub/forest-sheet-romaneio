@@ -19,6 +19,7 @@ Object.assign(process.env, loadEnv(process.env['NODE_ENV'] ?? "development", pro
 export default defineConfig({
   ...(android ? { nitro: false } : {}),
   tanstackStart: {
+    // Capacitor resolve navegações HTML5 locais pelo index.html, inclusive sem service worker.
     ...(android ? { spa: { enabled: true, prerender: { outputPath: "/index.html" } } } : {}),
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
