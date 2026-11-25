@@ -26,12 +26,7 @@ import {
   exportarGeo,
 } from "@/lib/engenheiro/intercambio";
 import { salvarArquivo } from "@/lib/arquivo";
-<<<<<<< HEAD
-import { useAuth } from "@/hooks/useAuth";
-import { gerarRelatorioPMFSPOA } from "@/lib/engenheiro/relatorioDocx";
-=======
 import { gerarRelatorioDocx } from "@/lib/engenheiro/relatorioDocx";
->>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
 
 const Mapa = lazy(() => import("./MapaLocal").then((m) => ({ default: m.MapaLocal })));
 type Campo = { id: string; nome: string; tipo?: string; opcional?: boolean; opcoes?: { id: string; nome: string }[] };
@@ -115,8 +110,6 @@ const categoria = {
 };
 
 export function CoreLocal({ aba }: { aba: string }) {
-  const auth = useAuth() as { session?: { user?: { id?: string } }; empresaId?: string | null };
-  const escopoLocal = auth.empresaId ?? auth.session?.user?.id ?? "";
   const [s, setS] = useState<Estado>(vazio),
     [pronto, setPronto] = useState(false),
     [erro, setErro] = useState(""),
@@ -125,17 +118,16 @@ export function CoreLocal({ aba }: { aba: string }) {
   const [previa, setPrevia] = useState<{ s: Estado; texto: string; erros: string[] } | null>(null);
   const [sugestao, setSugestao] = useState<ReturnType<typeof sugerirSementes> | null>(null);
   useEffect(() => {
-    setPronto(false);
-    void lerEstado(undefined, escopoLocal)
+    void lerEstado()
       .then((s) => {
         setS(s);
         setPronto(true);
       })
       .catch((e) => setErro(e.message));
-  }, [escopoLocal]);
+  }, []);
   const p = s.projetos.find((p) => p.id === pid);
   async function salvar(novo: Estado) {
-    const resultado = await salvarEstado(novo, undefined, escopoLocal);
+    const resultado = await salvarEstado(novo);
     setS(resultado);
     setPrevia(null);
     setSugestao(null);
@@ -304,8 +296,6 @@ export function CoreLocal({ aba }: { aba: string }) {
           <Formulario
             campos={[
               input("nome", "Nome da propriedade"),
-              input("car", "CAR (opcional)"),
-              input("areaTotalHa", "Área total (ha)", "number"),
               opcoes("clienteId", "Cliente", s.clientes),
             ]}
             onSalvar={async (v) =>
@@ -313,13 +303,7 @@ export function CoreLocal({ aba }: { aba: string }) {
                 ...s,
                 propriedades: [
                   ...s.propriedades,
-                  {
-                    id: crypto.randomUUID(),
-                    nome: v["nome"]!,
-                    clienteId: v["clienteId"]!,
-                    ...(v["car"] ? { car: v["car"] } : {}),
-                    ...(Number(v["areaTotalHa"]) ? { areaTotalHa: Number(v["areaTotalHa"]) } : {}),
-                  },
+                  { id: crypto.randomUUID(), nome: v["nome"]!, clienteId: v["clienteId"]! },
                 ],
               })
             }
@@ -658,16 +642,6 @@ export function CoreLocal({ aba }: { aba: string }) {
             intensidade e sementes antes de importar. Não constitui aprovação nem envio ao
             Sinaflor+.
           </p>
-          <Button
-            onClick={() => {
-              if (!p) return;
-              void gerarRelatorioPMFSPOA(s, p)
-                .then((blob) => exportar(`relatorio-${p.tipo.toLowerCase()}-${p.nome}.docx`, blob))
-                .catch((e) => setErro(e.message));
-            }}
-          >
-            Baixar relatório técnico .docx
-          </Button>
           <Formulario
             botao="Exportar arquivo"
             campos={[
@@ -736,10 +710,7 @@ export function CoreLocal({ aba }: { aba: string }) {
       )}
       {aba === "sincronizacao" && (
         <>
-          <p>
-            Armazenamento local separado por empresa/usuário nesta instalação. A sessão precisa
-            estar válida para abrir seu escopo.
-          </p>
+          <p>Armazenamento exclusivamente local. Não há sincronização com servidor.</p>
           <Button
             onClick={() =>
               tentar(() =>
@@ -991,10 +962,10 @@ function Coletor({
                 setErro(
                   err.code === 1
                     ? "Permissão de localização negada no navegador."
-                    : "Não foi possível obter sinal de GPS agora.",
+                    : "Não foi possível obter sinal de GPS agora."
                 );
               },
-              { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+              { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
           }}
         >

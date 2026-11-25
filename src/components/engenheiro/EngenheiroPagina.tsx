@@ -1,9 +1,4 @@
-<<<<<<< HEAD
-import { Capacitor } from "@capacitor/core";
-import { Link } from "@tanstack/react-router";
-=======
 import { Link, useNavigate } from "@tanstack/react-router";
->>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
 import { useState } from "react";
 import { CoreLocal } from "./CoreLocal";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,7 +39,6 @@ const abas = [
 ] as const;
 
 export function EngenheiroPagina() {
-  const nativo = Capacitor.isNativePlatform();
   const [aba, setAba] = useState("painel");
   const { session, loading, permissoesCarregando, estadoPermissoes, papel } = useAuth();
   const navegar = useNavigate();
@@ -82,17 +76,11 @@ export function EngenheiroPagina() {
             100% offline em campo.
           </p>
           <FormularioLogin />
-<<<<<<< HEAD
-          {!nativo && <div className="pt-2 text-center">
-            <Link to="/apresentacao" className="text-xs text-muted-foreground underline">
-              Voltar à apresentação
-=======
           <div className="pt-2 text-center">
             <Link to="/" className="text-xs text-muted-foreground underline">
               Voltar ao início
->>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
             </Link>
-          </div>}
+          </div>
         </div>
       </div>
     );
@@ -140,15 +128,6 @@ export function EngenheiroPagina() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-<<<<<<< HEAD
-            {!nativo && <Link
-              to="/apresentacao"
-              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-current/30 px-4 text-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
-            >
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              Apresentação
-            </Link>}
-=======
             <Link
               to="/"
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-current/30 px-4 text-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
@@ -156,7 +135,6 @@ export function EngenheiroPagina() {
               <ArrowLeft className="size-4" aria-hidden="true" />
               Início
             </Link>
->>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
             <Button
               type="button"
               variant="ghost"

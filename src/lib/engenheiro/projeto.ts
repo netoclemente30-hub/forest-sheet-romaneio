@@ -24,13 +24,7 @@ export type Camada = {
 export type Estado = {
   revisao: number;
   clientes: { id: string; nome: string }[];
-  propriedades: {
-    id: string;
-    clienteId: string;
-    nome: string;
-    car?: string;
-    areaTotalHa?: number;
-  }[];
+  propriedades: { id: string; clienteId: string; nome: string }[];
   projetos: Projeto[];
   uts: { id: string; projetoId: string; nome: string; areaHa: number }[];
   especies: (Especie & { projetoId: string })[];

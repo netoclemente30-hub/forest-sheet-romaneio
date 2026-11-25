@@ -27,18 +27,12 @@ export function abrirBanco(factory: IDBFactory = indexedDB): Promise<IDBDatabase
     };
   });
 }
-function chaveEscopo(escopo: string) {
-  if (!escopo.trim())
-    throw new Error("Sessão sem empresa ou usuário: dados locais não foram abertos.");
-  return `engenheiro:${encodeURIComponent(escopo.trim())}`;
-}
-export async function lerEstado(factory?: IDBFactory, escopo?: string): Promise<Estado> {
-  const chave = chaveEscopo(escopo ?? "");
+export async function lerEstado(factory?: IDBFactory, escopo = "local"): Promise<Estado> {
   const db = await abrirBanco(factory);
   try {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction("core", "readonly");
-      const r = tx.objectStore("core").get(chave);
+      const r = tx.objectStore("core").get(escopo);
       tx.oncomplete = () => {
         try {
           const s = r.result as Estado | undefined;
@@ -55,12 +49,7 @@ export async function lerEstado(factory?: IDBFactory, escopo?: string): Promise<
     db.close();
   }
 }
-export async function salvarEstado(
-  s: Estado,
-  factory?: IDBFactory,
-  escopo?: string,
-): Promise<Estado> {
-  const chave = chaveEscopo(escopo ?? "");
+export async function salvarEstado(s: Estado, factory?: IDBFactory): Promise<Estado> {
   validarEstado(s);
   s = {
     ...s,
@@ -76,7 +65,7 @@ export async function salvarEstado(
     return await new Promise((resolve, reject) => {
       const tx = db.transaction("core", "readwrite");
       const store = tx.objectStore("core");
-      const r = store.get(chave);
+      const r = store.get("local");
       let conflito = false;
       const novo = { ...s, revisao: s.revisao + 1 };
       r.onsuccess = () => {
@@ -85,7 +74,7 @@ export async function salvarEstado(
           tx.abort();
           return;
         }
-        store.put(novo, chave);
+        store.put(novo, "local");
       };
       tx.oncomplete = () => resolve(novo);
       tx.onabort = () =>

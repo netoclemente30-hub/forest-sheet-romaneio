@@ -9,8 +9,6 @@ import { salvarArquivo } from "@/lib/arquivo";
 import { area as turfArea } from "@turf/turf";
 import { paraUTM, distanciaMetros, gradeUTM, type Coordenada } from "@/lib/engenheiro/gis";
 import { Button } from "@/components/ui/button";
-import { gerarBufferAPP, exportarGPX, importarGPX, hectares } from "@/lib/engenheiro/camadas";
-import { salvarArquivo } from "@/lib/arquivo";
 
 export function MapaLocal({
   s,
@@ -33,22 +31,6 @@ export function MapaLocal({
     [cursor, setCursor] = useState(""),
     [erro, setErro] = useState("");
   const [tipoGrade, setTipoGrade] = useState("geografica");
-<<<<<<< HEAD
-  const [gravandoGPS, setGravandoGPS] = useState(false),
-    [distAPP, setDistAPP] = useState<30 | 50 | 100>(30);
-  const gps = useRef<number | null>(null);
-  const trilha = useRef<Coordenada[]>([]);
-  const importarTrilha = async (file: File) => {
-    const fc = importarGPX(await file.text());
-    await onSalvar({
-      id: crypto.randomUUID(),
-      projetoId: p.id,
-      tipo: "Patios_Estradas",
-      ut,
-      geojson: fc,
-    });
-  };
-=======
   const [versao, setVersao] = useState(0),
     [destino, setDestino] = useState<"Limite_UPA" | "UTs" | "APP">("Limite_UPA"),
     [editando, setEditando] = useState(""),
@@ -63,7 +45,6 @@ export function MapaLocal({
     [gravando, setGravando] = useState(false),
     [aviso, setAviso] = useState("");
   const watchId = useRef<number | null>(null);
->>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
   const modoRef = useRef(modo);
   modoRef.current = modo;
   useEffect(() => {
@@ -477,11 +458,6 @@ export function MapaLocal({
             <option value="consultar">Consultar</option>
             <option value="patio">Pátio</option>
             <option value="trilha">Estrada / trilha</option>
-<<<<<<< HEAD
-            <option value="poligono-UPA">Polígono UPA</option>
-            <option value="poligono-UT">Polígono UT</option>
-            <option value="hidrografia">Hidrografia / nascente</option>
-=======
             <option value="poligono">Polígono (perímetro / UPA / UT)</option>
             <option value="hidro">Hidrografia (linha)</option>
             <option value="nascente">Nascente (ponto)</option>
@@ -514,7 +490,6 @@ export function MapaLocal({
                 {i + 1}. {c.tipo} · {c.geojson.features[0]!.geometry.type}
               </option>
             ))}
->>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
           </select>
         </label>
         <label>
@@ -530,171 +505,6 @@ export function MapaLocal({
         <Button variant="outline" onClick={() => setPontos([])}>
           Limpar desenho
         </Button>
-        {(modo === "poligono-UPA" || modo === "poligono-UT" || modo === "hidrografia") && (
-          <Button
-            onClick={() => {
-              if (modo === "hidrografia" && pontos.length < 2) {
-                setErro("Marque ao menos dois pontos.");
-                return;
-              }
-              if (modo !== "hidrografia" && pontos.length < 3) {
-                setErro("Polígono exige três pontos.");
-                return;
-              }
-              const coords = pontos.map((a) => [a.longitude, a.latitude]);
-              if (modo !== "hidrografia") coords.push(coords[0]!);
-              const tipo =
-                modo === "hidrografia"
-                  ? "Hidrografia"
-                  : modo === "poligono-UPA"
-                    ? "Limite_UPA"
-                    : "UTs";
-              void onSalvar({
-                id: crypto.randomUUID(),
-                projetoId: p.id,
-                tipo,
-                ut,
-                geojson: {
-                  type: "FeatureCollection",
-                  features: [
-                    {
-                      type: "Feature",
-                      properties: {
-                        areaHa:
-                          modo === "hidrografia"
-                            ? null
-                            : hectares({
-                                type: "FeatureCollection",
-                                features: [
-                                  {
-                                    type: "Feature",
-                                    properties: {},
-                                    geometry: { type: "Polygon", coordinates: [coords] },
-                                  },
-                                ],
-                              }).toFixed(3),
-                      },
-                      geometry:
-                        modo === "hidrografia"
-                          ? { type: "LineString", coordinates: coords }
-                          : { type: "Polygon", coordinates: [coords] },
-                    },
-                  ],
-                },
-              })
-                .then(() => setPontos([]))
-                .catch((e) => setErro(e.message));
-            }}
-          >
-            Salvar {modo}
-          </Button>
-        )}
-        <label className="border rounded p-2">
-          Buffer APP{" "}
-          <select
-            value={distAPP}
-            onChange={(e) => setDistAPP(Number(e.target.value) as 30 | 50 | 100)}
-          >
-            <option value={30}>30 m</option>
-            <option value={50}>50 m</option>
-            <option value={100}>100 m</option>
-          </select>
-        </label>
-        <Button
-          onClick={() => {
-            try {
-              const fc = {
-                type: "FeatureCollection" as const,
-                features: s.camadas
-                  .filter((c) => c.projetoId === p.id && c.tipo === "Hidrografia")
-                  .flatMap((c) => c.geojson.features),
-              };
-              const geojson = gerarBufferAPP(fc, distAPP);
-              void onSalvar({
-                id: crypto.randomUUID(),
-                projetoId: p.id,
-                tipo: "APP",
-                ut,
-                geojson,
-              }).catch((e) => setErro(e.message));
-            } catch (e) {
-              setErro(String((e as Error).message));
-            }
-          }}
-        >
-          Gerar buffer APP
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            if (gravandoGPS) {
-              if (gps.current !== null) navigator.geolocation.clearWatch(gps.current);
-              gps.current = null;
-              setGravandoGPS(false);
-              return;
-            }
-            if (!navigator.geolocation) {
-              setErro("GPS não disponível.");
-              return;
-            }
-            trilha.current = [];
-            gps.current = navigator.geolocation.watchPosition(
-              (pos) => {
-                trilha.current.push({
-                  latitude: pos.coords.latitude,
-                  longitude: pos.coords.longitude,
-                });
-                setPontos([...trilha.current]);
-              },
-              (e) => setErro(e.message),
-              { enableHighAccuracy: true, maximumAge: 0 },
-            );
-            setGravandoGPS(true);
-          }}
-        >
-          {" "}
-          {gravandoGPS ? "Parar GPS" : "Gravar trilha GPS"}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
-            salvarArquivo({
-              nome: "trilha.gpx",
-              blob: new Blob(
-                [
-                  exportarGPX({
-                    type: "FeatureCollection",
-                    features: [
-                      {
-                        type: "Feature",
-                        properties: {},
-                        geometry: {
-                          type: "LineString",
-                          coordinates: pontos.map((x) => [x.longitude, x.latitude]),
-                        },
-                      },
-                    ],
-                  }),
-                ],
-                { type: "application/gpx+xml" },
-              ),
-            })
-          }
-        >
-          Exportar GPX
-        </Button>
-        <label>
-          Importar GPX{" "}
-          <input
-            type="file"
-            accept=".gpx,application/gpx+xml"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void importarTrilha(f).catch((x) => setErro(x.message));
-              e.target.value = "";
-            }}
-          />
-        </label>
         <Button
           disabled={
             !pontos.length ||

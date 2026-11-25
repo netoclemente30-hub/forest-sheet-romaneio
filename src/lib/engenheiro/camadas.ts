@@ -3,65 +3,6 @@ import type { FeatureCollection, Polygon, MultiPolygon, Position } from "geojson
 import { validarCoordenada } from "./gis";
 import type { Estado, Camada } from "./projeto";
 import { avaliarArvore } from "./inventario";
-import { area as turfArea, buffer as turfBuffer } from "@turf/turf";
-import type { Feature } from "geojson";
-
-export function hectares(geojson: FeatureCollection) {
-  return turfArea(geojson) / 10000;
-}
-export function gerarBufferAPP(
-  hidrografia: FeatureCollection,
-  distanciaM: 30 | 50 | 100,
-): FeatureCollection {
-  if (
-    !hidrografia.features.length ||
-    hidrografia.features.some(
-      (f) => !["LineString", "MultiLineString", "Point", "MultiPoint"].includes(f.geometry.type),
-    )
-  )
-    throw new Error("APP automática exige linhas de hidrografia ou pontos de nascentes.");
-  const buffered = hidrografia.features
-    .map((f) => turfBuffer(f, distanciaM, { units: "meters" }))
-    .filter((f): f is Feature<Polygon | MultiPolygon> => !!f);
-  if (!buffered.length) throw new Error("Não foi possível calcular o buffer.");
-  return validarCamada({ type: "FeatureCollection", features: buffered });
-}
-export function importarGPX(xmlText: string): FeatureCollection {
-  const xml = new DOMParser().parseFromString(xmlText, "application/xml");
-  if (xml.querySelector("parsererror")) throw new Error("GPX inválido.");
-  const features: FeatureCollection["features"] = [];
-  const pts = [...xml.querySelectorAll("trk trkseg trkpt,rte rtept")].map(
-    (el) => [Number(el.getAttribute("lon")), Number(el.getAttribute("lat"))] as [number, number],
-  );
-  if (pts.length > 1)
-    features.push({
-      type: "Feature",
-      properties: { tipo: "trilha-gps" },
-      geometry: { type: "LineString", coordinates: pts },
-    });
-  for (const el of xml.querySelectorAll("wpt"))
-    features.push({
-      type: "Feature",
-      properties: { nome: el.querySelector("name")?.textContent ?? "Waypoint" },
-      geometry: {
-        type: "Point",
-        coordinates: [Number(el.getAttribute("lon")), Number(el.getAttribute("lat"))],
-      },
-    });
-  return validarCamada({ type: "FeatureCollection", features });
-}
-export function exportarGPX(f: FeatureCollection) {
-  const pontos = f.features.flatMap((x) =>
-    x.geometry.type === "LineString"
-      ? x.geometry.coordinates.map((c) => `<trkpt lat="${c[1]}" lon="${c[0]}"/>`)
-      : x.geometry.type === "Point"
-        ? [
-            `<wpt lat="${x.geometry.coordinates[1]}" lon="${x.geometry.coordinates[0]}"><name>${String(x.properties?.["nome"] ?? "Ponto").replace(/[<>&"']/g, "")}</name></wpt>`,
-          ]
-        : [],
-  );
-  return `<?xml version="1.0"?><gpx version="1.1" creator="Gestor Florestal" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Trilha GPS</name><trkseg>${pontos.filter((p) => p.startsWith("<trkpt")).join("")}</trkseg></trk>${pontos.filter((p) => p.startsWith("<wpt")).join("")}</gpx>`;
-}
 
 export function validarCamada(value: unknown): FeatureCollection {
   const fc = value as FeatureCollection;
