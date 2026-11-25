@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -7,7 +8,6 @@ import { textoMotivo } from "@/lib/exploracao-salvar";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { salvarArquivo } from "@/lib/arquivo";
-import { modeloFichaCampo } from "@/lib/modelo-ficha-campo";
 import { ImportarCoordenadas } from "@/components/ImportarCoordenadas";
 import { SinaflorCsvExportacao } from "@/components/SinaflorCsvExportacao";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,7 +60,7 @@ function CortadorPage() {
         <div className="divide-y">{naoAbatidas.map((a) => <div key={a.id} className="flex justify-between gap-2 p-3 text-sm"><span>Árvore {a.numero} · {a.nome_vulgar}</span><span className="font-semibold text-destructive">{textoMotivo(a.nao_abatida_motivo)}</span></div>)}</div>
       </section>}
       {pode(papel, "base_importar") && <section className="flex flex-wrap items-center gap-2 border-t pt-4 pb-4">
-        <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal text-left" onClick={() => salvarArquivo(modeloFichaCampo())}>
+        <Button variant="outline" className="h-auto min-h-11 max-w-full whitespace-normal text-left" onClick={() => void import("@/lib/modelo-ficha-campo").then(({ modeloFichaCampo }) => salvarArquivo(modeloFichaCampo())).catch(() => toast.error("Não foi possível gerar a ficha de campo."))}>
           <Download className="shrink-0" /> Baixar modelo de planilha — ficha de campo com coordenadas
         </Button>
         <ImportarCoordenadas autex={numeroAtivo} arvores={lista} />

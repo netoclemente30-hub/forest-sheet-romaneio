@@ -1,16 +1,16 @@
-import * as XLSX from "xlsx";
 import { especieSchema, censoSchema, type Censo } from "./inventario";
 import { deUTM } from "./gis";
 import { avaliarCenso } from "./camadas";
 import type { Estado, Projeto } from "./projeto";
 
-export function lerTabela(texto: string): Record<string, unknown>[] {
+async function lerTabela(texto: string): Promise<Record<string, unknown>[]> {
   if (texto.trim().startsWith("[")) {
     const a: unknown = JSON.parse(texto);
     if (!Array.isArray(a) || a.some((v) => !v || typeof v !== "object" || Array.isArray(v)))
       throw new Error("JSON deve ser uma lista de registros.");
     return a;
   }
+  const XLSX = await import("xlsx");
   const wb = XLSX.read(texto, { type: "string", raw: true });
   const ws = wb.Sheets[wb.SheetNames[0]!]!;
   return XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -25,10 +25,10 @@ const bool = (v: unknown) => {
   if (v === false || v === "false" || v === "0" || v === "não" || v === "nao") return false;
   throw new Error("Booleano deve ser true/false ou sim/não.");
 };
-export function previaTabela(texto: string, tipo: "especies" | "censo", p: Projeto) {
+export async function previaTabela(texto: string, tipo: "especies" | "censo", p: Projeto) {
   const erros: string[] = [];
   const dados: Record<string, unknown>[] = [];
-  lerTabela(texto).forEach((r, i) => {
+  (await lerTabela(texto)).forEach((r, i) => {
     try {
       if (tipo === "especies") {
         const eq = r["equacaoVolume"];
@@ -163,7 +163,8 @@ export function csvSeguro(linhas: (string | number)[][]) {
     )
     .join("\r\n");
 }
-export function excel(linhas: (string | number)[][]) {
+export async function excel(linhas: (string | number)[][]) {
+  const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(linhas);
   ws["!cols"] = CABECALHO_IF100.map(() => ({ wch: 22 }));

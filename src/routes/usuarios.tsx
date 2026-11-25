@@ -1,3 +1,4 @@
+import { TelaServidorWeb } from "@/components/TelaServidorWeb";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/usuarios")({
       { property: "og:description", content: "Gerencie empresas e quem tem acesso ao aplicativo." },
     ],
   }),
-  component: UsuariosPage,
+  component: () => <TelaServidorWeb titulo="Administração de usuários"><UsuariosPage /></TelaServidorWeb>,
 });
 
 function UsuariosPage() {

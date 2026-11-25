@@ -19,10 +19,10 @@ import { importarCamada, avaliarCenso } from "@/lib/engenheiro/camadas";
 import { paraUTM, deUTM } from "@/lib/engenheiro/gis";
 import { resumo, sugerirSementes } from "@/lib/engenheiro/triagem";
 import {
-  previaTabela,
   linhasIF100,
-  csvIF100,
   excel,
+  previaTabela,
+  csvIF100,
   exportarGeo,
 } from "@/lib/engenheiro/intercambio";
 import { salvarArquivo } from "@/lib/arquivo";
@@ -143,7 +143,7 @@ export function CoreLocal({ aba }: { aba: string }) {
     let novo: Estado;
     let erros: string[] = [];
     if (tipo === "censo" || tipo === "especies") {
-      const pre = previaTabela(texto, tipo, p);
+      const pre = await previaTabela(texto, tipo, p);
       erros = pre.erros;
       novo =
         tipo === "censo"
@@ -659,7 +659,7 @@ export function CoreLocal({ aba }: { aba: string }) {
               else
                 await exportar(
                   "inventario-conferencia.xlsx",
-                  new Blob([excel(l)], {
+                  new Blob([await excel(l)], {
                     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                   }),
                 );

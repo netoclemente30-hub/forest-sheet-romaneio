@@ -201,11 +201,11 @@ describe("persistência transacional e intercâmbio", () => {
     expect(val).toEqual({ chave: "legado", valor: 123 });
     db.close();
   });
-  it("prévia converte UTM e lista erros sem gravar", () => {
+  it("prévia converte UTM e lista erros sem gravar", async () => {
     const s = estado();
     const { latitude: _, longitude: __, ...rest } = a;
     const u = paraUTM(a, 20, "S");
-    const pre = previaTabela(
+    const pre = await previaTabela(
       JSON.stringify([
         { ...rest, x: u.x, y: u.y },
         { ...rest, x: "", y: "" },

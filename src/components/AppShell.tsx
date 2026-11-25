@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSituacaoEmpresa, EmpresaInativa, AvisoDemonstracao } from "@/components/SituacaoEmpresa";
 import { ApresentacaoPagina } from "@/components/apresentacao/ApresentacaoPagina";
 import { supabase } from "@/integrations/supabase/client";
-import { listarEmpresas } from "@/lib/usuarios.functions";
+import { Capacitor } from "@capacitor/core";
 import { getEmpresaAtiva, setEmpresaAtiva } from "@/lib/empresa";
 import { SyncStatus } from "./SyncStatus";
 import { PrepararOffline } from "./PrepararOffline";
@@ -117,7 +117,21 @@ function OperationalAppShell() {
     setAparelhoAberto(false);
     toast.success(navigator.onLine ? "Nome do aparelho salvo." : "Nome salvo neste aparelho.");
   }
-  const empresas = useQuery({ queryKey: ["empresas"], queryFn: () => comCache("empresas", () => listarEmpresas(), null), networkMode: "always", enabled: isSuperAdmin });
+  const empresas = useQuery({
+    queryKey: ["empresas-menu", session?.user.id],
+    enabled: Boolean(session) && isSuperAdmin,
+    networkMode: "always",
+    queryFn: () => comCache("empresas-menu", async () => {
+      if (Capacitor.isNativePlatform() || import.meta.env.MODE === "android") {
+        // O cliente usa a sessão e as políticas de acesso do banco.
+        const { data, error } = await supabase.from("empresas").select("id, nome, status").order("nome");
+        if (error) throw error;
+        return data ?? [];
+      }
+      const { listarEmpresas } = await import("@/lib/usuarios.functions");
+      return listarEmpresas();
+    }, null),
+  });
   const situacao = useSituacaoEmpresa(Boolean(session) && !isSuperAdmin);
   // Páginas públicas (QR da tora e apresentação) abrem sem login.
   if (ehRotaPublica(pathname)) return <Outlet />;

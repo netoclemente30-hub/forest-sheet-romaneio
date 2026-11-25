@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+import type { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import type { Tora } from "@/lib/data";
 import { qrTora } from "@/lib/tora-qr";
@@ -59,6 +59,7 @@ export function desenharQr(doc: jsPDF, valor: string, x: number, y: number, lado
 export async function gerarEtiquetasPdf(toras: Tora[], t: TamanhoEtiqueta): Promise<jsPDF> {
   const ordenadas = ordenarEtiquetasPorLancamento(toras);
   const { largura: W, altura: H } = t;
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: W >= H ? "landscape" : "portrait", compress: true });
   const m = Math.max(2, Math.min(W, H) * 0.05);
   for (let i = 0; i < ordenadas.length; i++) {
@@ -98,6 +99,7 @@ export async function gerarEtiquetasAguardandoPdf(toras: import("@/lib/toras-agu
   const { qrAguardando, codigoAguardando, volumesAguardando } = await import("@/lib/toras-aguardando");
   const { largura: W, altura: H } = t;
   const o = W >= H ? "landscape" : "portrait";
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: [W, H], orientation: o, compress: true });
   const m = Math.max(2, Math.min(W, H) * 0.05);
   [...toras].sort((a, b) => a.numero - b.numero).forEach((tora, i) => {
