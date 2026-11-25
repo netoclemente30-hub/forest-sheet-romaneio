@@ -326,3 +326,30 @@ export const definirCnpjEmpresa = createServerFn({ method: "POST" })
     if (error) throw new Error(/duplicate|unique/i.test(error.message) ? "CNPJ já usado por outra empresa" : error.message);
     return { ok: true };
   });
+
+/** Exclui uma empresa sem dados de estoque. Somente administrador geral. */
+export const excluirEmpresa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { empresaId: string }) => ({ empresaId: String(input?.empresaId ?? "") }))
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as Ctx;
+    const { data: souSuper } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "superadmin" });
+    if (!souSuper) throw new Error("Apenas o administrador geral exclui empresas");
+    if (!data.empresaId) throw new Error("Empresa inválida");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const comDados = ["toras", "arvores", "romaneios", "pacotes_serrados", "romaneios_madeira_serrada", "romaneios_serrados_importados", "toras_aguardando", "fiscal_documentos"] as const;
+    for (const t of comDados) {
+      const { count, error } = await supabaseAdmin.from(t).select("*", { count: "exact", head: true }).eq("empresa_id", data.empresaId);
+      if (error) throw new Error(error.message);
+      if ((count ?? 0) > 0) throw new Error("Esta empresa ainda tem toras, árvores, romaneios ou notas. Zere os dados antes de excluir.");
+    }
+    const limpar = ["arrastos_arvores", "rastros_gps", "mapas_exploracao", "explanadas", "autex", "motoristas", "patios", "veiculos", "saldos", "aparelhos", "empresa_contador", "empresa_emitente", "fiscal_eventos", "fiscal_inutilizacoes", "fiscal_config", "funcoes_funcionarios", "empresa_usuarios"] as const;
+    for (const t of limpar) {
+      const { error } = await supabaseAdmin.from(t).delete().eq("empresa_id", data.empresaId);
+      if (error) throw new Error(error.message);
+    }
+    await supabaseAdmin.from("registros").update({ empresa_id: null }).eq("empresa_id", data.empresaId);
+    const { error } = await supabaseAdmin.from("empresas").delete().eq("id", data.empresaId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

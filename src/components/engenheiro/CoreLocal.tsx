@@ -26,11 +26,15 @@ import {
   exportarGeo,
 } from "@/lib/engenheiro/intercambio";
 import { salvarArquivo } from "@/lib/arquivo";
+<<<<<<< HEAD
 import { useAuth } from "@/hooks/useAuth";
 import { gerarRelatorioPMFSPOA } from "@/lib/engenheiro/relatorioDocx";
+=======
+import { gerarRelatorioDocx } from "@/lib/engenheiro/relatorioDocx";
+>>>>>>> 8a014b752aa100f7229f54256af8852f7952f1ac
 
 const Mapa = lazy(() => import("./MapaLocal").then((m) => ({ default: m.MapaLocal })));
-type Campo = { id: string; nome: string; tipo?: string; opcoes?: { id: string; nome: string }[] };
+type Campo = { id: string; nome: string; tipo?: string; opcional?: boolean; opcoes?: { id: string; nome: string }[] };
 function Formulario({
   campos,
   onSalvar,
@@ -71,7 +75,7 @@ function Formulario({
             </select>
           ) : (
             <input
-              required
+              required={!c.opcional}
               name={c.id}
               type={c.tipo ?? "text"}
               step="any"
@@ -91,6 +95,7 @@ function Formulario({
     </form>
   );
 }
+const opc = (id: string, nome: string): Campo => ({ id, nome, opcional: true });
 const input = (id: string, nome: string, tipo?: string): Campo => ({
   id,
   nome,
@@ -557,6 +562,14 @@ export function CoreLocal({ aba }: { aba: string }) {
                   throw e;
                 }
               }}
+              onCamadas={async (camadas) => {
+                try {
+                  await salvar({ ...s, camadas });
+                } catch (e) {
+                  setErro(String(e));
+                  throw e;
+                }
+              }}
             />
           </Suspense>
         </>
@@ -676,6 +689,32 @@ export function CoreLocal({ aba }: { aba: string }) {
                     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                   }),
                 );
+            }}
+          />
+          <Formulario
+            botao="Gerar relatório técnico (.docx)"
+            campos={[
+              opc("car", "CAR da propriedade"),
+              opc("areaTotal", "Área total (ha) — vazio usa o Limite_UPA desenhado"),
+              opc("areaManejo", "Área de efetivo manejo (ha) — vazio usa a soma das UTs"),
+              opc("responsavel", "Responsável técnico"),
+              opc("registro", "CREA / registro"),
+            ]}
+            onSalvar={async (v) => {
+              const num = (t?: string) => {
+                const n = Number((t ?? "").replace(",", "."));
+                return t?.trim() && Number.isFinite(n) && n > 0 ? n : undefined;
+              };
+              const areaTotalHa = num(v["areaTotal"]),
+                areaManejoHa = num(v["areaManejo"]);
+              const blob = await gerarRelatorioDocx(s, p.id, {
+                car: v["car"] ?? "",
+                responsavel: v["responsavel"] ?? "",
+                registro: v["registro"] ?? "",
+                ...(areaTotalHa ? { areaTotalHa } : {}),
+                ...(areaManejoHa ? { areaManejoHa } : {}),
+              });
+              await exportar(`relatorio-${p.tipo.toLowerCase()}-${p.nome.replace(/[^\w-]+/g, "_")}.docx`, blob);
             }}
           />
           <Button
