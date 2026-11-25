@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { CoreLocal } from "./CoreLocal";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,6 +41,12 @@ const abas = [
 export function EngenheiroPagina() {
   const [aba, setAba] = useState("painel");
   const { session, loading, permissoesCarregando, estadoPermissoes, papel } = useAuth();
+  const navegar = useNavigate();
+
+  async function sairEIrParaInicio() {
+    await supabase.auth.signOut();
+    await navegar({ to: "/" });
+  }
 
   if (loading || (session && permissoesCarregando && estadoPermissoes === "validando")) {
     return (
@@ -71,8 +77,8 @@ export function EngenheiroPagina() {
           </p>
           <FormularioLogin />
           <div className="pt-2 text-center">
-            <Link to="/apresentacao" className="text-xs text-muted-foreground underline">
-              Voltar à apresentação
+            <Link to="/" className="text-xs text-muted-foreground underline">
+              Voltar ao início
             </Link>
           </div>
         </div>
@@ -99,7 +105,7 @@ export function EngenheiroPagina() {
             type="button"
             variant="outline"
             className="w-full"
-            onClick={() => void supabase.auth.signOut()}
+            onClick={() => void sairEIrParaInicio()}
           >
             Sair desta conta
           </Button>
@@ -123,17 +129,17 @@ export function EngenheiroPagina() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              to="/apresentacao"
+              to="/"
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-current/30 px-4 text-sm hover:bg-white/10 focus-visible:outline focus-visible:outline-2"
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
-              Apresentação
+              Início
             </Link>
             <Button
               type="button"
               variant="ghost"
               className="min-h-11 gap-2 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground"
-              onClick={() => void supabase.auth.signOut()}
+              onClick={() => void sairEIrParaInicio()}
             >
               <LogOut className="size-4" aria-hidden="true" />
               Sair

@@ -12,14 +12,13 @@ vi.mock("@tanstack/react-router", () => ({
   useRouterState: () => "/engenheiro",
   Outlet: () => <EngenheiroPagina />,
   Navigate: () => null,
+  useNavigate: () => vi.fn(),
 }));
-const auth = vi.hoisted(() =>
-  vi.fn(() => {
-    throw new Error("Operational authentication must not mount");
-  }),
-);
+const auth = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/useAuth", () => ({ useAuth: auth }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { auth: { signOut: vi.fn() } },
+}));
 vi.mock("@/lib/usuarios.functions", () => ({ listarEmpresas: vi.fn() }));
 vi.mock("@/lib/registro", () => ({ registrarLogin: vi.fn() }));
 vi.mock("@/lib/aparelho", () => ({}));
@@ -28,7 +27,21 @@ vi.mock("@/components/SyncStatus", () => ({}));
 vi.mock("@/components/PrepararOffline", () => ({}));
 vi.mock("@/components/apresentacao/ApresentacaoPagina", () => ({}));
 vi.mock("@/components/Aparencia", () => ({}));
-import { AppShell } from "@/components/AppShell";
+
+const SEM_SESSAO = {
+  session: null,
+  loading: false,
+  permissoesCarregando: false,
+  estadoPermissoes: "indisponivel",
+  papel: "sem_funcao",
+};
+const ENGENHEIRO = {
+  session: { user: { id: "u-eng", email: "eng@gestorflorestal.com.br" } },
+  loading: false,
+  permissoesCarregando: false,
+  estadoPermissoes: "validado",
+  papel: "engenheiro",
+};
 
 beforeEach(() => vi.stubGlobal("indexedDB", new IDBFactory()));
 afterEach(() => {
@@ -36,19 +49,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Área do Engenheiro", () => {
-  it("abre vazia sem montar autenticação e consultas de Manejo/Serraria", () => {
-    render(<AppShell />);
-    expect(auth).not.toHaveBeenCalled();
+  it("sem login oferece voltar ao início (raiz), não à apresentação", () => {
+    auth.mockReturnValue(SEM_SESSAO);
+    render(<EngenheiroPagina />);
     expect(screen.getByRole("heading", { name: "Área do Engenheiro" })).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(11);
-    expect(screen.queryByRole("tab", { name: "Manejo" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Serraria" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Voltar à apresentação" })).toHaveAttribute(
-      "href",
-      "/apresentacao",
-    );
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    const voltar = screen.getByRole("link", { name: "Voltar ao início" });
+    expect(voltar).toHaveAttribute("href", "/");
+    expect(screen.queryByRole("link", { name: /apresenta/i })).not.toBeInTheDocument();
   });
-  it("permite navegar pelas abas e não anuncia sincronização ativa", async () => {
+  it("logado navega pelas abas, oferece Início (raiz) e não anuncia sincronização ativa", async () => {
+    auth.mockReturnValue(ENGENHEIRO);
     render(<EngenheiroPagina />);
     for (const tab of screen.getAllByRole("tab")) {
       fireEvent.mouseDown(tab, { button: 0, ctrlKey: false });
@@ -60,5 +71,8 @@ describe("Área do Engenheiro", () => {
         "Armazenamento exclusivamente local. Não há sincronização com servidor.",
       ),
     ).toBeInTheDocument();
+    const inicio = screen.getByRole("link", { name: /Início/ });
+    expect(inicio).toHaveAttribute("href", "/");
+    expect(screen.queryByRole("link", { name: /apresenta/i })).not.toBeInTheDocument();
   });
 });
