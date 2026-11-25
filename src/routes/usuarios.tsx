@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa, definirCnpjEmpresa, definirFuncao, statusFuncoes } from "@/lib/usuarios.functions";
+import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa, definirCnpjEmpresa, excluirEmpresa, definirFuncao, statusFuncoes } from "@/lib/usuarios.functions";
 import { FUNCOES, funcaoValida, nomePapel, type FuncaoFuncionario } from "@/lib/funcoes";
 import { formatarCnpj, LIMITE_DEMONSTRACAO, type StatusEmpresa } from "@/lib/cnpj";
 import { Button } from "@/components/ui/button";
@@ -209,6 +209,11 @@ function UsuariosPage() {
                   catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao salvar CNPJ"); }
                 }}>CNPJ</Button>
               )}
+              <Button type="button" size="icon" variant="ghost" aria-label={`Excluir empresa ${e.nome}`} onClick={async () => {
+                if (!confirm(`Excluir a empresa ${e.nome}? Os acessos dela ficam sem empresa. Isso não pode ser desfeito.`)) return;
+                try { await excluirEmpresa({ data: { empresaId: e.id } }); toast.success("Empresa excluída."); await qc.invalidateQueries(); }
+                catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao excluir empresa"); }
+              }}><Trash2 className="size-4" /></Button>
             </div>
           ))}
         </div>
