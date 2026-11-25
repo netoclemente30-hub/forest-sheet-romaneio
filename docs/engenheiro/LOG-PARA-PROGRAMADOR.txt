@@ -1,3 +1,5 @@
+ATUALIZAÇÃO MAIS RECENTE: seção 13, de 25/11/2026. As seções anteriores são histórico.
+
 LOG TÉCNICO — ÁREA DO ENGENHEIRO / GESTOR FLORESTAL
 Data de referência: 24/11/2026 — America/Manaus
 Estado: desenvolvimento local; layout inicial e fundação offline; não publicado.
@@ -241,3 +243,118 @@ Nenhum push, merge ou publicação autorizado/executado nesta etapa.
 proj4 já existe no package.json; @turf/boolean-point-in-polygon ainda não foi adicionado.
 Importação de polígonos UPA/APP, censo UTM/Lat-Lon, bloqueios APP/DMC e exportação
 POA/Sinaflor+ permanecem NÃO IMPLEMENTADOS nesta nova área.
+
+13. ENTREGA DO CORE LOCAL — 25/11/2026
+
+REPOSITÓRIO E RESTAURAÇÃO
+- Repositório: netoclemente30-hub/forest-sheet-romaneio, vínculo Lovable verificado
+  no levantamento anterior. Não é o aplicativo de depósito.
+- Branch de trabalho: feat/engenheiro, somente local.
+- Checkpoint anterior à implementação: 179ba8d
+  feat(engenheiro): checkpoint layout isolado e base offline.
+- O commit desta entrega será identificável por:
+  git log -1 --oneline -- docs/engenheiro/LOG-PARA-PROGRAMADOR.txt
+- Sem push, merge, alteração de main, deploy ou escrita em banco remoto.
+
+IMPLEMENTADO
+- Clientes -> propriedades -> projetos PMFS/POA -> UTs, com área efetiva informada.
+- Parâmetros editáveis do projeto: zona UTM/hemisfério, intensidade e sementes.
+  Nenhum valor é apresentado como limite legal automaticamente vigente.
+- Espécies por projeto: código, nomes, DMC, fator de forma e situação legal.
+  Equação opcional via importação JSON parametrizada (a, b, c), sem eval.
+  Atualizar espécie no formulário preserva equação anteriormente importada.
+- Coletor: placa/faixa/UT/espécie, CAP-DAP instantâneo, altura, fuste, cipós,
+  oco e destinação; prévia G e V antes de coordenadas e posição obrigatória.
+- Lat/Lon WGS84 <-> UTM configurada sobre GRS80 (SIRGAS 2000).
+- Trava de placa por UT/projeto; ignora caixa e zeros iniciais numéricos.
+- Bloqueios: DMC, espécie proibida, APP inclusive borda, UT ausente/fora da UT.
+  Espécie RARA recebe triagem conservadora e exige revisão técnica.
+- Toda gravação do núcleo recalcula e persiste a destinação efetiva. Relatórios,
+  mapas e GeoJSON também recalculam; alertas são derivados das regras atuais.
+- CSV/JSON com prévia e erros; importação atômica sem gravar parte válida de um
+  arquivo inválido. Limite de arquivo 20 MB. Não faz atualização por importação.
+- Leaflet vetorial sem mapa-base remoto, GeoJSON/KML: Limite_UPA, UTs,
+  Hidrografia, APP e Patios_Estradas. Cores por destinação, grades Lat/Lon e UTM.
+- Pátios com raio configurável e polilinhas com extensão geodésica aproximada.
+- Estatísticas espécie/UT e intensidade total por UT; aviso de intensidade excedida.
+- Sugestão de sementes por fuste 1 e dispersão espacial, com confirmação;
+  informa insuficiência de candidatas. Não substitui decisão do responsável.
+- CSV IF100 em ISO-8859-1 e Excel de conferência, 15 colunas, CAP/DAP em metros,
+  medidas até quatro casas, coordenadas decimais, IDs alfanuméricos até 10 posições.
+  Fórmulas de planilha são neutralizadas. Um arquivo por clique para uso mobile.
+- Exportação de camadas/árvores GeoJSON e cópia JSON do estado local.
+- Botões Área do Engenheiro/Acessar sistema agrupados no cabeçalho mobile.
+
+ARQUITETURA E ARQUIVOS
+- src/lib/engenheiro/projeto.ts: entidades e integridade referencial.
+- banco.ts: IndexedDB v2, upgrade ADITIVO no banco gestor-florestal-engenheiro-v1.
+  Stores arvores (legado) e core; revisão otimista impede sobrescrita entre abas.
+- inventario.ts: validações, volumetria, identidade de árvore e bloqueios.
+- gis.ts: projeção, ponto em polígono, distâncias e grade projetada.
+- camadas.ts: importação/validação geométrica e avaliação por projeto.
+- triagem.ts: estatísticas e sugestão determinística de sementes.
+- intercambio.ts: prévia CSV/JSON e exportadores IF100/Excel/GeoJSON.
+- components/engenheiro/CoreLocal.tsx: formulários e abas; MapaLocal.tsx: mapa.
+- O legado coleta.ts/rascunhos.ts permanece compatível com rascunhos anteriores.
+- Dependências novas: @turf/boolean-point-in-polygon, leaflet, @tmcw/togeojson,
+  @types/geojson e @types/leaflet. proj4 já existia no projeto.
+- bun.lock atualizado pelo Bun 1.4.5 com --lockfile-only --ignore-scripts.
+  Houve deduplicação de tslib no lockfile; não houve atualização de Supabase.
+
+VALIDAÇÃO
+- Suíte completa: 95 arquivos, 545 testes aprovados (core-testes-completos.log).
+- Após o refinamento do coletor, suíte focada com teste de formulário adicional:
+  4 arquivos / 17 testes passaram (core-testes-finais.log). O teste usa fake-indexeddb,
+  verifica prévia sem posição, bloqueio de salvamento e destinação persistida.
+- TypeScript sem erros e build Vite/Nitro sem erros na validação do núcleo.
+- Testes de migração preservam registros v1; conflitos entre abas são rejeitados.
+- Testes GIS cobrem meridiano central, ida/volta, coordenadas inválidas, bordas
+  e buracos de polígonos; testes de cálculo cobrem fator/equação e valores inválidos.
+- Navegador local: cadastro fictício cliente/propriedade/projeto; seleção preservada
+  entre abas; mapa, grade UTM, pátio; persistência após recarga.
+- Cabeçalho mobile conferido em 390x844: ambos os acessos lado a lado.
+- Prévia de desenvolvimento: http://127.0.0.1:5175/engenheiro.
+  Dados de QA fictícios existem apenas nessa origem local do navegador.
+- A prévia anterior 5174 exibiu HTML sem interação após rebuild; a verificação
+  final foi feita no servidor de desenvolvimento 5175.
+
+FONTES E LIMITES DE HOMOLOGAÇÃO
+- Acrescentados modelo oficial CSV e manual Ibama IF100 V2, com links e hashes
+  em fontes.json e explicação em FONTES.md. O manual V2 usa graus decimais,
+  ao contrário de instruções históricas; foi a base deste exportador.
+- CSV é um arquivo PARA REVISÃO, não um protocolo aceito ou aprovado pelo órgão.
+  Não houve envio ao Sinaflor+, conferência de catálogo SISTAXON ou homologação.
+- Sem confirmação de produto/espécies no catálogo, consistência de área autorizada,
+  regras regionais/autorizações e parâmetros florestais, não declarar POA pronto.
+- APP deve ser importada já delimitada tecnicamente. Hidrografia não cria APP
+  automaticamente; ausência de APP não prova ausência de restrições ambientais.
+- Validação geométrica confere tipos, coordenadas e fechamento de anéis; não
+  substitui análise topológica de autointerseções, sobreposições ou precisão.
+- GRS80 com transformação nula WGS84 é aproximação prática; não trata época
+  geodésica, deslocamento crustal ou levantamento de precisão certificada.
+- O percentual usa todos os indivíduos da espécie na UT como denominador.
+  Validar essa base e elegibilidade com o responsável antes de uso operacional.
+- Dados são locais ao perfil do navegador, não segregados por usuário autenticado.
+  Não existe login independente, sincronização, RLS nova ou auditoria por pessoa.
+  Manejo/Serraria não são montados nem consultados pelo módulo.
+- IndexedDB mantém o agregado completo em uma chave: medir desempenho e quota
+  para censos grandes antes de campo. Sem teste de 100 mil árvores.
+- Backup JSON é exportável; restauração assistida, edição completa e remoção
+  versionada de cadastros/camadas ficam para incremento futuro.
+- Não foi testado cold start da PWA desconectada, quota/disco cheio ou celular
+  físico. Mapa não exige internet para vetores, mas o carregamento inicial dos
+  arquivos do aplicativo depende da preparação/cache do ambiente de hospedagem.
+- Persistem avisos preexistentes do build sobre PWA/globs e imports dinâmicos.
+  Configuração operacional PWA não foi alterada nesta entrega.
+- Instalação de node_modules ainda é a local feita com pnpm; embora bun.lock esteja
+  atualizado, repetir instalação limpa --frozen-lockfile no ambiente de integração.
+- Vigência consolidada federal/RO e equivalência funcional Xendra NÃO certificadas.
+
+PRÓXIMAS ETAPAS
+1. Revisão de código e homologação florestal com conjunto real anonimizado.
+2. Ensaio do CSV no ambiente adequado do órgão, sem envio de pedido real.
+3. Preparação offline e cold start em aparelho de campo; teste de quota/conflitos.
+4. Restauração de backup e edição/versionamento de cadastros, censos e camadas.
+5. Somente em escopo posterior: identidade independente, autorização, sincronização
+   e servidor, conforme regras Lovable e sem reaproveitar acesso operacional.
+6. Nenhum merge/main/push/publicação integra esta entrega.

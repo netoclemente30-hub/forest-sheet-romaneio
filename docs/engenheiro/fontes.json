@@ -138,5 +138,25 @@
     "vigencia": "Não se aplica.",
     "status": "falhou: Response status code does not indicate success: 301 ().",
     "sha256": null
+  },
+  {
+    "titulo": "modelo-ibama-if100.csv",
+    "arquivo": "modelo-ibama-if100.csv",
+    "url": "https://www.gov.br/ibama/pt-br/assuntos/biodiversidade/flora-e-madeira/arquivos/sinaflor/2019/2019-07-09-nova_versao_da_planilha_padrao_inventario_florestal.csv",
+    "consultadoEm": "2026-11-25",
+    "escopo": "Modelo oficial das 15 colunas IF100",
+    "vigencia": "Documento técnico disponibilizado pelo Ibama; não é norma de manejo. Validar aceitação no ambiente de homologação e requisitos da SEDAM.",
+    "status": "baixado",
+    "sha256": "e1876f1e183cf0aac40e5e1194fc1f9ef502f114c4b23d372a8f5ad93512e1a2"
+  },
+  {
+    "titulo": "ibama-if100-manual-v2.pdf",
+    "arquivo": "ibama-if100-manual-v2.pdf",
+    "url": "https://www.gov.br/ibama/pt-br/assuntos/biodiversidade/flora-e-madeira/arquivos/sinaflor/2019/2019-07-09-Manual_Atualizado_SINAFLOR_-_Preenchimento_da_Planilha_do_POA_e_Importao_de_Dados_do_IF_100_V.2.pdf",
+    "consultadoEm": "2026-11-25",
+    "escopo": "Manual técnico IF100 V2: CSV ISO-8859-1, separador ponto e vírgula, medidas em metros, coordenadas decimais",
+    "vigencia": "Documento técnico disponibilizado pelo Ibama; não é norma de manejo. Validar aceitação no ambiente de homologação e requisitos da SEDAM.",
+    "status": "baixado",
+    "sha256": "1dd17383efde9dcd58758a94d3226eece37a0d165515528cb585827f0f147e3d"
   }
 ]

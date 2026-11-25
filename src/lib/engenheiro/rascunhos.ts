@@ -1,4 +1,5 @@
 import { arvoreColetada, chaveEscopo, type ArvoreColetada, type EscopoColeta } from "./coleta";
+import { abrirBanco } from "./banco";
 
 export const BANCO_ENGENHEIRO = "gestor-florestal-engenheiro-v1";
 type Rascunho = { chave: string; escopo: string; arvore: ArvoreColetada; atualizadoEm: string };
@@ -6,21 +7,18 @@ type Rascunho = { chave: string; escopo: string; arvore: ArvoreColetada; atualiz
 /** Internal persistence primitive, not authorization. Keep disconnected from UI until
  * a verified engineering identity/grant exists. Never replays into operational stock. */
 export async function abrirRascunhos(factory: IDBFactory = indexedDB) {
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = factory.open(BANCO_ENGENHEIRO, 1);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore("arvores", { keyPath: "chave" }).createIndex("escopo", "escopo");
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-    request.onblocked = () => reject(new Error("Feche outras abas para abrir o armazenamento do engenheiro."));
-  });
+  const db = await abrirBanco(factory);
   db.onversionchange = () => db.close();
   return {
     async salvar(escopo: EscopoColeta, entrada: ArvoreColetada): Promise<void> {
       const scope = chaveEscopo(escopo);
       const arvore = arvoreColetada.parse(entrada);
-      const registro: Rascunho = { chave: JSON.stringify([scope, arvore.numero]), escopo: scope, arvore, atualizadoEm: new Date().toISOString() };
+      const registro: Rascunho = {
+        chave: JSON.stringify([scope, arvore.numero]),
+        escopo: scope,
+        arvore,
+        atualizadoEm: new Date().toISOString(),
+      };
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction("arvores", "readwrite");
         tx.objectStore("arvores").put(registro);
@@ -34,7 +32,13 @@ export async function abrirRascunhos(factory: IDBFactory = indexedDB) {
       return new Promise((resolve, reject) => {
         const tx = db.transaction("arvores", "readonly");
         const req = tx.objectStore("arvores").index("escopo").getAll(scope);
-        tx.oncomplete = () => resolve((req.result as Rascunho[]).map(r => arvoreColetada.parse(r.arvore)));
+        tx.oncomplete = () => {
+          try {
+            resolve((req.result as Rascunho[]).map((r) => arvoreColetada.parse(r.arvore)));
+          } catch (e) {
+            reject(e);
+          }
+        };
         tx.onabort = () => reject(tx.error);
         tx.onerror = () => reject(tx.error);
       });

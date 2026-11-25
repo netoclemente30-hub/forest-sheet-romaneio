@@ -112,15 +112,17 @@ export function ApresentacaoPagina() {
             <p className="font-display text-xl font-bold uppercase leading-none">Gestor Florestal</p>
             <p className="text-[11px] uppercase tracking-widest opacity-75 hidden sm:block">Do manejo à serraria</p>
           </div>
-          <Button asChild variant="outline" className="ml-auto min-h-11 border-primary-foreground/50 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"><Link to="/engenheiro">Área do Engenheiro</Link></Button>
+          <div className="ml-auto grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Button asChild variant="outline" className="min-h-11 px-2 border-primary-foreground/50 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"><Link to="/engenheiro">Área do Engenheiro</Link></Button>
           <Button
             size="lg"
-            className="h-11 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90"
+            className="h-11 px-2 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90"
             onClick={() => { setCadastro(false); setAberto(true); }}
           >
             Acessar sistema
             <ArrowRight className="size-4" />
           </Button>
+          </div>
         </div>
       </header>
 

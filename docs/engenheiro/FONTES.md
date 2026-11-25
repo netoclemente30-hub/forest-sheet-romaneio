@@ -18,3 +18,9 @@ Consulta: 24/11/2026. Recorte inicial, não exaustivo. Downloads preservam origi
 | [federal-decreto5975-compilado](https://www2.camara.leg.br/legin/fed/decret/2006/decreto-5975-30-novembro-2006-547239-normaatualizada-pe.pdf) | Manejo, exploração e reposição florestal | Texto atualizado oficial; aplicabilidade de cada dispositivo deve ser confrontada com legislação posterior. | [baixado](fontes/federal-decreto5975-compilado.pdf) |
 | [ibama-manejo](https://www.gov.br/ibama/pt-br/assuntos/biodiversidade/flora-e-madeira/manejo-florestal-sustentavel) | Competência federal e lista de normas de manejo; página informativa | Não é ato normativo. | [baixado](fontes/ibama-manejo.html) |
 | [xendra-contratacao-pncp](https://pncp.gov.br/api/pncp/v1/orgaos/04092680000171/compras/2026/138) | Evidência pública de contratação Xendra; não é manual técnico | Não se aplica. | [falhou: Response status code does not indicate success: 301 ().](fontes/xendra-contratacao-pncp.json) |
+
+## Complemento IF100 — 25/11/2026
+
+O [catálogo oficial do Sinaflor](https://www.gov.br/ibama/pt-br/assuntos/biodiversidade/flora-e-madeira/sistema-nacional-de-controle-da-origem-dos-produtos-florestais-sinaflor) disponibiliza o modelo e o manual V2. Cópias locais: [modelo CSV](fontes/modelo-ibama-if100.csv) e [manual V2](fontes/ibama-if100-manual-v2.pdf). URLs diretas e SHA-256 estão em fontes.json.
+
+O V2 orienta 15 colunas, ISO-8859-1, ponto e vírgula, medidas com até quatro casas e coordenadas em graus decimais. Este exportador segue o V2; o manual antigo hospedado pela SEDAM permanece arquivado como fonte histórica. A compatibilidade com o sistema receptor precisa de homologação; o aplicativo não verifica o catálogo SISTAXON. Esses documentos são instruções técnicas, não demonstram vigência de limites legais de manejo.
