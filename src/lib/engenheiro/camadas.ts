@@ -92,3 +92,43 @@ export function avaliarCenso(s: Estado, projetoId: string) {
       );
     });
 }
+
+// Turf-based area and APP buffer helpers (pure, offline).
+import {
+  area as turfArea,
+  buffer as turfBuffer,
+  union as turfUnion,
+  featureCollection as turfFc,
+} from "@turf/turf";
+import type { Feature } from "geojson";
+
+export function areaHa(fc: FeatureCollection) {
+  return (
+    fc.features.reduce(
+      (n, f) =>
+        n +
+        (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon" ? turfArea(f) : 0),
+      0,
+    ) / 10000
+  );
+}
+export const DISTANCIAS_APP = [30, 50, 100] as const;
+/** Buffers every hydrography feature (lines, springs, polygons) of the project into one APP polygon layer. */
+export function bufferApp(s: Estado, projetoId: string, metros: number): FeatureCollection {
+  if (!Number.isFinite(metros) || metros <= 0) throw new Error("Distância de APP inválida.");
+  const feicoes = s.camadas
+    .filter((c) => c.projetoId === projetoId && c.tipo === "Hidrografia")
+    .flatMap((c) => c.geojson.features);
+  if (!feicoes.length) throw new Error("Cadastre ou desenhe a hidrografia/nascentes primeiro.");
+  const polis = feicoes
+    .map((f) => turfBuffer(f, metros, { units: "meters" }))
+    .filter((f): f is Feature<Polygon | MultiPolygon> => !!f && !!f.geometry);
+  const unido = polis.length > 1 ? turfUnion(turfFc(polis)) : polis[0];
+  if (!unido) throw new Error("Não foi possível gerar a APP.");
+  return validarCamada({
+    type: "FeatureCollection",
+    features: [{ ...unido, properties: { origem: "buffer-hidrografia", metros } }],
+  });
+}
+export const ehAppAutomatica = (c: Camada) =>
+  c.tipo === "APP" && c.geojson.features.some((f) => f.properties?.["origem"] === "buffer-hidrografia");
