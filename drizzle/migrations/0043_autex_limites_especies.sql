@@ -1,0 +1,2 @@
+ALTER TABLE public.autex ADD COLUMN limites_especies jsonb;
+COMMENT ON COLUMN public.autex.limites_especies IS 'Volumes autorizados por espécie informados no cadastro: array de objetos {especie:string,nome_cientifico?:string,volume_m3:number}. Opcional; NULL indica limites não informados.';

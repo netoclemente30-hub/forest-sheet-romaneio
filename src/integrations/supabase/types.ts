@@ -196,6 +196,7 @@ export type Database = {
           descricao: string | null
           empresa_id: string
           encerrado: boolean
+          limites_especies: Json | null
           numero: string
         }
         Insert: {
@@ -203,6 +204,7 @@ export type Database = {
           descricao?: string | null
           empresa_id?: string
           encerrado?: boolean
+          limites_especies?: Json | null
           numero: string
         }
         Update: {
@@ -210,6 +212,7 @@ export type Database = {
           descricao?: string | null
           empresa_id?: string
           encerrado?: boolean
+          limites_especies?: Json | null
           numero?: string
         }
         Relationships: [
