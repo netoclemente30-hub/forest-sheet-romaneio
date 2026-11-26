@@ -316,6 +316,13 @@
       "when": 1795655199553,
       "tag": "0044_rastreabilidade_serrada_publicacao_explicita",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795688448980,
+      "tag": "0045_rastreabilidade_serrada_prioriza_emitente_fiscal",
+      "breakpoints": true
     }
   ]
 }
