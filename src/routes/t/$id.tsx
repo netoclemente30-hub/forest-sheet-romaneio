@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type React from "react";
-import { CheckCircle2, Factory, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, TreePine, Truck } from "lucide-react";
-import { consultarFichaPublicaTora } from "@/lib/consulta-tora-publica";
+import { useEffect } from "react";
+import { CheckCircle2, Factory, GitCommitVertical, MapPin, QrCode, Ruler, Sprout, Tractor, TreePine, Truck } from "lucide-react";
+import { consultarFichaPublicaTora, guardarFichaPublica, lerFichaPublicaOffline } from "@/lib/consulta-tora-publica";
 import type { FichaToraPublica } from "@/lib/consulta-tora-publica";
 import { medidaComercial, fmtComprimentoComercial } from "@/lib/medida-comercial";
-import { dataHoraSerragem, situacaoSerragem } from "@/lib/situacao-serragem";
+import { dataHoraSerragem, FUSO_SERRARIA, situacaoSerragem } from "@/lib/situacao-serragem";
 import { EscolherAparencia } from "@/components/Aparencia";
 
 export const Route = createFileRoute("/t/$id")({
@@ -29,6 +30,8 @@ export const Route = createFileRoute("/t/$id")({
         erro: null as string | null,
       };
     } catch (e) {
+      const copia = lerFichaPublicaOffline(params.id);
+      if (copia) return { tora: copia.tora, erro: null, consultadaEm: copia.consultadaEm };
       return {
         tora: null,
         erro: e instanceof Error ? e.message : "Falha na consulta pública.",
@@ -41,12 +44,21 @@ export const Route = createFileRoute("/t/$id")({
 const n2 = (v: number | null | undefined) => (v == null ? "—" : Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const n4 = (v: number | null | undefined) => (v == null ? "—" : Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }));
 const n0 = (v: number | null | undefined) => (v == null ? "—" : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 1 }));
-const data = (v: string | null | undefined) => (v ? new Date(v.length === 10 ? `${v}T12:00:00` : v).toLocaleDateString("pt-BR") : "");
+const data = (v: string | null | undefined) => {
+  if (!v) return "";
+  const instante = new Date(v.length === 10 ? `${v}T12:00:00Z` : v);
+  return Number.isNaN(instante.getTime()) ? "" : instante.toLocaleDateString("pt-BR", {
+    timeZone: FUSO_SERRARIA, day: "2-digit", month: "2-digit", year: "numeric",
+  });
+};
 
 function ToraPublica() {
   const { id } = Route.useParams();
-  const { tora, erro } = Route.useLoaderData();
+  const { tora, erro, consultadaEm } = Route.useLoaderData();
   const t = tora;
+  useEffect(() => {
+    if (tora && !consultadaEm) guardarFichaPublica(id, tora);
+  }, [id, tora, consultadaEm]);
   return (
     <main className="min-h-screen bg-background pb-10">
       <header className="border-b bg-card px-4 py-4">
@@ -57,6 +69,9 @@ function ToraPublica() {
         </div>
       </header>
       <div className="mx-auto max-w-2xl space-y-4 px-4 pt-4">
+        {consultadaEm && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">
+          Cópia offline de {dataHoraSerragem(new Date(consultadaEm).toISOString())}. Conecte-se para consultar a situação atual.
+        </p>}
         {erro && (
           <div role="alert" className="space-y-3 rounded-lg border border-destructive p-4">
             <p className="font-semibold">Não foi possível abrir a ficha da tora.</p>
@@ -68,7 +83,7 @@ function ToraPublica() {
           </div>
         )}
         {!erro && !t && <p className="rounded-lg border p-6 text-center text-muted-foreground">Tora não encontrada. Confira o QR Code da etiqueta.</p>}
-        {t && <Detalhes t={t} />}
+        {t && <Detalhes t={t} offline={Boolean(consultadaEm)} />}
         <p className="pt-2 text-center text-xs text-muted-foreground"><b>Sistema de Gestão Florestal · <Link to="/apresentacao" className="underline">Gestor Florestal</Link></b><br />Documento gerado automaticamente via QR Code</p>
       </div>
     </main>
@@ -77,11 +92,12 @@ function ToraPublica() {
 
 type Publica = FichaToraPublica;
 
-function Detalhes({ t }: { t: Publica }) {
+function Detalhes({ t, offline }: { t: Publica; offline: boolean }) {
   const c = medidaComercial(t);
   const serragem = situacaoSerragem(t.serrada_em);
   const etapas = [
     { txt: "Abate", det: data(t.abatida_em), ok: !!t.abatida_em },
+    { txt: "Data do Arraste", det: data(t.arrastada_em) || "Não informado", ok: true, icone: Tractor },
     { txt: "Medida e etiquetada", det: data(t.created_at), ok: true },
     { txt: "Romaneio de carga", det: t.romaneio_data ? `Carregada em ${data(t.romaneio_data)}` : "", ok: t.carregada || !!t.serrada_em },
     { txt: "Serrada", det: dataHoraSerragem(t.serrada_em) ?? "", ok: !!t.serrada_em },
@@ -114,7 +130,7 @@ function Detalhes({ t }: { t: Publica }) {
           </p>
         )}
         <p className="mt-2 text-xs text-muted-foreground">
-          Situação consultada no registro atual da tora. Horário de Rondônia (UTC−4).
+          {offline ? "Situação da última consulta salva." : "Situação consultada no registro atual da tora."} Horário de Rondônia (UTC−4).
         </p>
       </Cartao>
 
@@ -157,7 +173,8 @@ function Detalhes({ t }: { t: Publica }) {
         <ol className="space-y-3">
           {etapas.map((e) => (
             <li key={e.txt} className="flex gap-3">
-              <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-primary" />
+              {e.icone ? <e.icone aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /> :
+                <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full bg-primary" />}
               <div><p className="font-medium">{e.txt}</p>{e.det && <p className="text-xs text-muted-foreground">{e.det}</p>}</div>
             </li>
           ))}

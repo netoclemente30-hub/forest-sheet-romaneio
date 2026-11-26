@@ -1,6 +1,10 @@
 import type { Database } from "@/integrations/supabase/types";
 
-export type FichaToraPublica = Database["public"]["Functions"]["tora_publica"]["Returns"][number];
+type FichaRpc = Database["public"]["Functions"]["tora_publica"]["Returns"][number];
+export type FichaToraPublica = Omit<FichaRpc, "arrastada_em"> & {
+  // Optional for snapshots and servers from before this field was added.
+  arrastada_em?: string | null;
+};
 
 export class ErroConsultaTora extends Error {
   constructor(message: string) {
@@ -11,6 +15,37 @@ export class ErroConsultaTora extends Error {
 
 const TEMPO_LIMITE_MS = 12000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CHAVE_COPIA = "rastreio-publico:ultima-ficha:v1";
+const VALIDADE_COPIA_MS = 24 * 60 * 60 * 1000;
+type CopiaPublica = { id: string; tora: FichaToraPublica; consultadaEm: number };
+
+export function guardarFichaPublica(id: string, tora: FichaToraPublica) {
+  if (!UUID.test(id)) return;
+  try {
+    localStorage.setItem(CHAVE_COPIA, JSON.stringify({ id: id.toLowerCase(), tora, consultadaEm: Date.now() }));
+  } catch { /* Storage can be disabled; online lookup still works. */ }
+}
+
+export function lerFichaPublicaOffline(id: string): CopiaPublica | null {
+  if (!UUID.test(id) || typeof navigator === "undefined" || navigator.onLine !== false) return null;
+  try {
+    const copia = JSON.parse(localStorage.getItem(CHAVE_COPIA) ?? "null") as CopiaPublica | null;
+    if (!copia?.tora || !Number.isFinite(copia.consultadaEm)) return null;
+    const idade = Date.now() - copia.consultadaEm;
+    if (idade < 0 || idade > VALIDADE_COPIA_MS) {
+      localStorage.removeItem(CHAVE_COPIA);
+      return null;
+    }
+    return copia.id === id.toLowerCase() ? copia : null;
+  } catch { return null; }
+}
+
+function descartarFichaPublica(id: string) {
+  try {
+    const copia = JSON.parse(localStorage.getItem(CHAVE_COPIA) ?? "null") as CopiaPublica | null;
+    if (copia?.id === id.toLowerCase()) localStorage.removeItem(CHAVE_COPIA);
+  } catch { /* SSR and browsers without local storage simply have no snapshot. */ }
+}
 
 /**
  * A consulta do QR é pública: não pode depender do refresh de sessão nem do
@@ -57,6 +92,7 @@ export async function consultarFichaPublicaTora(
       },
     );
     if (!resp.ok) {
+      if (resp.status === 401 || resp.status === 403) descartarFichaPublica(id);
       console.error("[QR público] Resposta da consulta:", resp.status);
       throw new ErroConsultaTora(
         resp.status === 401 || resp.status === 403
@@ -66,7 +102,9 @@ export async function consultarFichaPublicaTora(
     }
     const dados: unknown = await resp.json();
     if (!Array.isArray(dados)) throw new ErroConsultaTora("Resposta inesperada ao consultar a tora.");
-    return (dados[0] as FichaToraPublica | undefined) ?? null;
+    const tora = (dados[0] as FichaToraPublica | undefined) ?? null;
+    if (!tora) descartarFichaPublica(id);
+    return tora;
   } catch (e) {
     if (e instanceof ErroConsultaTora) throw e;
     if (ctrl.signal.aborted) {
