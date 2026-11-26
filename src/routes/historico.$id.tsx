@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import { useAuth } from "@/hooks/useAuth";
 import { createFileRoute, useNavigate,Link } from "@tanstack/react-router";
 import {rotaPermitida} from "@/lib/funcoes";
@@ -57,11 +58,12 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape" });
+  await adicionarLogoPdf(doc, 14, 6, 18);
   const totais = totaisComerciais(itens);
   doc.setFontSize(16);
-  doc.text("ROMANEIO DE CARGA", 14, 16);
+  doc.text("ROMANEIO DE CARGA", 36, 16);
   doc.setFontSize(10);
-  doc.text(`Placa/Caminhão: ${r.placa ?? ""}    Reboque: ${r.julieta ?? ""}`, 14, 24);
+  doc.text(`Placa/Caminhão: ${r.placa ?? ""}    Reboque: ${r.julieta ?? ""}`, 36, 24);
   doc.text(`Data: ${dataBR(r.data)}    Motorista: ${r.motorista ?? ""}    CPF: ${r.cpf ?? ""}`, 14, 30);
   const QRCode = (await import("qrcode")).default;
   const qr = await QRCode.toDataURL(qrRomaneio(r, itens.map((t) => t.plaqueta)), { margin: 1, width: 400 });

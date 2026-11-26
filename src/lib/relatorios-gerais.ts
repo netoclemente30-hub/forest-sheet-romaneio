@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import type { Romaneio, Tora } from "./data";
 import type { PacoteSerrado, CargaSerrada } from "./madeira-serrada";
 import type { ArquivoGerado } from "./arquivo";
@@ -135,10 +136,11 @@ export async function exportarTabelasPdf(nome: string, filtro: string, tabelas: 
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape", compress: true });
+  await adicionarLogoPdf(doc, 14, 7, 15);
   doc.setFontSize(15);
-  doc.text(nome.toUpperCase(), 14, 14);
+  doc.text(nome.toUpperCase(), 33, 14);
   doc.setFontSize(9);
-  doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")}${filtro ? ` · ${filtro}` : ""}`, 14, 20);
+  doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")}${filtro ? ` · ${filtro}` : ""}`, 33, 20);
   let y = 26;
   for (const t of tabelas) {
     doc.setFontSize(11);

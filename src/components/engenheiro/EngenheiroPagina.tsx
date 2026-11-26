@@ -1,3 +1,4 @@
+import { LogoGestor } from "@/components/LogoGestor";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { CoreLocal } from "./CoreLocal";
@@ -61,7 +62,7 @@ export function EngenheiroPagina() {
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
         <div className="w-full max-w-md space-y-6 rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
           <div className="flex items-center gap-3">
-            <TreePine className="size-8 shrink-0 text-primary" aria-hidden="true" />
+            <LogoGestor />
             <div>
               <h1 className="font-display text-2xl font-bold uppercase text-primary">
                 Área do Engenheiro
@@ -119,7 +120,7 @@ export function EngenheiroPagina() {
       <header className="bg-forest text-primary-foreground">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6">
           <div className="flex items-center gap-3">
-            <TreePine className="size-8 shrink-0 text-accent" aria-hidden="true" />
+            <LogoGestor />
             <div>
               <p className="font-display text-xl font-bold uppercase">Gestor Florestal</p>
               <p className="text-xs tracking-wide opacity-80">

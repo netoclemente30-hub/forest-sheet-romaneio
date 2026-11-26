@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import { volumeTora } from "@/lib/volume";
 import { medidaComercial } from "@/lib/medida-comercial";
 
@@ -72,10 +73,11 @@ export async function pdfAguardando(toras: ToraAguardando[], empresa: string) {
   const { fmtM3 } = await import("@/lib/volume");
   const r = relatorioAguardando(toras);
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  await adicionarLogoPdf(doc, 14, 7, 15);
   doc.setFont("helvetica", "bold"); doc.setFontSize(14);
-  doc.text("TORAS MEDIDAS NO PÁTIO — AGUARDANDO IDENTIFICAÇÃO", 14, 14);
+  doc.text("TORAS MEDIDAS NO PÁTIO — AGUARDANDO IDENTIFICAÇÃO", 33, 14);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  doc.text(`${empresa} · Emitido em ${new Date().toLocaleString("pt-BR")} · ${r.total.qtd} toras · Físico ${fmtM3(r.total.fisico)} m³ · Comercial ${fmtM3(r.total.comercial)} m³`, 14, 20);
+  doc.text(`${empresa} · Emitido em ${new Date().toLocaleString("pt-BR")} · ${r.total.qtd} toras · Físico ${fmtM3(r.total.fisico)} m³ · Comercial ${fmtM3(r.total.comercial)} m³`, 33, 20);
   doc.text("Toras sem identificação de árvore/seção/autorização; medidas físicas (Smalian) e comerciais (ponta mais fina, comprimento arredondado para baixo de 0,5 m).", 14, 25);
   const n = (v: number | null, d = 2) => v === null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
   autoTable(doc, {

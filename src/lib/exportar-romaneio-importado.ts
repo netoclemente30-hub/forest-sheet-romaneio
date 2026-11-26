@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import type { ArquivoGerado } from './arquivo';
 import type { RomaneioImportado } from './romaneio-serrado-importado';
 
@@ -39,8 +40,9 @@ export async function pdfImportado(r:RomaneioImportado, empresaNome:string): Pro
   const forest=t('forest')||'#1f4d36', paper=t('paper')||'#ffffff', ink=t('ink')||'#1a1a1a', line=t('line')||'#bbbbbb';
   const c = r.cab;
   doc.setFillColor(forest); doc.rect(0,0,297,25,'F');
-  doc.setTextColor(paper); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(empresaNome,10,9);
-  doc.setFontSize(15); doc.text('ROMANEIO DE MADEIRA SERRADA',10,19);
+  await adicionarLogoPdf(doc, 10, 4, 17);
+  doc.setTextColor(paper); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(empresaNome,31,9);
+  doc.setFontSize(15); doc.text('ROMANEIO DE MADEIRA SERRADA',31,19);
   doc.setFontSize(9); doc.text(`${c.numero_carga} · ${c.data.split('-').reverse().join('/')}`,287,9,{align:'right'});
   autoTable(doc,{startY:30,margin:{left:10,right:10},theme:'grid',styles:{fontSize:9,cellPadding:3,textColor:ink,lineColor:line},headStyles:{fillColor:forest,textColor:paper},
     head:[['CLIENTE / DESTINATÁRIO','MOTORISTA','PLACAS','RESUMO']],

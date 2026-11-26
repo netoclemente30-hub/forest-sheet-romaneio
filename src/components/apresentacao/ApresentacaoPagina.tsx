@@ -1,3 +1,4 @@
+import { LogoGestor } from "@/components/LogoGestor";
 import { useState } from "react";
 import { VersaoAplicativo } from "@/components/VersaoAplicativo";
 import { Link } from "@tanstack/react-router";
@@ -6,7 +7,6 @@ import {
   Check,
   MessageCircle,
   Smartphone,
-  TreePine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,7 +108,7 @@ export function ApresentacaoPagina() {
     <main className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 bg-forest text-primary-foreground">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-4 py-3">
-          <TreePine className="size-6 shrink-0 text-accent" />
+          <LogoGestor className="size-9" />
           <div className="min-w-0">
             <p className="font-display text-xl font-bold uppercase leading-none">Gestor Florestal</p>
             <p className="text-[11px] uppercase tracking-widest opacity-75 hidden sm:block">Do manejo à serraria</p>

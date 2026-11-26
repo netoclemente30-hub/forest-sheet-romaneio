@@ -1,3 +1,4 @@
+import { LogoGestor } from "@/components/LogoGestor";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +46,7 @@ export function FormularioLogin() {
 
   return (
     <div className="space-y-4">
+      <LogoGestor className="mx-auto size-16" alt="Gestor Florestal" />
       {semAcesso && (
         <div role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 space-y-3">
           <p className="font-semibold">Esta conta ainda não tem acesso.</p>

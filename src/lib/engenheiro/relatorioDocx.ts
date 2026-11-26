@@ -1,3 +1,4 @@
+import { carregarLogoRelatorio } from "@/lib/logo-gestor";
 import { avaliarCenso, areaHa, poligonos } from "./camadas";
 import { resumo } from "./triagem";
 import type { Estado } from "./projeto";
@@ -77,8 +78,9 @@ export async function gerarRelatorioDocx(s: Estado, pid: string, info: InfoRelat
   const d = dadosRelatorio(s, pid, info);
   const {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, AlignmentType,
-    WidthType, BorderStyle, ShadingType, Header, Footer, PageNumber, LevelFormat,
+    WidthType, BorderStyle, ShadingType, Header, Footer, PageNumber, LevelFormat, ImageRun,
   } = await import("docx");
+  const logo = await carregarLogoRelatorio();
   const borda = { style: BorderStyle.SINGLE, size: 1, color: "999999" };
   const bordas = { top: borda, bottom: borda, left: borda, right: borda };
   const cel = (t: string, w: number, cab = false, dir = false) =>
@@ -142,7 +144,8 @@ export async function gerarRelatorioDocx(s: Estado, pid: string, info: InfoRelat
     sections: [{
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
       headers: { default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT,
-        children: [new TextRun({ text: `${d.p.tipo} · ${d.p.nome}`, size: 16, color: "666666" })] })] }) },
+        children: [...(logo ? [new ImageRun({ type: "png", data: logo, transformation: { width: 26, height: 26 } })] : []),
+          new TextRun({ text: `  ${d.p.tipo} · ${d.p.nome}`, size: 16, color: "666666" })] })] }) },
       footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER,
         children: [new TextRun({ size: 16, children: ["Página ", PageNumber.CURRENT, " de ", PageNumber.TOTAL_PAGES] })] })] }) },
       children: [

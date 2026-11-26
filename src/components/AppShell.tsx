@@ -1,3 +1,4 @@
+import { LogoGestor } from "@/components/LogoGestor";
 import { Link, Navigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { Home, BarChart3, LogOut, TreePine, Factory, Users, Building2, ClipboardList, Download, LifeBuoy, Check, Smartphone, MapPinned, Truck, Scissors, Warehouse } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -147,7 +148,7 @@ function OperationalAppShell() {
   return (
     <div className="min-h-screen pb-24">
       <header className="no-print bg-forest text-forest-foreground px-4 py-3 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-20">
-        <span className="font-display text-xl font-bold uppercase min-w-0">GESTOR FLORESTAL{"\n"}</span>
+        <div className="flex min-w-0 items-center gap-2"><LogoGestor /><span className="font-display text-xl font-bold uppercase">Gestor Florestal</span></div>
         <div className="ml-auto flex items-center gap-1 shrink-0">
           <EscolherAparencia />
           <Button size="icon" variant="ghost" aria-label="Este aparelho" title="Este aparelho" onClick={abrirAparelho} className="opacity-80">

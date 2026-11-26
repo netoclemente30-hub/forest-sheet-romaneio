@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import type { ArquivoGerado } from './arquivo';
 import { COMPRIMENTOS, comoBitola, type CargaSerrada } from './madeira-serrada';
 
@@ -27,8 +28,9 @@ export async function gerarPdfRomaneioSerrado(carga: CargaSerrada, empresaNome: 
   const forest = token('forest'), paper = token('paper'), ink = token('ink'), muted = token('muted'), line = token('line');
   const resumo = linhasCarga(carga);
   doc.setFillColor(forest); doc.rect(0,0,297,25,'F');
+  await adicionarLogoPdf(doc, 10, 4, 17);
   doc.setTextColor(paper); doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  doc.text(empresaNome,10,9); doc.setFontSize(15); doc.text('ROMANEIO DE CARGA — MADEIRA SERRADA',10,19);
+  doc.text(empresaNome,31,9); doc.setFontSize(15); doc.text('ROMANEIO DE CARGA — MADEIRA SERRADA',31,19);
   doc.setFontSize(9); doc.text(`${carga.numero_carga} · ${carga.data.split('-').reverse().join('/')}`,287,9,{align:'right'});
   autoTable(doc, {
     startY:30, margin:{left:10,right:10}, theme:'grid',

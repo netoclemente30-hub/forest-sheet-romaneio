@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import type { ArquivoGerado } from './arquivo';
 import { totaisImportados, type CabImportado, type PecaImportada } from './romaneio-serrado-importar';
 
@@ -63,8 +64,9 @@ export async function gerarPdfImportado(doc: DocExportar, empresaNome: string): 
   const forest = tk('forest'), paper = tk('paper'), ink = tk('ink'), muted = tk('muted'), line = tk('line');
   const { cab } = doc; const tot = totaisImportados(doc.itens);
   pdf.setFillColor(forest); pdf.rect(0, 0, 210, 25, 'F');
-  pdf.setTextColor(paper); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11); pdf.text(empresaNome, 10, 9);
-  pdf.setFontSize(14); pdf.text('ROMANEIO DE CARGA — MADEIRA SERRADA', 10, 19);
+  await adicionarLogoPdf(pdf, 10, 4, 17);
+  pdf.setTextColor(paper); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11); pdf.text(empresaNome, 31, 9);
+  pdf.setFontSize(14); pdf.text('ROMANEIO DE CARGA — MADEIRA SERRADA', 31, 19);
   pdf.setFontSize(9); pdf.text(`${cab.numero_carga} · ${dataBr(cab.data)}`, 200, 9, { align: 'right' });
   const getY = () => (pdf as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 40;
   autoTable(pdf, { startY: 30, margin: { left: 10, right: 10 }, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 2.5, textColor: ink, lineColor: line }, headStyles: { fillColor: forest, textColor: paper },

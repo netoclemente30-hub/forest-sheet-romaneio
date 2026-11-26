@@ -1,3 +1,4 @@
+import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import type { Tora } from "./data";
 import { fmtM3 } from "./volume";
 import type { ArquivoGerado } from "./arquivo";
@@ -72,12 +73,13 @@ export async function exportarPdf(toras: Tora[], titulo: string, medida: MedidaR
   const { jsPDF } = await import("jspdf");
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape", compress: true });
+  await adicionarLogoPdf(doc, 14, 7, 15);
   const dados = dadosPdfToras(toras, medida);
   const comercial = medida === "comercial";
   doc.setFontSize(15);
-  doc.text(`RELATÓRIO DE TORAS — ${titulo.toUpperCase()}`, 14, 14);
+  doc.text(`RELATÓRIO DE TORAS — ${titulo.toUpperCase()}`, 33, 14);
   doc.setFontSize(9);
-  doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")} · ${toras.length} toras · ${fmtM3(dados.total)} m³${comercial ? " · MEDIDA COMERCIAL" : ""}`, 14, 20);
+  doc.text(`Emitido em ${new Date().toLocaleString("pt-BR")} · ${toras.length} toras · ${fmtM3(dados.total)} m³${comercial ? " · MEDIDA COMERCIAL" : ""}`, 33, 20);
   if (dados.semMedidas) doc.text(`${dados.semMedidas} tora(s) sem medidas completas: volume comercial não incluído nos totais.`, 14, 25);
   autoTable(doc, {
     startY: dados.semMedidas ? 30 : 25,

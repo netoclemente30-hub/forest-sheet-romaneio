@@ -1,5 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { dadosRelatorio } from "./relatorioDocx";
+import { describe, it, expect, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { unzipSync } from "fflate";
+import { dadosRelatorio, gerarRelatorioDocx } from "./relatorioDocx";
+import { exportarTabelasPdf } from "../relatorios-gerais";
 import { areaHa, bufferApp } from "./camadas";
 import { paraGpx, lerGpx } from "./gps";
 import { vazio, type Estado } from "./projeto";
@@ -23,6 +26,28 @@ function estado(): Estado {
   return s;
 }
 describe("engenheiro: relatório, área, APP e GPX", () => {
+  it("incorpora o ícone do PWA ao cabeçalho dos relatórios DOCX e PDF", async () => {
+    const imagem = readFileSync("public/icon-512.png");
+    const fetchLogo = vi.fn(async () => new Response(new Uint8Array(imagem)));
+    vi.stubGlobal("fetch", fetchLogo);
+    const lerBlob = (blob: Blob) => new Promise<ArrayBuffer>((resolve, reject) => {
+      const leitor = new FileReader();
+      leitor.onload = () => resolve(leitor.result as ArrayBuffer);
+      leitor.onerror = () => reject(leitor.error);
+      leitor.readAsArrayBuffer(blob);
+    });
+    try {
+      const docx = await gerarRelatorioDocx(estado(), "p", { car: "", responsavel: "", registro: "" });
+      const arquivos = unzipSync(new Uint8Array(await lerBlob(docx)));
+      expect(Object.keys(arquivos).some((nome) => nome.startsWith("word/media/") && nome.endsWith(".png"))).toBe(true);
+      expect(new TextDecoder().decode(arquivos["word/header1.xml"])).toContain("<w:drawing>");
+      const pdf = await exportarTabelasPdf("Inventário", "", []);
+      expect(new TextDecoder().decode(await lerBlob(pdf.blob))).toContain("/Subtype /Image");
+      expect(fetchLogo).toHaveBeenCalledWith("/icon-512.png");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it("separa corte e remanescente abaixo do DMC por espécie", () => {
     const d = dadosRelatorio(estado(), "p", { car: "RO-1", responsavel: "", registro: "" });
     expect(d.especies[0]!.corte.n).toBe(1);
