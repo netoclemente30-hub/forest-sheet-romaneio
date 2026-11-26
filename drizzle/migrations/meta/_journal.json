@@ -309,6 +309,13 @@
       "when": 1795654989930,
       "tag": "0043_autex_limites_especies",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795655199553,
+      "tag": "0044_rastreabilidade_serrada_publicacao_explicita",
+      "breakpoints": true
     }
   ]
 }

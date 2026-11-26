@@ -751,29 +751,44 @@ export type Database = {
         Row: {
           autex: string
           created_at: string
+          crv_percentual: number | null
           data: string
           empresa_id: string
           id: string
           numero: string
           observacoes: string
+          pmfs: string | null
+          poa: string | null
+          publico_id: string | null
+          toras_origem: string[]
         }
         Insert: {
           autex?: string
           created_at?: string
+          crv_percentual?: number | null
           data?: string
           empresa_id?: string
           id?: string
           numero: string
           observacoes?: string
+          pmfs?: string | null
+          poa?: string | null
+          publico_id?: string | null
+          toras_origem?: string[]
         }
         Update: {
           autex?: string
           created_at?: string
+          crv_percentual?: number | null
           data?: string
           empresa_id?: string
           id?: string
           numero?: string
           observacoes?: string
+          pmfs?: string | null
+          poa?: string | null
+          publico_id?: string | null
+          toras_origem?: string[]
         }
         Relationships: [
           {
@@ -1044,6 +1059,7 @@ export type Database = {
           numero_carga: string
           placa_reboque: string
           placa_veiculo: string
+          publico_id: string | null
           total_pecas: number
           total_volume_m3: number
         }
@@ -1059,6 +1075,7 @@ export type Database = {
           numero_carga: string
           placa_reboque?: string
           placa_veiculo: string
+          publico_id?: string | null
           total_pecas?: number
           total_volume_m3?: number
         }
@@ -1074,6 +1091,7 @@ export type Database = {
           numero_carga?: string
           placa_reboque?: string
           placa_veiculo?: string
+          publico_id?: string | null
           total_pecas?: number
           total_volume_m3?: number
         }
@@ -1431,6 +1449,11 @@ export type Database = {
         Args: { _acao: string; _empresa: string }
         Returns: boolean
       }
+      publicar_rastreabilidade_serrada: {
+        Args: { _empresa: string; _id: string; _tipo: string }
+        Returns: string
+      }
+      rastreabilidade_serrada_publica: { Args: { _id: string }; Returns: Json }
       registrar_arrasto_arvore: {
         Args: {
           _arvore: number
