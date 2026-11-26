@@ -12,9 +12,10 @@ export const COMPRIMENTOS = Array.from({ length: 17 }, (_, i) => (1 + i * 0.5).t
 export type BitolaSerrada = { especie: string; tipo_peca: string; grossura: number; largura: number; distribuicao_pecas: Record<string, number> };
 type Tables = Database['public']['Tables'];
 export type ItemSerrado = Tables['itens_pacote_serrado']['Row'];
+export type RastreioPacote = { toras_origem?: string[]; crv_percentual?: number | null; pmfs?: string | null; poa?: string | null };
 export type PacoteSerrado = Tables['pacotes_serrados']['Row'] & { itens: ItemSerrado[]; carga_id: string | null; fila_id?:string; erro_fila?:string };
 export type CargaSerrada = Tables['romaneios_madeira_serrada']['Row'] & { pacotes: PacoteSerrado[] };
-export type CabPacote = { numero: string; data: string; observacoes: string; autex: string };
+export type CabPacote = { numero: string; data: string; observacoes: string; autex: string } & RastreioPacote;
 export type CabCarga = { numero_carga: string; data: string; cliente_nome: string; cliente_documento: string; motorista_nome: string; motorista_cpf: string; placa_veiculo: string; placa_reboque: string };
 
 export function calcularBitola(item: BitolaSerrada) {
@@ -86,7 +87,7 @@ export function pacotesComFila(pacotes:PacoteSerrado[], fila:ItemFila[], empresa
   for(const item of fila) {
     const op=item.op; if(op.tipo!=='pacote_serrado_salvar'||op.empresa_id!==empresa)continue;
     const existente=mapa.get(op.pacote_id);
-    mapa.set(op.pacote_id,{...op.cab,id:op.pacote_id,empresa_id:empresa,created_at:op.log.criado_em,carga_id:null,toras_origem:existente?.toras_origem??[],crv_percentual:existente?.crv_percentual??null,pmfs:existente?.pmfs??null,poa:existente?.poa??null,publico_id:existente?.publico_id??null,fila_id:item.id,...(item.erro?{erro_fila:item.erro}:{}),itens:op.itens.map((i,n)=>{const r=calcularBitola(i);return {...i,id:`${op.pacote_id}:${n}`,empresa_id:empresa,pacote_id:op.pacote_id,total_pecas:r.pecas,volume_m3:r.volume};})});
+    mapa.set(op.pacote_id,{...op.cab,id:op.pacote_id,empresa_id:empresa,created_at:op.log.criado_em,carga_id:null,toras_origem:op.cab.toras_origem??existente?.toras_origem??[],crv_percentual:op.cab.crv_percentual === undefined ? existente?.crv_percentual??null : op.cab.crv_percentual,pmfs:op.cab.pmfs === undefined ? existente?.pmfs??null : op.cab.pmfs,poa:op.cab.poa === undefined ? existente?.poa??null : op.cab.poa,publico_id:existente?.publico_id??null,fila_id:item.id,...(item.erro?{erro_fila:item.erro}:{}),itens:op.itens.map((i,n)=>{const r=calcularBitola(i);return {...i,id:`${op.pacote_id}:${n}`,empresa_id:empresa,pacote_id:op.pacote_id,total_pecas:r.pecas,volume_m3:r.volume};})});
   }
   return [...mapa.values()];
 }

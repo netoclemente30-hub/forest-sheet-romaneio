@@ -1,10 +1,11 @@
+import type { ComponentProps } from "react";
 import { IDBFactory } from "fake-indexeddb";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EngenheiroPagina } from "@/components/engenheiro/EngenheiroPagina";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ to, children, ...props }: any) => (
+  Link: ({ to, children, ...props }: ComponentProps<"a"> & { to: string }) => (
     <a href={to} {...props}>
       {children}
     </a>

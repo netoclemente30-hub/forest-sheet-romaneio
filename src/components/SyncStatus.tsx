@@ -20,6 +20,7 @@ function descrever(op: Op): string {
     case 'pacote_serrado_salvar': return `Pacote de madeira serrada ${op.cab.numero}`;
     case "tora_insert": return `Tora lançada · plaqueta ${String(op.dados["plaqueta"] ?? "?")}`;
     case "tora_update": return `Tora editada · plaqueta ${op.plaqueta}`;
+    case "toras_etiquetas": return `Etiquetas emitidas · ${op.plaquetas.length} toras`;
     case "tora_delete": return `Tora excluída · plaqueta ${op.plaqueta}`;
     case "romaneio_salvar": return `Romaneio ${op.cab.placa} · ${op.qtd_toras} toras`;
     case "romaneio_recebido": return `Entrada no pátio ${op.patio}`;

@@ -57,6 +57,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const [open, setOpen] = useState(!!nova);
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<Filtro>("patio");
+  const [impressao, setImpressao] = useState<"todas" | "impressas" | "nao">("todas");
   const [qr, setQr] = useState<number | null>(null);
   const [novas, setNovas] = useState<number[]>([]);
   const [lim, setLim] = useState(100);
@@ -71,11 +72,11 @@ export function TorasList({ nova }: { nova?: boolean }) {
   const empresa = getEmpresaAtiva() ?? empresaId;
   const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
   const lista = useMemo(() => {
-    const t = torasDeManejo(estoque).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex));
+    const t = torasDeManejo(estoque).filter((x) => (filtro === "todas" ? true : filtro === "patio" ? !x.carregada : x.carregada) && (!dia || new Date(x.created_at).toLocaleDateString("en-CA") === dia) && (!autex || x.autex === autex) && (impressao === "todas" || (impressao === "impressas") === !!x.etiqueta_impressa_em));
     const s = q.trim().toLowerCase();
     const f = !s ? t : t.filter((x) => String(x.plaqueta) === s || String(x.arvore) === s || (x.especie ?? "").toLowerCase().includes(s));
     return ordenarToras(f, ordem);
-  }, [estoque, q, filtro, dia, autex, ordem]);
+  }, [estoque, q, filtro, dia, autex, ordem, impressao]);
 
   const tora = estoque.find((t) => t.plaqueta === qr);
   const administrador = papel === "admin_empresa" || papel === "superadmin";
@@ -124,6 +125,10 @@ export function TorasList({ nova }: { nova?: boolean }) {
         ))}
       </div>
       <SeletorMedida valor={modo} onChange={setModo} />
+      <div className="flex flex-wrap gap-2" aria-label="Filtrar status da etiqueta">
+        {([["todas", "Etiqueta: todas"], ["impressas", "Impressas"], ["nao", "Não impressas"]] as const).map(([valor, rotulo]) =>
+          <Button key={valor} size="sm" variant={impressao === valor ? "default" : "outline"} aria-pressed={impressao === valor} onClick={() => setImpressao(valor)}>{rotulo}</Button>)}
+      </div>
       <RelatorioToras lista={lista} selecionadas={selecionadas} ordem={ordem} setOrdem={setOrdem} titulo="Toras de manejo" medida={modo} ocultarSinaflor />
       <SinaflorCsvExportacao arvores={arvores.data ?? []} toras={estoque} />
       <div className="rounded-lg bg-secondary p-3 space-y-1 text-sm">
@@ -142,7 +147,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
             <Checkbox aria-label={`Selecionar tora ${t.plaqueta}`} className="shrink-0" checked={selecionadas.includes(t.plaqueta)} onCheckedChange={(v) => setSelecionadas((s) => selecionarToras(s, [t.plaqueta], v === true))} />
             <div className="min-w-0 flex-1">
               <div className="font-semibold leading-snug">{t.especie ?? "Sem espécie"}</div>
-              <div className="text-xs text-muted-foreground">Plaqueta {t.plaqueta} · Árv. {t.arvore} · Sec. {t.secao ?? "–"} · {t.comprimento ?? "–"} m</div>
+              <div className="text-xs text-muted-foreground">Plaqueta {t.plaqueta} · Árv. {t.arvore} · Sec. {t.secao ?? "–"} · {t.comprimento ?? "–"} m{t.etiqueta_impressa_em ? <span className="font-semibold text-primary"> · Etiqueta Impressa</span> : <span> · etiqueta não impressa</span>}</div>
               <div className="text-xs text-muted-foreground">AUTEX {t.autex ?? "—"} · <span className="font-semibold text-foreground">{fmtM3(modo === "comercial" ? volumeComercial(t) : Number(t.volume))} m³</span>{modo === "comercial" && <span> · físico {fmtM3(Number(t.volume))} m³</span>}{t.carregada && <span className="font-semibold text-success"> · carregada</span>}</div>
               {modo === "comercial" && <TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" />}
             </div>
@@ -171,7 +176,7 @@ export function TorasList({ nova }: { nova?: boolean }) {
       <Sheet open={edit !== null} onOpenChange={(o) => !o && setEdit(null)}>
         <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
           <SheetHeader><SheetTitle className="font-display text-2xl uppercase">Plaqueta {edit?.plaqueta}</SheetTitle></SheetHeader>
-          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={estoque} podeExcluir={administrador} onDone={() => setEdit(null)} /></div>}
+          {edit && <div className="p-4 pt-0"><ToraEditor tora={edit} toras={estoque} arvores={arvores.data ?? []} podeExcluir={administrador} onDone={() => setEdit(null)} /></div>}
         </SheetContent>
       </Sheet>
 

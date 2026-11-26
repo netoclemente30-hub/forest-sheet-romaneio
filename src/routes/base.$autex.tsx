@@ -4,7 +4,11 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Archive, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { arvoresQuery, autexQuery } from "@/lib/data";
-import { supabase } from "@/integrations/supabase/client";
+import { LimitesAutex } from "@/components/LimitesAutex";
+import { useFilaOffline } from "@/hooks/useFilaOffline";
+import { projetarDados } from "@/lib/offline/projecao";
+import { getEmpresaAtiva } from "@/lib/empresa";
+import { pode } from "@/lib/funcoes";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { estaOnline } from "@/lib/offline/sync";
@@ -31,13 +35,15 @@ function ManejoPage() {
   const { autex: numero } = Route.useParams();
   const arvores = useQuery(arvoresQuery);
   const autex = useQuery(autexQuery);
-  const { isAdmin: adminEmpresa, isSuperAdmin } = useAuth();
+  const { isAdmin: adminEmpresa, isSuperAdmin, papel, empresaId } = useAuth();
   const isAdmin = adminEmpresa || isSuperAdmin;
   const qc = useQueryClient();
   const [aba] = useState<"ficha">("ficha");
   const [busy, setBusy] = useState(false);
-  const manejo = (autex.data ?? []).find((a) => a.numero === numero);
-  const lista = useMemo(() => (arvores.data ?? []).filter((a) => a.autex === numero).sort((a, b) => a.numero - b.numero), [arvores.data, numero]);
+  const pendentes = useFilaOffline();
+  const empresa = getEmpresaAtiva() ?? empresaId;
+  const manejo = projetarDados("autex", autex.data ?? [], pendentes.itens, empresa).find(a => a.numero === numero && a.empresa_id === empresa);
+  const lista = useMemo(() => (arvores.data ?? []).filter((a) => a.autex === numero && a.empresa_id === empresa).sort((a, b) => a.numero - b.numero), [arvores.data, numero, empresa]);
   const encerrado = manejo?.encerrado ?? false;
 
   async function alternarEncerrado() {
@@ -69,6 +75,7 @@ function ManejoPage() {
         {isAdmin && manejo && <Button variant={encerrado ? "outline" : "secondary"} size="sm" disabled={busy} onClick={alternarEncerrado}>{encerrado ? <RotateCcw /> : <Archive />}{encerrado ? "Reabrir" : "Encerrar manejo"}</Button>}
       </header>
 
+      {manejo && <LimitesAutex key={manejo.empresa_id + manejo.numero} autex={manejo} podeEditar={pode(papel, "base_importar")} />}
       {aba === "ficha" && (
         <section className="overflow-hidden rounded-xl border bg-card">
           <div className="border-b p-3 text-sm text-muted-foreground">Esta ficha permanece vinculada à AUTEX {numero}, inclusive depois do encerramento.</div>

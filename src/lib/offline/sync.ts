@@ -8,6 +8,8 @@ import type { Fila, Op } from "./fila";
 import { enviarOperacao } from "@/lib/registro-operacao";
 import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { comPrazo, erroDeRede, informarConexao, redeDisponivel, verificarBackend } from "./conexao";
+import { lerCache, salvarCache } from "./cache";
+import type { Tora } from "@/lib/data";
 import { rejeicaoConfirmada, erroDaTransacao } from "./rejeicao";
 
 export function estaOnline(): boolean {
@@ -102,6 +104,21 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
       return;
     }
     case 'campo_update': {
+      if (op.tabela === 'autex' && op.limitesAnteriores !== undefined) {
+        const q = supabase.from('autex').update(op.dados as never).eq('numero', String(op.alvo)).eq('empresa_id', op.empresa_id);
+        const { data, error } = await (op.limitesAnteriores === null
+          ? q.is('limites_especies', null)
+          : q.filter('limites_especies', 'eq', JSON.stringify(op.limitesAnteriores))).select('*');
+        if (error) throw erroDaTransacao(error);
+        if (!data.length) {
+          // A resposta do primeiro envio pode ter se perdido após a gravação.
+          const atual = await supabase.from('autex').select('limites_especies').eq('numero', String(op.alvo)).eq('empresa_id', op.empresa_id)
+            .filter('limites_especies', 'eq', JSON.stringify(op.dados['limites_especies'])).maybeSingle();
+          if (atual.error) throw erroDaTransacao(atual.error);
+          if (!atual.data) throw new Error('Os limites da AUTEX mudaram ou não estão disponíveis. Atualize a ficha e confira antes de lançar novamente.');
+        }
+        return;
+      }
       const { error } = await supabase.from(op.tabela as 'arvores').update(op.dados as never).filter(op.chave, 'eq', op.alvo).eq('empresa_id', op.empresa_id).select('*');
       if (error) throw new Error(error.message);
       return;
@@ -114,6 +131,28 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
     case 'aguardando_delete': {
       const { error } = await supabase.from('toras_aguardando').delete().eq('id', op.id).eq('empresa_id', op.empresa_id);
       if (error) throw new Error(error.message);
+      return;
+    }
+    case "toras_etiquetas": {
+      const em = op.log.criado_em;
+      const atualizadas = new Map<number, string | null>();
+      for (let i = 0; i < op.plaquetas.length; i += 100) {
+        const lote = op.plaquetas.slice(i, i + 100);
+        const { error } = await supabase.from("toras").update({ etiqueta_impressa_em: em })
+          .eq("empresa_id", op.empresa_id).in("plaqueta", lote)
+          .or(`etiqueta_impressa_em.is.null,etiqueta_impressa_em.lt.${em}`);
+        if (error) throw erroDaTransacao(error);
+        const confirmacao = await supabase.from("toras").select("plaqueta,etiqueta_impressa_em")
+          .eq("empresa_id", op.empresa_id).in("plaqueta", lote);
+        if (confirmacao.error) throw erroDaTransacao(confirmacao.error);
+        if (confirmacao.data.length !== lote.length || confirmacao.data.some(t => !t.etiqueta_impressa_em || Date.parse(t.etiqueta_impressa_em) < Date.parse(em))) {
+          throw new Error("O servidor não confirmou a emissão para todas as plaquetas. Confira as permissões e o estoque.");
+        }
+        for (const t of confirmacao.data) atualizadas.set(t.plaqueta, t.etiqueta_impressa_em);
+      }
+      const local = await lerCache<Tora>("toras", op.empresa_id);
+      if (local) await salvarCache("toras", local.map(t => t.empresa_id === op.empresa_id && atualizadas.has(t.plaqueta)
+        ? { ...t, etiqueta_impressa_em: atualizadas.get(t.plaqueta) } : t), op.empresa_id);
       return;
     }
     case "tora_insert": {

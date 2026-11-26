@@ -4,7 +4,8 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Tora } from "@/lib/data";
+import { AvisosManejo } from "@/components/AvisosManejo";
+import type { Arvore, Tora } from "@/lib/data";
 import { fmtM3 } from "@/lib/volume";
 import { CartaoMedidaComercial } from "@/components/MedidaComercial";
 import { fila } from "@/lib/offline/fila";
@@ -46,7 +47,7 @@ export async function excluirTora(t: Tora): Promise<boolean> {
   return true;
 }
 
-export function ToraEditor({ tora, toras, onDone, podeExcluir = true }: { tora: Tora; toras: Tora[]; onDone: () => void; podeExcluir?: boolean }) {
+export function ToraEditor({ tora, toras, onDone, podeExcluir = true, arvores = [] }: { tora: Tora; toras: Tora[]; arvores?: Arvore[]; onDone: () => void; podeExcluir?: boolean }) {
   const qc = useQueryClient();
   const [e, setE] = useState<EdicaoTora>(() => editarDe(tora));
   const [busy, setBusy] = useState(false);
@@ -135,6 +136,7 @@ export function ToraEditor({ tora, toras, onDone, podeExcluir = true }: { tora: 
         {campo("d_pe2", "D. pé 2 (cm)")}
       </div>
       {campo("comprimento", "Comprimento (m)", "decimal")}
+      {tora.origem === "manejo" && <AvisosManejo toras={toras} arvores={arvores} empresa={e.empresa_id} autex={e.autex.trim()} arvore={Number(e.arvore)} especie={e.especie} nome_cientifico={e.nome_cientifico} comprimento={num(e.comprimento)} volume={digitado} plaquetaAnterior={tora.plaqueta} />}
       <CartaoMedidaComercial tora={{ d_topo1: num(e.d_topo1), d_topo2: num(e.d_topo2), d_pe1: num(e.d_pe1), d_pe2: num(e.d_pe2), comprimento: num(e.comprimento), volume: digitado }} />
       <Button className="w-full h-12" disabled={busy} onClick={salvar}>Salvar alterações</Button>
       {podeExcluir && <Button variant="destructive" className="w-full" disabled={busy} onClick={excluir}><Trash2 /> Excluir tora</Button>}

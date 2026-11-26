@@ -13,7 +13,7 @@ export type Op =
   | { tipo: 'estoque_operacao'; empresa_id: string; operacao: string; tipo_operacao: string; dados: Record<string, unknown>; alvos: (number | string)[]; log: LogCapturado }
   | { tipo: 'aguardando_delete'; id: string; empresa_id: string; log: LogCapturado }
   | { tipo: 'romaneio_importado_salvar'; empresa_id: string; documento_id: string; revisao: number; cab: import('@/lib/romaneio-serrado-importar').CabImportado; itens: import('@/lib/romaneio-serrado-importar').PecaImportada[]; operacao: string; log: LogCapturado }
-  | { tipo: 'campo_update'; empresa_id: string; tabela: 'arvores' | 'autex' | 'toras'; alvo: string | number; chave: 'id' | 'numero' | 'plaqueta'; dados: Record<string, unknown>; log: LogCapturado }
+  | { tipo: 'campo_update'; empresa_id: string; tabela: 'arvores' | 'autex' | 'toras'; alvo: string | number; chave: 'id' | 'numero' | 'plaqueta'; dados: Record<string, unknown>; limitesAnteriores?: import('@/integrations/supabase/types').Json; log: LogCapturado }
   | { tipo: 'cadastro_upsert'; empresa_id: string; tabela: 'autex' | 'explanadas' | 'saldos'; dados: Record<string, unknown>; conflito: string; log: LogCapturado }
   | { tipo:'pacote_serrado_salvar'; empresa_id:string; pacote_id:string; cab:CabPacote; itens:BitolaSerrada[]; log:LogCapturado }
   | { tipo: "tora_insert"; dados: Record<string, unknown>; log?: LogCapturado }
@@ -25,6 +25,7 @@ export type Op =
       dados: Record<string, unknown>;
       log?: LogCapturado;
     }
+  | { tipo: "toras_etiquetas"; empresa_id: string; plaquetas: number[]; log: LogCapturado }
   | { tipo: "tora_delete"; plaqueta: number; empresa_id: string; log?: LogCapturado }
   | {
       tipo: "romaneio_salvar";

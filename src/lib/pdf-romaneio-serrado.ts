@@ -1,4 +1,5 @@
 import { adicionarLogoPdf } from "@/lib/logo-gestor";
+import { urlRastreioSerrado } from "./rastreabilidade-serrada";
 import type { ArquivoGerado } from './arquivo';
 import { COMPRIMENTOS, comoBitola, type CargaSerrada } from './madeira-serrada';
 
@@ -40,8 +41,18 @@ export async function gerarPdfRomaneioSerrado(carga: CargaSerrada, empresaNome: 
     body:[[`${carga.cliente_nome}\nCNPJ/CPF: ${carga.cliente_documento || '—'}`,`${carga.motorista_nome}\nCPF: ${carga.motorista_cpf || '—'}`,`Caminhão: ${carga.placa_veiculo}\nReboque: ${carga.placa_reboque || '—'}`,`${carga.pacotes.length} pacotes · ${resumo.pecas} peças\n${resumo.volume.toFixed(4).replace('.',',')} m³`]],
   });
   const getY = () => (doc as unknown as {lastAutoTable?:{finalY:number}}).lastAutoTable?.finalY ?? 55;
+  if (carga.publico_id) {
+    const qr = (await import("qrcode")).default;
+    const imagem = await qr.toDataURL(urlRastreioSerrado(carga.publico_id), { width: 300, margin: 2, errorCorrectionLevel: "M" });
+    const y = getY() + 3;
+    doc.addImage(imagem, "PNG", 10, y, 25, 25);
+    doc.setTextColor(ink);
+    doc.setFontSize(9);
+    doc.text("Verificação pública de rastreabilidade", 38, y + 8);
+    doc.text(carga.publico_id, 38, y + 15);
+  }
   autoTable(doc, {
-    startY:getY()+6, margin:{left:10,right:10,top:14,bottom:22}, theme:'grid',
+    startY:getY()+(carga.publico_id ? 33 : 6), margin:{left:10,right:10,top:14,bottom:22}, theme:'grid',
     styles:{fontSize:6.8,cellPadding:1.4,halign:'center',textColor:ink,lineColor:line,lineWidth:0.1},
     headStyles:{fillColor:forest,textColor:paper,fontStyle:'bold'},
     columnStyles:{0:{cellWidth:17},1:{cellWidth:31,halign:'left'},2:{cellWidth:20},20:{cellWidth:16},21:{cellWidth:21}},

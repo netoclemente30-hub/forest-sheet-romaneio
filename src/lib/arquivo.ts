@@ -24,6 +24,8 @@ async function compartilharNativo(arquivo: ArquivoGerado, text?: string): Promis
     reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
     reader.readAsDataURL(arquivo.blob);
   });
+  // Caracteres de controle são inválidos no nome entregue ao sistema de arquivos.
+  // eslint-disable-next-line no-control-regex
   const nome = arquivo.nome.replace(/[\\/:*?"<>|\x00-\x1f]/g, "_").replace(/^\.+/, "") || "arquivo";
   const { uri } = await Filesystem.writeFile({
     path: "exportacoes/" + crypto.randomUUID() + "/" + nome,

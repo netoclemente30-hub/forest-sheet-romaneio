@@ -6,6 +6,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { COMPRIMENTOS, autexSerradasQuery, calcularBitola, comoBitola, salvarPacote, type BitolaSerrada, type PacoteSerrado } from '@/lib/madeira-serrada';
+import { torasQuery } from '@/lib/data';
+import { Checkbox } from './ui/checkbox';
 import type { SugestaoPacote } from '@/lib/pacote-de-toras';
 
 export function PacoteSerradoForm({ empresa, pacote, pacotes, sugestao, onSalvo, onCancelar }: { empresa:string; pacote?:PacoteSerrado | undefined; sugestao?:SugestaoPacote | undefined; pacotes:PacoteSerrado[]; onSalvo:()=>void; onCancelar:()=>void }) {
@@ -15,6 +17,16 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, sugestao, onSalvo,
   const [confirmada,setConfirmada]=useState(!sugestao);
   const autexCadastradas = useQuery(autexSerradasQuery(empresa));
   const [data,setData] = useState(pacote?.data ?? new Date().toLocaleDateString('en-CA'));
+  const estoque = useQuery(torasQuery);
+  const [origens, setOrigens] = useState(pacote?.toras_origem ?? []);
+  const [buscaOrigem, setBuscaOrigem] = useState("");
+  const [crv, setCrv] = useState(pacote?.crv_percentual?.toString() ?? "");
+  const [pmfs, setPmfs] = useState(pacote?.pmfs ?? "");
+  const [poa, setPoa] = useState(pacote?.poa ?? "");
+  const toras = (estoque.data ?? []).filter(t => t.empresa_id === empresa && !!t.publico_id);
+  const prefixo = (t: (typeof toras)[number]) => `Plaqueta ${t.plaqueta} · Árvore ${t.arvore} · ${t.especie ?? ""} · ${t.autex ?? ""}`;
+  const candidatas = toras.filter(t => origens.includes(t.publico_id!) ||
+    (!buscaOrigem ? sugestao?.plaquetas.includes(t.plaqueta) : prefixo(t).toLowerCase().includes(buscaOrigem.trim().toLowerCase())));
   const [obs,setObs] = useState(pacote?.observacoes ?? '');
   const [especie,setEspecie] = useState(pacote?.itens[0]?.especie ?? sugestao?.especie ?? '');
   const nova = ():BitolaSerrada => ({especie,tipo_peca:'Viga',grossura:5,largura:15,distribuicao_pecas:Object.fromEntries(COMPRIMENTOS.map(c=>[c,0]))});
@@ -26,7 +38,10 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, sugestao, onSalvo,
   function alterar(index:number, valores:Partial<BitolaSerrada>) { setItens(s=>s.map((i,n)=>n===index ? {...i,...valores} : i)); }
   async function salvar(e:React.FormEvent) {
     e.preventDefault(); if(busy)return; if(!confirmada){toast.error('Confirme ou altere a AUTEX sugerida');return;} setBusy(true);
-    try { await salvarPacote(empresa,id,{numero,data,observacoes:obs,autex},itens); toast.success('Pacote guardado no aparelho — aguarda confirmação na nuvem'); onSalvo(); }
+    try {
+      const percentual = crv.trim() ? Number(crv.replace(",", ".")) : null;
+      if (percentual != null && (!Number.isFinite(percentual) || percentual < 0 || percentual > 100)) throw new Error("O CRV deve estar entre 0 e 100%.");
+      await salvarPacote(empresa,id,{numero,data,observacoes:obs,autex,toras_origem:origens,crv_percentual:percentual,pmfs:pmfs.trim()||null,poa:poa.trim()||null},itens); toast.success('Pacote guardado no aparelho — aguarda confirmação na nuvem'); onSalvo(); }
     catch(e) { toast.error(e instanceof Error ? e.message : 'Não foi possível salvar'); }
     finally { setBusy(false); }
   }
@@ -43,13 +58,32 @@ export function PacoteSerradoForm({ empresa, pacote, pacotes, sugestao, onSalvo,
       <label className="text-sm">Data<Input required type="date" aria-label="Data do pacote" value={data} onChange={e=>setData(e.target.value)} /></label>
     </div>
     <label className="block text-sm">AUTEX<Input list="autex-pacotes-serrados" aria-label="AUTEX do pacote" placeholder="Selecionar ou digitar AUTEX" value={autex} onChange={e=>{setAutex(e.target.value);setConfirmada(true);}} /></label>
+    <details className="rounded-lg border p-3">
+      <summary className="cursor-pointer font-semibold">Origem e desdobro · {origens.length} toras vinculadas</summary>
+      <div className="my-2 grid gap-2 sm:grid-cols-3">
+        <label className="text-sm">PMFS<Input value={pmfs} onChange={e => setPmfs(e.target.value)} /></label>
+        <label className="text-sm">POA<Input value={poa} onChange={e => setPoa(e.target.value)} /></label>
+        <label className="text-sm">CRV aplicado (%)<Input inputMode="decimal" value={crv} onChange={e => setCrv(e.target.value)} /></label>
+      </div>
+      <Input aria-label="Buscar tora de origem" placeholder="Buscar por plaqueta, árvore, espécie ou AUTEX" value={buscaOrigem} onChange={e => setBuscaOrigem(e.target.value)} />
+      <div className="my-2 max-h-52 overflow-auto">
+        {candidatas.slice(0, Math.max(50, origens.length + 20)).map(t => {
+          const id = t.publico_id!;
+          return <label className="flex items-center gap-2 border-b py-2 text-sm" key={id}>
+            <Checkbox checked={origens.includes(id)} onCheckedChange={v => setOrigens(s => v === true ? [...new Set([...s, id])] : s.filter(x => x !== id))} />
+            {prefixo(t)}
+          </label>;
+        })}
+        {!candidatas.length && <p className="py-2 text-sm text-muted-foreground">Pesquise uma tora já sincronizada para vinculá-la.</p>}
+      </div>
+    </details>
     <datalist id="autex-pacotes-serrados">{(autexCadastradas.data??[]).map(a=><option key={a.numero} value={a.numero} />)}</datalist>
     <datalist id="especies-serradas">{especies.map(e=><option key={e} value={e} />)}</datalist>
     {itens.map((i,index)=> <section key={index} className="border rounded-lg p-3 space-y-3 bg-card">
       <div className="flex items-center justify-between"><h3 className="text-lg font-bold">Bitola {index+1} · {i.grossura} × {i.largura} cm</h3><Button type="button" variant="ghost" size="icon" aria-label={`Remover bitola ${index+1}`} title="Remover bitola" disabled={busy || itens.length===1} onClick={()=>setItens(s=>s.filter((_,n)=>n!==index))}><Trash2 /></Button></div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <label className="text-xs">Espécie<Input required aria-label={`Espécie bitola ${index+1}`} value={i.especie} list="especies-serradas" onChange={e=>alterar(index,{especie:e.target.value})} /></label>
-        <label className="text-xs">Tipo de peça<select className="h-10 w-full border rounded-md bg-background px-2 text-sm" value={i.tipo_peca} aria-label={`Tipo de peça ${index+1}`} onChange={e=>alterar(index,{tipo_peca:e.target.value})}>{['Viga','Prancha','Caibro','Sarrafo','Tábua','Ripa','Outro'].map(t=><option key={t}>{t}</option>)}</select></label>
+        <label className="text-xs">Tipo de peça<select className="h-10 w-full border rounded-md bg-background px-2 text-sm" value={i.tipo_peca} aria-label={`Tipo de peça ${index+1}`} onChange={e=>alterar(index,{tipo_peca:e.target.value})}>{['Viga','Prancha','Caibro','Sarrafo','Tábua','Ripa','Madeira beneficiada','Outro'].map(t=><option key={t}>{t}</option>)}</select></label>
         <label className="text-xs">Grossura (cm)<Input required type="number" min="0.01" step="0.01" aria-label={`Grossura bitola ${index+1}`} value={i.grossura || ''} onChange={e=>alterar(index,{grossura:Number(e.target.value)})} /></label>
         <label className="text-xs">Largura (cm)<Input required type="number" min="0.01" step="0.01" aria-label={`Largura bitola ${index+1}`} value={i.largura || ''} onChange={e=>alterar(index,{largura:Number(e.target.value)})} /></label>
       </div>

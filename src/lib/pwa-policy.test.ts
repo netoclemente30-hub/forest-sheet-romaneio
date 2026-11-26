@@ -16,6 +16,8 @@ describe("navegação offline gerada", () => {
     }
   });
   it("não armazena OAuth, APIs, dados externos nem requisições comuns", () => {
+    expect(navegacaoOffline(request("/t/serrada/a5ef9bc0-9739-4d88-81fc-1ff25cf7df6a"))).toBe(true);
+    expect(navegacaoOffline(request("/t/serrada/a5ef9bc0-9739-4d88-81fc-1ff25cf7df6a", "cors", true))).toBe(true);
     expect(navegacaoOffline(request("/~oauth/callback"))).toBe(false);
     expect(navegacaoOffline(request("/t/a5ef9bc0-9739-4d88-81fc-1ff25cf7df6a"))).toBe(false);
     expect(navegacaoOffline(request("/~oauth", "cors", true))).toBe(false);

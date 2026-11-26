@@ -21,7 +21,7 @@ export function projetarDados<T>(nome: string, base: T[], itens: ItemFila[], emp
       const index = rows.findIndex(r => r['id'] === op.documento_id);
       if (index < 0) rows.push(row); else rows[index] = row;
     }
-    if (op.tipo === 'campo_update' && nome === op.tabela) {
+    if (op.tipo === 'campo_update' && nome === op.tabela && !(item.erro && op.limitesAnteriores !== undefined)) {
       const index = rows.findIndex(r => r[op.chave] === op.alvo);
       if (index >= 0) rows[index] = { ...rows[index], ...op.dados, ...status };
     }
@@ -61,6 +61,9 @@ export function projetarDados<T>(nome: string, base: T[], itens: ItemFila[], emp
         if (!item.erro) rows.splice(i, 1); else rows[i] = { ...row, ...status };
       } else if ((nome === 'toras' && tipo === 'tora_update') || (nome === 'toras_aguardando' && tipo === 'aguardando_update') || (nome === 'arvores' && tipo === 'arvore_gps')) {
         rows[i] = { ...row, ...dados, ...status };
+      } else if (nome === 'toras' && op.tipo === 'toras_etiquetas' && !item.erro) {
+        const anterior = row['etiqueta_impressa_em'];
+        if (typeof anterior !== 'string' || Date.parse(anterior) < Date.parse(em)) rows[i] = { ...row, etiqueta_impressa_em: em };
       } else if (nome === 'toras' && tipo === 'toras_serradas') {
         const desfazer = 'desfazer' in op ? op.desfazer : dados['desfazer'];
         rows[i] = { ...row, serrada_em: desfazer ? null : em, ...status };

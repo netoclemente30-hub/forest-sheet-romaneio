@@ -2,7 +2,10 @@ import { Capacitor } from "@capacitor/core";
 import { baixarArquivo, compartilharArquivoExato } from "@/lib/arquivo";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fila } from "@/lib/offline/fila";
+import { sincronizar } from "@/lib/offline/sync";
+import { capturarLog } from "@/lib/registro";
+import { pode } from "@/lib/funcoes";
 import { torasQuery } from "@/lib/data";
 import { ToraLabel } from "@/components/ToraLabel";
 import { Button } from "@/components/ui/button";
@@ -65,12 +68,15 @@ function Etiquetas() {
     try {
       const doc = await gerarEtiquetasPdf(selecionadas, tam);
       const nome = `etiquetas-${tam.largura}x${tam.altura}mm.pdf`;
-      if (navigator.onLine && papel !== "gerente_escritorio") {
-        const agora = new Date().toISOString();
-        const porEmp = new Map<string, number[]>();
-        for (const t of selecionadas) { const k = t.empresa_id; porEmp.set(k, [...(porEmp.get(k) ?? []), t.plaqueta]); }
-        Promise.all([...porEmp].map(([emp, ps]) => supabase.from("toras").update({ etiqueta_impressa_em: agora }).eq("empresa_id", emp).in("plaqueta", ps)))
-          .then(() => qc.invalidateQueries({ queryKey: ["toras"] }));
+      if (pode(papel, "toras_lancar") || pode(papel, "serraria_operar")) {
+        const plaquetas = selecionadas.map(t => t.plaqueta);
+        try {
+          const log = await capturarLog("Etiqueta emitida", plaquetas.join(", "));
+          await fila().enfileirar({ tipo: "toras_etiquetas", empresa_id: empresa, plaquetas, log });
+          void sincronizar(fila()).then(() => qc.invalidateQueries({ queryKey: ["toras"] })).catch(() => {});
+        } catch {
+          toast.warning("O PDF foi gerado. O status de emissão não pôde ser gravado neste aparelho.");
+        }
       }
       const blob = doc.output("blob");
       const arquivo = { blob, nome };

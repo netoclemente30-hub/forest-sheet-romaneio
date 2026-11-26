@@ -81,7 +81,9 @@ function prepararPaginas(): Promise<void> {
         // Requisições sequenciais de HTML (sem renderizar outro app/iframe).
         // O worker gerado é quem grava paginas; assets/fallback são precacheados
         // na instalação. Dados privados continuam no IndexedDB por empresa.
-        for (const url of PAGINAS_OFFLINE) {
+        const atual = window.location.pathname;
+        const paginas = atual.startsWith("/t/serrada/") ? [atual, ...PAGINAS_OFFLINE] : PAGINAS_OFFLINE;
+        for (const url of paginas) {
           if (!navigator.onLine) break;
           try {
             await fetch(url, {

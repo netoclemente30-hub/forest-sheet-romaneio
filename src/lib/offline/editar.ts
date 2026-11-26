@@ -24,6 +24,7 @@ export function camposDaFila(op: Op): CampoFila[] {
     case 'estoque_operacao': case 'aguardando_delete': case 'cadastro_upsert': case 'romaneio_importado_salvar': case 'campo_update': return [];
     case 'pacote_serrado_salvar': return [{chave:'numero',rotulo:'Número do pacote'},{chave:'autex',rotulo:'AUTEX'},{chave:'data',rotulo:'Data'},{chave:'observacoes',rotulo:'Observações'}];
     case "tora_insert": case "tora_update": return camposTora;
+    case "toras_etiquetas": return [];
     case "tora_delete": return [{ chave: "plaqueta", rotulo: "Plaqueta azul", mode: "numeric" }];
     case "romaneio_recebido": return [{ chave: "patio", rotulo: "Pátio" }];
     case "toras_serradas": return [{ chave: "plaquetas", rotulo: "Plaquetas (separadas por vírgula)" }];
@@ -38,7 +39,10 @@ export function camposDaFila(op: Op): CampoFila[] {
 
 export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
   if (['estoque_operacao', 'aguardando_delete', 'cadastro_upsert', 'romaneio_importado_salvar', 'campo_update'].includes(op.tipo)) return {};
-  if(op.tipo==='pacote_serrado_salvar')return {...op.cab};
+  if (op.tipo === 'pacote_serrado_salvar') {
+    const { numero, autex, data, observacoes } = op.cab;
+    return { numero, autex, data, observacoes };
+  }
   if (op.tipo === "tora_insert" || op.tipo === "tora_update") {
     const base = op.tipo === "tora_update" ? toras.find((t) => t.empresa_id === op.empresa_id && t.plaqueta === op.plaqueta) : undefined;
     const dados: Record<string, unknown> = { ...base, ...op.dados };

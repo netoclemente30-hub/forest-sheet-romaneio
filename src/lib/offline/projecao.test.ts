@@ -13,6 +13,15 @@ describe('projeção cache e fila', () => {
     expect(projetarDados('toras', base, [insert], 'Outra')).toEqual(base);
     expect(projetarDados('toras', base, [insert], 'RJ')).toEqual([expect.objectContaining({ empresa_id: 'RJ', plaqueta: 9, volume: 2 })]);
   });
+  it('mostra etiqueta emitida offline sem modificar o estoque de outra empresa', () => {
+    const em = '2026-11-19T10:00:00.000Z';
+    const item: ItemFila = { id: 'etiqueta', criadoEm: 1, op: { tipo: 'toras_etiquetas', empresa_id: 'RJ', plaquetas: [9],
+      log: { acao: 'Etiqueta emitida', detalhe: '9', user_email: null, lat: null, lng: null, criado_em: em } } };
+    const base = [{ empresa_id: 'RJ', plaqueta: 9, etiqueta_impressa_em: null }, { empresa_id: 'Outra', plaqueta: 9, etiqueta_impressa_em: null }];
+    expect(projetarDados('toras', base, [item], 'RJ')[0]?.etiqueta_impressa_em).toBe(em);
+    expect(projetarDados('toras', base, [item], 'Outra')[0]?.etiqueta_impressa_em).toBeNull();
+    expect(projetarDados('toras', base, [{ ...item, erro: 'permissão' }], 'RJ')[0]?.etiqueta_impressa_em).toBeNull();
+  });
   it('resposta perdida não duplica tora e total', () => {
     const rows = projetarDados('toras', [{ empresa_id: 'RJ', plaqueta: 9, volume: 2 }], [insert], 'RJ');
     expect(rows).toHaveLength(1);

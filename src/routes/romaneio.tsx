@@ -3,7 +3,7 @@ import {ClienteRomaneio,clienteRomaneioVazio} from "@/components/ClienteRomaneio
 import { pode } from "@/lib/funcoes";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { torasQuery, type Tora } from "@/lib/data";
 import { Link } from "@tanstack/react-router";
@@ -18,7 +18,10 @@ import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { fila } from "@/lib/offline/fila";
 import { sincronizar } from "@/lib/offline/sync";
 import { capturarLog } from "@/lib/registro";
-import { plaquetaDoQr } from "@/lib/tora-qr";
+import { resolverQrSerragem } from "@/lib/qr-serragem";
+import { BipagemCarga } from "@/components/BipagemCarga";
+import { ResumoCargaConsolidada } from "@/components/ResumoCargaConsolidada";
+import { consolidarCarga } from "@/lib/carga-consolidada";
 import { QrScanner } from "@/components/QrScanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +55,16 @@ function RomaneioPage() {
   const [cliente, setCliente] = useState<typeof clienteVazio>(clienteVazio);
   useEffect(()=>{setCliente(clienteRomaneioVazio);},[empresa]);
   const [itens, setItens] = useState<Tora[]>([]);
+  const itensAtuais = useRef<Tora[]>([]);
+  function atualizarItens(novos: Tora[]) {
+    itensAtuais.current = novos;
+    setItens(novos);
+  }
+  useEffect(() => {
+    itensAtuais.current = [];
+    setItens([]);
+    setScan(false);
+  }, [empresa]);
   const [plq, setPlq] = useState("");
   const [scan, setScan] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -72,24 +85,30 @@ function RomaneioPage() {
   const estoque = useMemo(() => estoqueComFila(toras.data ?? [], pendentes.itens, empresa), [toras.data, pendentes.itens, empresa]);
   const mapa = useMemo(() => new Map(estoque.filter((t) => empresa && t.empresa_id === empresa).map((t) => [t.plaqueta, t])), [estoque, empresa]);
 
-  const adicionar = useCallback(
-    (raw: string) => {
-      const n = plaquetaDoQr(raw);
-      if (!n) { toast.error("QR code inválido ou plaqueta inválida"); return; }
-      const t = mapa.get(n);
-      if (!t) { toast.error(`Plaqueta ${n} não encontrada no inventário`); return; }
-      if (t.carregada) { toast.warning(`Plaqueta ${n} JÁ FOI CARREGADA em outra carga!`, { duration: 6000 }); return; }
-      setItens((cur) => {
-        if (cur.some((x) => x.plaqueta === n)) {
-          toast.warning(`Plaqueta ${n} já está nesta carga`);
-          return cur;
-        }
-        toast.success(`${n} · ${t.especie} · ${fmtM3(Number(t.volume))} m³`);
-        return [t, ...cur];
-      });
-    },
-    [mapa],
-  );
+  function bipar(raw: string): string | null {
+    if (!podeCarregar || !empresa) return "Selecione uma empresa com permissão de carregamento.";
+    let tora: Tora;
+    try {
+      tora = resolverQrSerragem(raw, estoque, empresa);
+    } catch (erro) {
+      return erro instanceof Error ? erro.message : "Não foi possível ler esta etiqueta.";
+    }
+    if (!mapa.has(tora.plaqueta) || tora.carregada) return `Plaqueta ${tora.plaqueta} indisponível para esta carga.`;
+    if (itensAtuais.current.some(t => t.plaqueta === tora.plaqueta)) return `Plaqueta ${tora.plaqueta} já está nesta carga.`;
+    atualizarItens([tora, ...itensAtuais.current]);
+    return null;
+  }
+
+  function adicionar(raw: string) {
+    const aviso = bipar(raw);
+    if (aviso) toast.warning(aviso);
+    else toast.success("Tora adicionada à carga.");
+  }
+
+  const consolidado = consolidarCarga(itens.map(t => ({
+    especie: t.especie || "Não informada", produto: "Tora", autorizacao: t.autex || "Não informada",
+    pecas: 1, volume: Number(t.volume),
+  })));
 
   const total = itens.reduce((n, t) => n + Number(t.volume), 0);
   const totais = totaisComerciais(itens);
@@ -118,7 +137,7 @@ function RomaneioPage() {
         log,
       });
       void sincronizar(fila()).catch(()=>{ /* A carga permanece na fila para nova tentativa. */ });
-      setItens([]);
+      atualizarItens([]);
       toast.success("Romaneio guardado neste aparelho — aguarda confirmação na nuvem");
       nav({ to: "/historico" });
     } catch (error) {
@@ -158,6 +177,7 @@ function RomaneioPage() {
         <div className="col-span-2">{f("data", "Data", "date")}</div>
       </div>
       {empresa && session?.user.id && <ClienteRomaneio key={empresa} empresa={empresa} usuario={session.user.id} salvos={cad.data?.clientes??[]} cliente={cliente} alterar={setCliente}/>}
+      <ResumoCargaConsolidada linhas={consolidado} />
       <details className="bg-card border rounded-xl p-3">
         <summary className="font-semibold cursor-pointer">Cadastros salvos (toque para preencher)</summary>
         <div className="mt-2 space-y-2 text-sm">
@@ -190,6 +210,7 @@ function RomaneioPage() {
           <Button type="submit" className="h-12">Adicionar</Button>
           <Button type="button" variant="secondary" className="h-12" aria-label="Ler QR code" onClick={() => setScan(!scan)}><Camera /></Button>
         </form>
+        {!scan && empresa && podeCarregar && <BipagemCarga key={empresa} onScan={bipar} />}
         {scan && <QrScanner onScan={adicionar} onClose={() => { setScan(false); toast.error("Não foi possível abrir a câmera"); }} />}
         <div className="rounded-lg bg-forest text-primary-foreground px-4 py-3 space-y-1">
           <div className="flex items-center justify-between gap-2">
@@ -226,7 +247,7 @@ function RomaneioPage() {
               <TextoMedidaComercial tora={t} />
             </div>
             <div className="text-right text-sm font-semibold">{fmtM3(Number(t.volume))}<div className="text-xs font-normal text-muted-foreground">físico</div></div>
-            <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItens(itens.filter((x) => x.plaqueta !== t.plaqueta))}><X /></Button>
+            <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => atualizarItens(itensAtuais.current.filter((x) => x.plaqueta !== t.plaqueta))}><X /></Button>
           </div>
         ))}
         {!itens.length && (

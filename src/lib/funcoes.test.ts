@@ -5,10 +5,10 @@ import {
 } from "./funcoes";
 
 describe("funções individuais por empresa", () => {
-  it("reconhece seis cargos operacionais, sem criar admin por cargo escolhido", () => {
+  it("reconhece os cargos operacionais, sem criar admin por cargo escolhido", () => {
     expect(FUNCOES.map((f) => f.valor)).toEqual([
       "cortador", "tratorista", "romaneador", "motorista",
-      "gerente_patio", "gerente_escritorio",
+      "gerente_patio", "gerente_escritorio", "engenheiro",
     ]);
     expect(funcaoValida("admin_empresa")).toBe(false);
     expect(funcaoValida("superadmin")).toBe(false);
