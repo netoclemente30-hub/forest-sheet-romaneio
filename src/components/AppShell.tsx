@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { MANEJO, secaoDaRota, ehRotaPublica } from "@/lib/nav";
 import { nomePapel, pode, rotaInicial, rotaPermitida, type Papel } from "@/lib/funcoes";
 import { comCache } from "@/lib/offline/cache";
+import { chaveEmpresasMenu, manterNaTrocaDeEmpresa } from "@/lib/empresas-consulta";
 import { EscolherAparencia } from "@/components/Aparencia";
 
 const nav = [
@@ -120,7 +121,7 @@ function OperationalAppShell() {
     toast.success(navigator.onLine ? "Nome do aparelho salvo." : "Nome salvo neste aparelho.");
   }
   const empresas = useQuery({
-    queryKey: ["empresas-menu", session?.user.id],
+    queryKey: chaveEmpresasMenu(session?.user.id),
     enabled: Boolean(session) && isSuperAdmin,
     networkMode: "always",
     queryFn: () => comCache("empresas-menu", async () => {
@@ -187,8 +188,8 @@ function OperationalAppShell() {
               value={empresaSel}
               onChange={async (e) => {
                 const proxima = e.target.value;
-                await qc.cancelQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
-                qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "empresas" });
+                await qc.cancelQueries({ predicate: (q) => !manterNaTrocaDeEmpresa(q.queryKey) });
+                qc.removeQueries({ predicate: (q) => !manterNaTrocaDeEmpresa(q.queryKey) });
                 try {
                   localStorage.setItem(`empresa-selecionada:${session.user.id}`, proxima);
                   const nome = (empresas.data ?? []).find((x) => x.id === proxima)?.nome;

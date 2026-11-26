@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { listarUsuarios, criarUsuario, alterarSenhaUsuario, definirAdmin, removerUsuario, listarEmpresas, criarEmpresa, definirEmpresa, definirStatusEmpresa, definirCnpjEmpresa, excluirEmpresa, definirFuncao, statusFuncoes } from "@/lib/usuarios.functions";
 import { FUNCOES, funcaoValida, nomePapel, type FuncaoFuncionario } from "@/lib/funcoes";
+import { invalidarEmpresas } from "@/lib/empresas-consulta";
 import { formatarCnpj, LIMITE_DEMONSTRACAO, type StatusEmpresa } from "@/lib/cnpj";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,7 @@ function UsuariosPage() {
       await criarEmpresa({ data: { nome: novaEmpresa } });
       toast.success(`Empresa "${novaEmpresa.trim()}" criada. Agora crie o acesso dela abaixo.`);
       setNovaEmpresa("");
-      await qc.invalidateQueries({ queryKey: ["empresas"] });
+      await invalidarEmpresas(qc);
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -145,7 +146,7 @@ function UsuariosPage() {
   async function mudarStatus(id: string, status: StatusEmpresa) {
     try {
       await definirStatusEmpresa({ data: { empresaId: id, status } });
-      await qc.invalidateQueries({ queryKey: ["empresas"] });
+      await invalidarEmpresas(qc);
       toast.success("Situação da empresa atualizada");
     } catch (err) {
       toast.error((err as Error).message);
