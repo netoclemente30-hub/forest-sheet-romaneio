@@ -1522,6 +1522,7 @@ export type Database = {
         Args: { _id: string }
         Returns: {
           abatida_em: string
+          arrastada_em: string
           arvore: number
           autex: string
           carregada: boolean

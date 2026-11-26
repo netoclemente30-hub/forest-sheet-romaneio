@@ -295,6 +295,13 @@
       "when": 1795366243280,
       "tag": "0041_excluir_romaneio_serrado_importado",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795651902315,
+      "tag": "0042_tora_publica_arrastada_em",
+      "breakpoints": true
     }
   ]
 }
