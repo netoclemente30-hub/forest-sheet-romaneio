@@ -12,6 +12,11 @@ it('preserva pacote, empresa e auditoria ao editar e sincronizar offline',async(
  await f.atualizarPacote(item.id,{...item.op,cab:{...item.op.cab,autex:'ALTERADA'}});
  const projected=pacotesComFila([],await f.listar(),'empresa');
  expect(projected[0]?.autex).toBe('ALTERADA');expect(projected[0]?.itens[0]?.volume_m3).toBe(0.45);
+ expect(projected[0]).toMatchObject({toras_origem:[],crv_percentual:null,pmfs:null,poa:null,publico_id:null});
+ const novo=projected[0];
+ if(!novo)throw new Error('Pacote não projetado');
+ const existente={...novo,toras_origem:['tora-publica'],crv_percentual:55,pmfs:'PMFS-1',poa:'POA-1',publico_id:'token-publicado'};
+ expect(pacotesComFila([existente],await f.listar(),'empresa')[0]).toMatchObject({toras_origem:['tora-publica'],crv_percentual:55,pmfs:'PMFS-1',poa:'POA-1',publico_id:'token-publicado'});
  expect(pacotesComFila([],await f.listar(),'outra')).toEqual([]);
  await sincronizar(f,executarOp,async()=>true);
  expect(rpc).toHaveBeenCalledWith('salvar_pacote_serrado',expect.objectContaining({_empresa:'empresa',_id:'pacote',_log:expect.objectContaining({operacao_id:'audit',lat:1,lng:2})}));

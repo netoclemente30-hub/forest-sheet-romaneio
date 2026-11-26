@@ -85,7 +85,8 @@ export function pacotesComFila(pacotes:PacoteSerrado[], fila:ItemFila[], empresa
   const mapa=new Map(pacotes.filter(p=>p.empresa_id===empresa).map(p=>[p.id,p]));
   for(const item of fila) {
     const op=item.op; if(op.tipo!=='pacote_serrado_salvar'||op.empresa_id!==empresa)continue;
-    mapa.set(op.pacote_id,{...op.cab,id:op.pacote_id,empresa_id:empresa,created_at:op.log.criado_em,carga_id:null,fila_id:item.id,...(item.erro?{erro_fila:item.erro}:{}),itens:op.itens.map((i,n)=>{const r=calcularBitola(i);return {...i,id:`${op.pacote_id}:${n}`,empresa_id:empresa,pacote_id:op.pacote_id,total_pecas:r.pecas,volume_m3:r.volume};})});
+    const existente=mapa.get(op.pacote_id);
+    mapa.set(op.pacote_id,{...op.cab,id:op.pacote_id,empresa_id:empresa,created_at:op.log.criado_em,carga_id:null,toras_origem:existente?.toras_origem??[],crv_percentual:existente?.crv_percentual??null,pmfs:existente?.pmfs??null,poa:existente?.poa??null,publico_id:existente?.publico_id??null,fila_id:item.id,...(item.erro?{erro_fila:item.erro}:{}),itens:op.itens.map((i,n)=>{const r=calcularBitola(i);return {...i,id:`${op.pacote_id}:${n}`,empresa_id:empresa,pacote_id:op.pacote_id,total_pecas:r.pecas,volume_m3:r.volume};})});
   }
   return [...mapa.values()];
 }
