@@ -41,6 +41,22 @@ describe('projeção cache e fila', () => {
     const item: ItemFila = { id: 'op', criadoEm: 1, op: { tipo: 'romaneio_salvar', empresa_id: 'RJ', cab: { placa: 'ABC', motorista: 'M', julieta: '', cpf: '', data: '2026-11-19' }, total_volume: 2, qtd_toras: 1, plaquetas: [9] } };
     expect(projetarDados('romaneios', [{ id: 'id-remoto', empresa_id: 'RJ', operacao_id: 'op' }], [item], 'RJ')).toHaveLength(1);
   });
+  it('edição de romaneio troca as plaquetas e mantém outra empresa intacta', () => {
+    const log = { acao: 'Romaneio editado', detalhe: '', user_email: null, lat: null, lng: null, criado_em: '2026-11-27', operacao_id: 'edicao' };
+    const item: ItemFila = { id: 'edicao', criadoEm: 2, op: { tipo: 'romaneio_editar', id: 'carga', empresa_id: 'RJ', cab: { placa: 'NOVA1', motorista: 'M', julieta: '', cpf: '', data: '2026-11-27' }, total_volume: 4, qtd_toras: 1, plaquetas: [20], log } };
+    const base = [
+      { empresa_id: 'RJ', plaqueta: 10, volume: 2, carregada: true, romaneio_id: 'carga' },
+      { empresa_id: 'RJ', plaqueta: 20, volume: 4, carregada: false, romaneio_id: null },
+      { empresa_id: 'OUTRA', plaqueta: 20, volume: 9, carregada: false, romaneio_id: null },
+    ];
+    expect(projetarDados('toras', base, [item], 'RJ')).toEqual([
+      expect.objectContaining({ plaqueta: 10, carregada: false, romaneio_id: null }),
+      expect.objectContaining({ plaqueta: 20, carregada: true, romaneio_id: 'carga' }),
+    ]);
+    expect(projetarDados('toras', base, [item], 'OUTRA')).toEqual([base[2]]);
+    expect(projetarDados('romaneios', [{ id: 'carga', empresa_id: 'RJ', placa: 'ANTIGA', qtd_toras: 1, total_volume: 2 }], [item], 'RJ'))
+      .toEqual([expect.objectContaining({ placa: 'NOVA1', qtd_toras: 1, total_volume: 4 })]);
+  });
   it('NI pendente aparece com edição e exclusão sem duplicar', () => {
     const log = { acao: 'fixture', detalhe: '', user_email: null, lat: null, lng: null, criado_em: '2026-11-19' };
     const items: ItemFila[] = [

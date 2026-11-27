@@ -36,6 +36,16 @@ export type Op =
       empresa_id?: string | null;
       log?: LogCapturado;
     }
+  | {
+      tipo: "romaneio_editar";
+      id: string;
+      cab: { placa: string; julieta: string; motorista: string; cpf: string; data: string; cliente?: Record<string, string> | null };
+      total_volume: number;
+      qtd_toras: number;
+      plaquetas: number[];
+      empresa_id: string;
+      log: LogCapturado;
+    }
   | { tipo: "romaneio_recebido"; id: string; patio: string; empresa_id?: string | null; log?: LogCapturado }
   | { tipo: "toras_serradas"; plaquetas: number[]; desfazer: boolean; empresa_id?: string; log?: LogCapturado }
   | { tipo: "arvore_gps"; id: string; empresa_id: string; autex: string; dados: DadosArvoreGPS; log: LogCapturado }

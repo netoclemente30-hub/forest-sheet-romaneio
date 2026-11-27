@@ -52,3 +52,18 @@ export async function salvarRomaneioNoBanco(
   ]);
   return id;
 }
+
+/** Corrige carga e vínculos na mesma transação; o servidor valida empresa e recebimento. */
+export async function editarRomaneioNoBanco(
+  id: string, cab: CabecalhoRomaneio, plaquetas: number[], log: LogCapturado, empresa: string,
+): Promise<string> {
+  const operacao = log.operacao_id;
+  if (!operacao) throw new Error("Identificador de operação ausente");
+  const { data: idSalvo, error } = await supabase.rpc("editar_romaneio_toras", {
+    _empresa: empresa, _id: id, _cab: cab as unknown as Json,
+    _plaquetas: plaquetas, _operacao: operacao, _log: log as unknown as Json,
+  });
+  if (error) throw erroDaTransacao(error);
+  if (!idSalvo) throw new Error("A edição não retornou o romaneio");
+  return idSalvo;
+}

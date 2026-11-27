@@ -1,7 +1,7 @@
 import { adicionarLogoPdf } from "@/lib/logo-gestor";
 import { useAuth } from "@/hooks/useAuth";
 import { createFileRoute, useNavigate,Link } from "@tanstack/react-router";
-import {rotaPermitida} from "@/lib/funcoes";
+import {pode, rotaPermitida} from "@/lib/funcoes";
 import {clienteDoRomaneio} from "@/lib/fiscal-cargas";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,14 +14,12 @@ import { useFilaOffline } from "@/hooks/useFilaOffline";
 import { getEmpresaAtiva } from "@/lib/empresa";
 import { projetarDados } from "@/lib/offline/projecao";
 import { estoqueComFila } from "@/lib/tora-origem";
-import { fmtM3, fmtM3Sinal } from "@/lib/volume";
-import { TextoMedidaComercial } from "@/components/MedidaComercial";
-import { fmtComprimentoComercial, medidaComercial, totaisComerciais } from "@/lib/medida-comercial";
+import { fmtM3 } from "@/lib/volume";
 import { resumoPorEspecie } from "@/lib/romaneio";
 import { Button } from "@/components/ui/button";
 import { QrImage } from "@/components/QrImage";
 import { qrRomaneio } from "@/lib/tora-qr";
-import { FileDown, Trash2, Share2 } from "lucide-react";
+import { FileDown, Trash2, Share2, Pencil } from "lucide-react";
 import { NfeWhatsapp } from "@/components/NfeWhatsapp";
 import { itensDeToras } from "@/lib/nfe-txt";
 import { compartilharArquivoExato } from "@/lib/arquivo";
@@ -35,6 +33,10 @@ export function ordenarRomaneio(itens: Tora[]): Tora[] {
       (a.secao ?? "").localeCompare(b.secao ?? "", "pt-BR") ||
       a.plaqueta - b.plaqueta,
   );
+}
+
+export function medidasFisicasRomaneio(t: Tora): (string | number)[] {
+  return [t.d_topo1 ?? "—", t.d_topo2 ?? "—", t.d_pe1 ?? "—", t.d_pe2 ?? "—", t.comprimento ?? "—"];
 }
 
 export const Route = createFileRoute("/historico/$id")({
@@ -59,7 +61,6 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   const autoTable = (await import("jspdf-autotable")).default;
   const doc = new jsPDF({ orientation: "landscape" });
   await adicionarLogoPdf(doc, 14, 6, 18);
-  const totais = totaisComerciais(itens);
   doc.setFontSize(16);
   doc.text("ROMANEIO DE CARGA", 36, 16);
   doc.setFontSize(10);
@@ -72,16 +73,12 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   doc.text("QR da carga: entrada no pátio", 160, 45);
   autoTable(doc, {
     startY: 48,
-    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "Ø comercial (cm)", "C com. (m)", "m³ comercial", "m³ físico", "Diferença"]],
-    body: itens.map((t) => {
-      const c = medidaComercial(t);
-      return [
-        t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
-        c ? `${c.d1}×${c.d2}` : "—", c ? fmtComprimentoComercial(c.comprimento) : "—",
-        c ? fmtM3(c.volume) : "—", fmtM3(Number(t.volume)), c ? fmtM3(c.volume - Number(t.volume)) : "—",
-      ];
-    }),
-    foot: [["", "", "TOTAL", "", "", `${itens.length} toras`, fmtM3(totais.comercial), fmtM3(totais.fisico), fmtM3(totais.diferenca)]],
+    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "Topo Ø1 (cm)", "Topo Ø2 (cm)", "Pé Ø1 (cm)", "Pé Ø2 (cm)", "Comp. (m)", "m³ físico"]],
+    body: itens.map((t) => [
+      t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
+      ...medidasFisicasRomaneio(t), fmtM3(Number(t.volume)),
+    ]),
+    foot: [["", "", "TOTAL", "", "", "", "", "", `${itens.length} toras`, fmtM3(itens.reduce((n, t) => n + Number(t.volume), 0))]],
     styles: { fontSize: 8 },
     headStyles: { fillColor: [46, 84, 56] },
     footStyles: { fillColor: [230, 225, 205], textColor: 20 },
@@ -90,11 +87,8 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   const y = (doc as any).lastAutoTable.finalY + 8;
   autoTable(doc, {
     startY: y,
-    head: [["Espécie", "Nome científico", "Qtd toras", "m³ comercial", "m³ físico"]],
-    body: resumoPorEspecie(itens).map((e) => {
-      const grupo = itens.filter((t) => (t.especie ?? "Não cadastrada") === e.especie);
-      return [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(totaisComerciais(grupo).comercial), fmtM3(e.volume)];
-    }),
+    head: [["Espécie", "Nome científico", "Qtd toras", "m³ físico"]],
+    body: resumoPorEspecie(itens).map((e) => [e.especie, e.nome_cientifico ?? "", e.qtd, fmtM3(e.volume)]),
     styles: { fontSize: 9 },
     headStyles: { fillColor: [46, 84, 56] },
   });
@@ -121,12 +115,12 @@ async function compartilharPdf(r: Romaneio, itens: Tora[]) {
 }
 
 function Detalhe() {
-  const { papel } = useAuth();
+  const { papel, empresaId } = useAuth();
   const podeExcluir = papel === "superadmin" || papel === "admin_empresa";
+  const podeEditar = pode(papel, "carga_criar");
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const nav = useNavigate();
-  const { empresaId } = useAuth();
   const empresa = getEmpresaAtiva() ?? empresaId;
   const roms = useQuery(romaneiosQuery);
   const toras = useQuery(torasQuery);
@@ -152,7 +146,6 @@ function Detalhe() {
   const { r, itens: itensBrutos } = q.data;
   const cliente=clienteDoRomaneio(r.cliente);
   const itens = ordenarRomaneio(itensBrutos);
-  const totais = totaisComerciais(itens);
 
   return (
     <div className="space-y-4">
@@ -162,11 +155,11 @@ function Detalhe() {
         <div className="text-sm opacity-90">Reboque {r.julieta || "–"} · {r.motorista} {r.cpf && `· CPF ${r.cpf}`}</div>
         <div className="mt-2 font-display text-4xl font-bold">{fmtM3(Number(r.total_volume))} m³</div>
         <div className="text-sm opacity-80">{r.qtd_toras} toras · volume físico</div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm"><span>Comercial: <b>{fmtM3(totais.comercial)} m³</b></span><span>Diferença: <b>{fmtM3Sinal(totais.diferenca)} m³</b></span></div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button className="flex-1 h-12" onClick={() => gerarPdf(r, itens)}><FileDown /> Baixar PDF</Button>
         <Button variant="secondary" className="flex-1 h-12" onClick={() => void compartilharPdf(r, itens).catch((e) => toast.error(e instanceof Error ? e.message : "Erro ao gerar PDF"))}><Share2 /> Enviar PDF</Button>
+        {podeEditar && !r.recebido_em && <Button asChild variant="outline" className="h-12"><Link to="/romaneio" search={{ editar: r.id }}><Pencil /> Editar</Link></Button>}
         {podeExcluir && <Button variant="outline" className="h-12" onClick={excluir} aria-label="Excluir"><Trash2 /></Button>}
       </div>
       <div className="rounded-xl border bg-card p-3">
@@ -196,7 +189,7 @@ function Detalhe() {
         {itens.map((t) => (
           <div key={t.plaqueta} className="flex items-center gap-3 p-3 text-sm">
             <div className="font-display text-lg font-bold w-14">{t.plaqueta}</div>
-            <div className="flex-1 min-w-0"><div>{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div><TextoMedidaComercial tora={t} classe="text-xs text-muted-foreground" /></div>
+            <div className="flex-1 min-w-0"><div>{t.especie} <span className="text-muted-foreground">· Árv. {t.arvore} · Sec. {t.secao ?? "–"}</span></div><div className="text-xs text-muted-foreground">Topo {t.d_topo1 ?? "–"}×{t.d_topo2 ?? "–"} cm · Pé {t.d_pe1 ?? "–"}×{t.d_pe2 ?? "–"} cm · Comp. {t.comprimento ?? "–"} m</div></div>
             <div className="text-right font-semibold">{fmtM3(Number(t.volume))}<div className="text-xs font-normal text-muted-foreground">físico</div></div>
           </div>
         ))}

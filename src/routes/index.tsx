@@ -152,7 +152,7 @@ function Index() {
         <Stat label="Carregadas" value={String(s.carr)} sub={`${fmtM3(s.volCarr)} m³`} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Link to="/romaneio" className="bg-forest text-primary-foreground rounded-xl p-4 flex flex-col gap-2">
+        <Link to="/romaneio" search={{ editar: "" }} className="bg-forest text-primary-foreground rounded-xl p-4 flex flex-col gap-2">
           <Truck className="size-7 text-accent" />
           <span className="font-display text-xl font-bold uppercase">Nova carga</span>
         </Link>

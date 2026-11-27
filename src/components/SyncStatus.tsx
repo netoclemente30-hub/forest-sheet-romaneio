@@ -23,6 +23,7 @@ function descrever(op: Op): string {
     case "toras_etiquetas": return `Etiquetas emitidas · ${op.plaquetas.length} toras`;
     case "tora_delete": return `Tora excluída · plaqueta ${op.plaqueta}`;
     case "romaneio_salvar": return `Romaneio ${op.cab.placa} · ${op.qtd_toras} toras`;
+    case "romaneio_editar": return `Edição de romaneio ${op.cab.placa} · ${op.qtd_toras} toras`;
     case "romaneio_recebido": return `Entrada no pátio ${op.patio}`;
     case "toras_serradas": return `${op.desfazer ? "Voltar ao pátio" : "Serrar"} · ${op.plaquetas.length} toras`;
     case "arvore_gps": return `Árvore localizada · AUTEX ${op.autex}`;

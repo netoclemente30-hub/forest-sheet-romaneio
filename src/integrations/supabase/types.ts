@@ -1405,6 +1405,17 @@ export type Database = {
     }
     Functions: {
       admin_minha_empresa: { Args: never; Returns: string }
+      editar_romaneio_toras: {
+        Args: {
+          _cab: Json
+          _empresa: string
+          _id: string
+          _log: Json
+          _operacao: string
+          _plaquetas: number[]
+        }
+        Returns: string
+      }
       excluir_carga_serrada: {
         Args: { _empresa: string; _id: string; _log: Json }
         Returns: undefined

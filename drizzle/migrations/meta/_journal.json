@@ -323,6 +323,13 @@
       "when": 1795688448980,
       "tag": "0045_rastreabilidade_serrada_prioriza_emitente_fiscal",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1795818992413,
+      "tag": "0046_editar_romaneio_toras",
+      "breakpoints": true
     }
   ]
 }

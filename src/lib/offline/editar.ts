@@ -30,7 +30,7 @@ export function camposDaFila(op: Op): CampoFila[] {
     case "toras_serradas": return [{ chave: "plaquetas", rotulo: "Plaquetas (separadas por vírgula)" }];
     case "arvore_gps": return [{ chave: "latitude", rotulo: "Latitude", mode: "decimal" }, { chave: "longitude", rotulo: "Longitude", mode: "decimal" }, { chave: "gps_precisao", rotulo: "Precisão GPS (m)", mode: "decimal" }];
     case "rastro_salvar": case "arrasto_arvore": case "transferencia_explanada": case "arrasto_toras": case "aguardando_insert": case "aguardando_update": case "aguardando_impressa": return [];
-    case "romaneio_salvar": return [
+    case "romaneio_salvar": case "romaneio_editar": return [
       { chave: "placa", rotulo: "Placa do caminhão" }, { chave: "julieta", rotulo: "Placa do reboque" },
       { chave: "motorista", rotulo: "Motorista" }, { chave: "cpf", rotulo: "CPF" }, { chave: "data", rotulo: "Data" },
     ];
@@ -48,7 +48,7 @@ export function rascunhoDaFila(op: Op, toras: Tora[]): Record<string, string> {
     const dados: Record<string, unknown> = { ...base, ...op.dados };
     return Object.fromEntries(camposTora.map(({ chave }) => [chave, String(dados[chave === "plaquetaNova" ? "plaqueta" : chave] ?? (chave === "plaquetaNova" && op.tipo === "tora_update" ? op.plaqueta : ""))]));
   }
-  if (op.tipo === "romaneio_salvar") { const { cliente: _c, ...cab } = op.cab; return cab; }
+  if (op.tipo === "romaneio_salvar" || op.tipo === "romaneio_editar") { const { cliente: _c, ...cab } = op.cab; return cab; }
   if (op.tipo === "romaneio_recebido") return { patio: op.patio };
   if (op.tipo === "arvore_gps") return { latitude: String(op.dados.latitude), longitude: String(op.dados.longitude), gps_precisao: String(op.dados.gps_precisao ?? "") };
   if (op.tipo === "rastro_salvar" || op.tipo === "arrasto_arvore" || op.tipo === "transferencia_explanada" || op.tipo === "arrasto_toras" || op.tipo === "aguardando_insert" || op.tipo === "aguardando_update" || op.tipo === "aguardando_impressa") return {};
@@ -105,7 +105,7 @@ export function corrigirOp(op: Op, valores: Record<string, string>, toras: Tora[
       if (!patio) throw new Error("Informe o pátio");
       return { ...op, patio };
     }
-    case "romaneio_salvar": {
+    case "romaneio_salvar": case "romaneio_editar": {
       const placa = valores["placa"]?.trim();
       const motorista = valores["motorista"]?.trim();
       const data = valores["data"]?.trim();

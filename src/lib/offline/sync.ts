@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { gravarRegistro, type LogCapturado } from "@/lib/registro";
 import type { Fila, Op } from "./fila";
 import { enviarOperacao } from "@/lib/registro-operacao";
-import { salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
+import { editarRomaneioNoBanco, salvarRomaneioNoBanco } from "@/lib/romaneio-salvar";
 import { comPrazo, erroDeRede, informarConexao, redeDisponivel, verificarBackend } from "./conexao";
 import { lerCache, salvarCache } from "./cache";
 import type { Tora } from "@/lib/data";
@@ -89,7 +89,7 @@ export async function executarOp(op: Op, operacao?: string): Promise<void> {
   }
   await executarOpSemLog(op, operacao);
   // A função SQL de romaneio já registra a operação na mesma transação.
-  if (op.log && op.tipo !== "romaneio_salvar" && op.tipo !== 'romaneio_importado_salvar') {
+  if (op.log && op.tipo !== "romaneio_salvar" && op.tipo !== "romaneio_editar" && op.tipo !== 'romaneio_importado_salvar') {
     await gravarRegistro(op.log, "empresa_id" in op ? op.empresa_id ?? null : null);
   }
 }
@@ -195,6 +195,10 @@ async function executarOpSemLog(op: Op, operacao?: string): Promise<void> {
         lat: null, lng: null, criado_em: new Date().toISOString(),
       };
       await salvarRomaneioNoBanco(op.cab, op.plaquetas, log, op.empresa_id, operacao);
+      return;
+    }
+    case "romaneio_editar": {
+      await editarRomaneioNoBanco(op.id, op.cab, op.plaquetas, op.log, op.empresa_id);
       return;
     }
     case "romaneio_recebido": {

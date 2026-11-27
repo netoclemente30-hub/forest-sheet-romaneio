@@ -83,6 +83,21 @@ export function projetarDados<T>(nome: string, base: T[], itens: ItemFila[], emp
       const id = op.log?.operacao_id ?? item.id;
       if (!rows.some(r => r['operacao_id'] === id)) rows.push({ id, operacao_id: id, empresa_id: empresa, ...op.cab, total_volume: op.total_volume, qtd_toras: op.qtd_toras, created_at: em, recebido_em: null, patio: null, ...status });
     }
+    if (op.tipo === 'romaneio_editar') {
+      if (nome === 'romaneios') {
+        const index = rows.findIndex(r => r['id'] === op.id);
+        if (index >= 0) rows[index] = { ...rows[index], ...op.cab, total_volume: op.total_volume, qtd_toras: op.qtd_toras, ...status };
+      }
+      if (nome === 'toras') {
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row) continue;
+          const selecionada = op.plaquetas.includes(Number(row['plaqueta']));
+          if (selecionada) rows[i] = { ...row, carregada: true, romaneio_id: op.id, ...status };
+          else if (row['romaneio_id'] === op.id) rows[i] = { ...row, carregada: false, romaneio_id: null, ...status };
+        }
+      }
+    }
   }
   return rows as T[];
 }

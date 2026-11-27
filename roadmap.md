@@ -95,3 +95,7 @@
 
 - [x] Fiscal Spedy homologação (P01–P06): emissão/consulta/XML/DANFE/inutilização no servidor, bloqueio de produção, auditoria.
 - [ ] Validação real Spedy: aguarda chave SPEDY_SANDBOX_KEY_<UUID> por empresa, A1 e cadastro na conta sandbox.
+
+## Romaneio de toras — 27/11/2026
+- [x] Mostrar as quatro medidas físicas lançadas no romaneio e no PDF, no lugar das medidas comerciais.
+- [x] Editar dados e toras de romaneios antes do recebimento, com auditoria, fila offline e isolamento por empresa; migração 0046, 563 testes, PDF real e fluxo celular/desktop conferidos sem gravação real.
