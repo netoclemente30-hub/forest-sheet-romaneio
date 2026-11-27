@@ -64,16 +64,35 @@ async function montarPdf(r: Romaneio, itens: Tora[]) {
   doc.setFontSize(16);
   doc.text("ROMANEIO DE CARGA", 36, 16);
   doc.setFontSize(10);
-  doc.text(`Placa/Caminhão: ${r.placa ?? ""}    Reboque: ${r.julieta ?? ""}`, 36, 24);
-  doc.text(`Data: ${dataBR(r.data)}    Motorista: ${r.motorista ?? ""}    CPF: ${r.cpf ?? ""}`, 14, 30);
+  const transporte = doc.splitTextToSize(`Placa/Caminhão: ${r.placa ?? ""}    Reboque: ${r.julieta ?? ""}`, 200);
+  doc.text(transporte, 36, 24);
+  const inicioMotorista = Math.max(30, 24 + transporte.length * 5);
+  const motorista = doc.splitTextToSize(`Data: ${dataBR(r.data)}    Motorista: ${r.motorista ?? ""}    CPF: ${r.cpf ?? ""}`, 225);
+  doc.text(motorista, 14, inicioMotorista);
   const QRCode = (await import("qrcode")).default;
   const qr = await QRCode.toDataURL(qrRomaneio(r, itens.map((t) => t.plaqueta)), { margin: 1, width: 400 });
-  doc.addImage(qr, "PNG", 160, 6, 36, 36);
+  doc.addImage(qr, "PNG", 247, 6, 36, 36);
   doc.setFontSize(7);
-  doc.text("QR da carga: entrada no pátio", 160, 45);
+  doc.text("QR da carga: entrada no pátio", 247, 45);
+  const cliente = clienteDoRomaneio(r.cliente);
+  const endereco = cliente?.endereco;
   autoTable(doc, {
-    startY: 48,
-    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "Topo Ø1 (cm)", "Topo Ø2 (cm)", "Pé Ø1 (cm)", "Pé Ø2 (cm)", "Comp. (m)", "m³ físico"]],
+    startY: Math.max(48, inicioMotorista + motorista.length * 5 + 5),
+    head: [["Cliente / fornecedor do manejo", "CPF/CNPJ", "Endereço"]],
+    body: [[
+      cliente?.nome || "Cliente não informado neste romaneio",
+      cliente?.documento || "—",
+      endereco ? [endereco.logradouro, endereco.numero, endereco.complemento, endereco.bairro,
+        [endereco.municipio, endereco.uf].filter(Boolean).join(" / "),
+        endereco.cep ? `CEP ${endereco.cep}` : ""].filter(Boolean).join(", ") || "—" : "—",
+    ]],
+    styles: { fontSize: 9, overflow: "linebreak" },
+    headStyles: { fillColor: [46, 84, 56] },
+  });
+  const tabelaCliente = doc as typeof doc & { lastAutoTable?: { finalY: number } };
+  autoTable(doc, {
+    startY: (tabelaCliente.lastAutoTable?.finalY ?? 70) + 6,
+    head: [["Plaqueta", "Árvore", "Espécie", "Sec.", "df1 (cm)", "df2 (cm)", "df3 (cm)", "df4 (cm)", "Comp. (m)", "m³ físico"]],
     body: itens.map((t) => [
       t.plaqueta, t.arvore, t.especie ?? "", t.secao ?? "",
       ...medidasFisicasRomaneio(t), fmtM3(Number(t.volume)),

@@ -97,5 +97,6 @@
 - [ ] Validação real Spedy: aguarda chave SPEDY_SANDBOX_KEY_<UUID> por empresa, A1 e cadastro na conta sandbox.
 
 ## Romaneio de toras — 27/11/2026
+- [x] Ajustar PDF para df1/df2/df3/df4 e incluir cliente, CPF/CNPJ e endereço; nove testes passaram, PDF baixado e conferido com sessão autenticada e dados fictícios interceptados, sem gravação remota nem publicação.
 - [x] Mostrar as quatro medidas físicas lançadas no romaneio e no PDF, no lugar das medidas comerciais.
 - [x] Editar dados e toras de romaneios antes do recebimento, com auditoria, fila offline e isolamento por empresa; migração 0046, 563 testes, PDF real e fluxo celular/desktop conferidos sem gravação real.
