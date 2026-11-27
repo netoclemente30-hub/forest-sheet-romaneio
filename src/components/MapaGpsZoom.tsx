@@ -142,18 +142,19 @@ export function MapaGpsZoom({
                 e.preventDefault(); aoSelecionar(arvore);
               }
             }}>
-            <circle cx={x} cy={y} r={12 / Math.sqrt(zoom)}
+            <circle cx={x} cy={y} r={10 / zoom} fill="transparent" />
+            <circle cx={x} cy={y} r={5 / zoom} pointerEvents="none"
               fill={arvore.abatida_em ? "var(--color-destructive)" :
                 arvore.nao_abatida_motivo ? "var(--color-muted-foreground)" : "var(--color-primary)"}
-              stroke="var(--color-card)" strokeWidth="3" />
-            <text x={x + 15 / Math.sqrt(zoom)} y={y + 4 / Math.sqrt(zoom)}
-              fontSize={12 / Math.sqrt(zoom)} fontWeight="700" fill="var(--color-foreground)">
+              stroke="var(--color-card)" strokeWidth={1.5 / zoom} />
+            {zoom >= 2.5 && <text x={x + 8 / zoom} y={y + 4 / zoom}
+              fontSize={12 / zoom} fontWeight="700" fill="var(--color-foreground)">
               {arvore.numero}
-            </text>
+            </text>}
           </g>)}
         {atual && <g aria-label="Sua posição GPS">
-          <circle cx={atual.x} cy={atual.y} r={11 / Math.sqrt(zoom)}
-            fill="var(--color-gps)" stroke="var(--color-card)" strokeWidth="4" />
+          <circle cx={atual.x} cy={atual.y} r={6 / zoom} pointerEvents="none"
+            fill="var(--color-gps)" stroke="var(--color-card)" strokeWidth={2 / zoom} />
         </g>}
         {!arvores.length && !percursos.length && !atual &&
           <text x="320" y="205" textAnchor="middle" fontSize="16"
